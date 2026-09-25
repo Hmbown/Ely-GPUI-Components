@@ -1,10 +1,9 @@
 use ely_gpui_component::forms::{Choice, ChoiceChips, Knob, RangeSlider, Rating, Slider, Stepper};
 use gpui::{App, IntoElement, ParentElement, SharedString, Styled, Window, div, px};
 
-use super::choices::{keep, set};
 use crate::{
     probe::probe,
-    ui::{section, specimen, specimens},
+    ui::{keep, section, set, specimen, specimens},
 };
 
 pub fn chips(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {

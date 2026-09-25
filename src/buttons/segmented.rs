@@ -1,29 +1,17 @@
 use std::rc::Rc;
 
 use gpui::{
-    Animation, AnimationExt, App, Bounds, ElementId, FontWeight, InteractiveElement, IntoElement,
-    MouseButton, ParentElement, Pixels, RenderOnce, SharedString, StatefulInteractiveElement,
-    Styled, Window, canvas, div, prelude::*,
+    Animation, AnimationExt, App, ElementId, FontWeight, InteractiveElement, IntoElement,
+    MouseButton, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement, Styled,
+    Window, div, prelude::*,
 };
 
 use super::button::label_size;
 use crate::{
-    motion,
+    motion::{self, Axis, Marker, glide, measure_item, measure_origin, slide},
     primitives::{FocusRing, Icon, IconName},
     theme::{ActiveTheme, ControlSize, Elevation, Radius},
 };
-
-/// Left edge and width of a segment, inside the control.
-type Span = (Pixels, Pixels);
-
-#[derive(Default)]
-struct Slide {
-    origin: Pixels,
-    spans: Vec<Option<Span>>,
-    from: Option<Span>,
-    last: Option<SharedString>,
-    generation: u64,
-}
 
 type OnChange = Rc<dyn Fn(&SharedString, &mut Window, &mut App)>;
 
@@ -72,65 +60,47 @@ impl SegmentedControl {
     }
 }
 
-/// Position along a slide from `from` to `to`, overshooting a little.
-fn glide(from: Span, to: Span, t: f32) -> Span {
-    let s = motion::spring(t);
-    let lerp = |a: Pixels, b: Pixels| a + (b - a) * s;
-    (lerp(from.0, to.0), lerp(from.1, to.1))
-}
-
 impl RenderOnce for SegmentedControl {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let chosen = self
+        let values: Vec<SharedString> = self
             .segments
             .iter()
-            .position(|(value, ..)| *value == self.selected)
+            .map(|(value, ..)| value.clone())
+            .collect();
+        let chosen = values
+            .iter()
+            .position(|value| *value == self.selected)
             .unwrap_or_else(|| panic!("segmented control has no segment {}", self.selected));
-        let count = self.segments.len();
-        let state = window.use_keyed_state(self.id.clone(), cx, |_, _| Slide::default());
-        if state.read(cx).spans.len() != count {
-            state.update(cx, |slide, _| slide.spans = vec![None; count]);
-        }
-        if state.read(cx).last.as_ref() != Some(&self.selected) {
-            state.update(cx, |slide, _| {
-                let previous = slide
-                    .last
-                    .as_ref()
-                    .and_then(|last| self.segments.iter().position(|(value, ..)| value == last));
-                slide.from = previous.and_then(|ix| slide.spans[ix]);
-                slide.last = Some(self.selected.clone());
-                slide.generation += 1;
-            });
-        }
-        let (to, from, generation) = {
-            let slide = state.read(cx);
-            (slide.spans[chosen], slide.from, slide.generation)
-        };
+        let (state, marker) = slide(self.id.clone(), &values, &self.selected, window, cx);
         let theme = cx.theme();
         let colors = &theme.colors;
         let (text, icon_size) = label_size(self.size);
         let duration = motion::duration(motion::SLOW, cx);
-        let thumb = to.map(|to| {
-            let from = from.unwrap_or(to);
-            div()
-                .absolute()
-                .top_0p5()
-                .bottom_0p5()
-                .rounded(theme.radius(Radius::Md))
-                .bg(colors.surface)
-                .border_1()
-                .border_color(colors.border)
-                .shadow(theme.elevation(Elevation::Raised))
-                .with_animation(
-                    ("segment-thumb", generation),
-                    Animation::new(duration),
-                    move |thumb, t| {
-                        let (left, width) = glide(from, to, t);
-                        thumb.left(left).w(width)
-                    },
-                )
-        });
-        let origin_state = state.clone();
+        let thumb = marker.map(
+            |Marker {
+                 from,
+                 to,
+                 generation,
+             }| {
+                div()
+                    .absolute()
+                    .top_0p5()
+                    .bottom_0p5()
+                    .rounded(theme.radius(Radius::Md))
+                    .bg(colors.surface)
+                    .border_1()
+                    .border_color(colors.border)
+                    .shadow(theme.elevation(Elevation::Raised))
+                    .with_animation(
+                        ("segment-thumb", generation),
+                        Animation::new(duration),
+                        move |thumb, t| {
+                            let (left, width) = glide(from, to, t);
+                            thumb.left(left).w(width)
+                        },
+                    )
+            },
+        );
         let segments = self
             .segments
             .into_iter()
@@ -176,27 +146,7 @@ impl RenderOnce for SegmentedControl {
                         segment.child(Icon::new(icon).size(icon_size).color(fg))
                     })
                     .child(label)
-                    .child(
-                        canvas(
-                            move |bounds: Bounds<Pixels>, _, cx| {
-                                let span = Some((
-                                    bounds.left() - measure.read(cx).origin,
-                                    bounds.size.width,
-                                ));
-                                if measure.read(cx).spans.get(ix) != Some(&span) {
-                                    measure.update(cx, |slide, cx| {
-                                        slide.spans[ix] = span;
-                                        cx.notify();
-                                    });
-                                }
-                            },
-                            |_, _, _, _| {},
-                        )
-                        .absolute()
-                        .top_0()
-                        .left_0()
-                        .size_full(),
-                    )
+                    .child(measure_item(measure, ix, Axis::Horizontal))
             });
         div()
             .id(self.id)
@@ -208,39 +158,8 @@ impl RenderOnce for SegmentedControl {
             .bg(colors.sunken)
             .border_1()
             .border_color(colors.border)
-            .child(
-                canvas(
-                    move |bounds: Bounds<Pixels>, _, cx| {
-                        if origin_state.read(cx).origin != bounds.left() {
-                            origin_state.update(cx, |slide, cx| {
-                                slide.origin = bounds.left();
-                                cx.notify();
-                            });
-                        }
-                    },
-                    |_, _, _, _| {},
-                )
-                .absolute()
-                .top_0()
-                .left_0()
-                .size_full(),
-            )
+            .child(measure_origin(state.clone(), Axis::Horizontal))
             .children(thumb)
             .children(segments)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use gpui::px;
-
-    use super::glide;
-
-    #[test]
-    fn glide_starts_at_from_and_settles_on_to() {
-        let (from, to) = ((px(0.0), px(40.0)), (px(100.0), px(60.0)));
-        assert_eq!(glide(from, to, 0.0), from);
-        let (left, width) = glide(from, to, 1.0);
-        assert!((f32::from(left) - 100.0).abs() < 0.5 && (f32::from(width) - 60.0).abs() < 0.5);
     }
 }

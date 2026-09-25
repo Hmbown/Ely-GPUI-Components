@@ -9,7 +9,6 @@ use jiff::civil::Date;
 
 use super::{
     super::{
-        check::tab_stop,
         options::{Run, float, surface},
         select::{field_button, field_text},
     },
@@ -18,7 +17,7 @@ use super::{
     show_date, show_span,
 };
 use crate::{
-    primitives::{Icon, IconName},
+    primitives::{Icon, IconName, tab_stop},
     theme::{ActiveTheme, ControlSize, IconSize},
 };
 

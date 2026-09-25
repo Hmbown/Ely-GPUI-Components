@@ -4,10 +4,9 @@ use ely_gpui_component::{
 };
 use gpui::{App, Hsla, IntoElement, ParentElement, Styled, Window, div, px, rgb, rgba};
 
-use super::choices::{keep, set};
 use crate::{
     probe::probe,
-    ui::{code, section, specimen, specimens},
+    ui::{code, keep, section, set, specimen, specimens},
 };
 
 fn hex(color: Hsla) -> String {

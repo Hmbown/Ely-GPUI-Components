@@ -7,15 +7,12 @@ use gpui::{
 };
 use jiff::{ToSpan, civil::Date};
 
-use super::{
-    super::{check::tab_stop, options::Run},
-    zoned_now,
-};
+use super::{super::options::Run, zoned_now};
 use crate::{
     buttons::{ButtonVariant, IconButton},
     layout::seeded::use_seeded,
     motion,
-    primitives::IconName,
+    primitives::{IconName, tab_stop},
     theme::{ActiveTheme, ControlSize, Radius, TextSize},
 };
 

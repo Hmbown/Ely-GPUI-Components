@@ -29,7 +29,9 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T06e Forms · Files
 - [x] T06f Forms · Other
 - [x] T06g Forms · Structure
-- [ ] T07 Navigation
+- [x] T07a Navigation · Tabs & paths
+- [ ] T07b Navigation · Places
+- [ ] T07c Navigation · Palettes & tour
 - [ ] T08 Menus
 - [ ] T09 Overlays
 - [ ] T10 Feedback
@@ -136,3 +138,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T06g | 1 | FAIL | form errors shared one animation id, so a later error skipped its entrance; the demo left links out of its saved snapshot; the demo let a lone @ pass as an email |
 | T06g | 2 | FAIL | a field's error still keyed its entrance by the label, so twin labels in one form shared it |
 | T06g | 3 | PASS | |
+| T07a | 1 | FAIL | editor tabs keyed their scroll on the count of changes: a far tab chosen at mount stayed off screen, and after one change every redraw pulled a manual scroll back |
+| T07a | 2 | FAIL | in a hidden or zero-width strip the follow asked for a frame on every render, 126 redraws in 2 s |
+| T07a | 3 | FAIL | AGENTS.md said the test platform gives text no width; it gives each character a fixed advance (fixed after the cap) |

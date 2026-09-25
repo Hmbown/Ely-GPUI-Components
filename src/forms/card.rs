@@ -8,13 +8,13 @@ use gpui::{
 
 use super::{
     CheckState,
-    check::{check_mark, tab_stop},
+    check::check_mark,
     options::{OnFlag, Run},
     radio::radio_mark,
 };
 use crate::{
     motion,
-    primitives::{Icon, IconName},
+    primitives::{Icon, IconName, tab_stop},
     theme::{ActiveTheme, IconSize, Radius, TextSize},
 };
 

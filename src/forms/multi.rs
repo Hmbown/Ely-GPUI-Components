@@ -7,14 +7,13 @@ use gpui::{
 
 use super::{
     Choice,
-    check::tab_stop,
     listbox::chosen,
     options::{OnValues, Pick, Popup, step},
     select::{Picker, measure_anchor, moved},
     tags::chip,
 };
 use crate::{
-    primitives::{Icon, IconName},
+    primitives::{Icon, IconName, tab_stop},
     theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
 };
 

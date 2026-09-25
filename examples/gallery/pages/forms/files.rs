@@ -3,10 +3,9 @@ use std::path::PathBuf;
 use ely_gpui_component::forms::{DropZone, FileInput};
 use gpui::{App, IntoElement, ParentElement, Styled, Window, div, px};
 
-use super::choices::{keep, set};
 use crate::{
     probe::probe,
-    ui::{section, specimen, specimens},
+    ui::{keep, section, set, specimen, specimens},
 };
 
 fn names(paths: &[PathBuf]) -> String {

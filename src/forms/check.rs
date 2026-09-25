@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    Animation, AnimationExt, AnyElement, App, ElementId, FocusHandle, InteractiveElement,
-    IntoElement, MouseButton, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement,
-    Styled, Window, div, prelude::*,
+    Animation, AnimationExt, AnyElement, App, ElementId, InteractiveElement, IntoElement,
+    MouseButton, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement, Styled,
+    Window, div, prelude::*,
 };
 
 use super::{
@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{
     motion,
-    primitives::{Icon, IconName},
+    primitives::{Icon, IconName, tab_stop},
     theme::{ActiveTheme, IconSize, Mix, Radius, TextSize},
 };
 
@@ -29,20 +29,6 @@ impl From<bool> for CheckState {
     fn from(on: bool) -> Self {
         if on { Self::On } else { Self::Off }
     }
-}
-
-/// A focus handle kept for `id`, a Tab stop while enabled.
-pub(crate) fn tab_stop(
-    id: ElementId,
-    enabled: bool,
-    window: &mut Window,
-    cx: &mut App,
-) -> FocusHandle {
-    window
-        .use_keyed_state(id, cx, |_, cx| cx.focus_handle())
-        .read(cx)
-        .clone()
-        .tab_stop(enabled)
 }
 
 /// The box alone, shared by checkboxes, cards and lists. `changes` replays its motion.

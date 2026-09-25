@@ -6,9 +6,10 @@ use gpui::{
     prelude::*, transparent_black,
 };
 
-use super::{check::tab_stop, options::OnFlag};
+use super::options::OnFlag;
 use crate::{
     motion,
+    primitives::tab_stop,
     theme::{ActiveTheme, Elevation, Mix, TextSize},
 };
 

@@ -6,8 +6,11 @@ use gpui::{
     Styled, Window, canvas, div, prelude::*, relative,
 };
 
-use super::{check::tab_stop, options::OnNumber};
-use crate::theme::{ActiveTheme, Elevation};
+use super::options::OnNumber;
+use crate::{
+    primitives::tab_stop,
+    theme::{ActiveTheme, Elevation},
+};
 
 /// `value` as a fraction of `min..=max`.
 pub(crate) fn fraction(value: f64, min: f64, max: f64) -> f32 {

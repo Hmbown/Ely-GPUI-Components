@@ -4,28 +4,12 @@ use ely_gpui_component::{
     },
     primitives::IconName,
 };
-use gpui::{App, Entity, IntoElement, ParentElement, SharedString, Styled, Window, div, px};
+use gpui::{App, IntoElement, ParentElement, SharedString, Styled, Window, div, px};
 
 use crate::{
     probe::probe,
-    ui::{code, section, specimen},
+    ui::{code, keep, section, set, specimen},
 };
-
-pub(super) fn keep<T: 'static>(
-    key: &'static str,
-    init: impl FnOnce() -> T,
-    window: &mut Window,
-    cx: &mut App,
-) -> Entity<T> {
-    window.use_keyed_state(key, cx, move |_, _| init())
-}
-
-pub(super) fn set<T: 'static>(state: &Entity<T>, value: T, cx: &mut App) {
-    state.update(cx, |state, cx| {
-        *state = value;
-        cx.notify();
-    });
-}
 
 fn values(list: &[&'static str]) -> Vec<SharedString> {
     list.iter()

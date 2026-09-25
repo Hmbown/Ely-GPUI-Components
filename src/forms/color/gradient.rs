@@ -6,9 +6,10 @@ use gpui::{
     Styled, Window, canvas, div, linear_color_stop, linear_gradient, prelude::*, relative,
 };
 
-use super::{super::check::tab_stop, ColorPicker, swatch::checker};
+use super::{ColorPicker, swatch::checker};
 use crate::{
     layout::seeded::{Seeded, use_seeded},
+    primitives::tab_stop,
     theme::{ActiveTheme, ControlSize, Mix, Radius},
 };
 

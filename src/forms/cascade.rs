@@ -8,12 +8,11 @@ use gpui::{
 
 use super::{
     Choice,
-    check::tab_stop,
     options::{OnValues, float, option_row, surface},
     select::{field_button, field_text},
 };
 use crate::{
-    primitives::{Icon, IconName},
+    primitives::{Icon, IconName, tab_stop},
     theme::{ActiveTheme, ControlSize, IconSize},
 };
 

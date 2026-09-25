@@ -8,11 +8,11 @@ use gpui::{
 
 use super::{
     Choice,
-    check::tab_stop,
     options::{OnValue, Run, step},
 };
 use crate::{
     motion,
+    primitives::tab_stop,
     theme::{ActiveTheme, TextSize},
 };
 

@@ -9,13 +9,10 @@ use gpui::{
     App, AppContext, Entity, IntoElement, ParentElement, Styled, Window, div, prelude::*, px,
 };
 
-use super::{
-    choices::{keep, set},
-    text::field,
-};
+use super::text::field;
 use crate::{
     probe::probe,
-    ui::{section, specimen},
+    ui::{keep, section, set, specimen},
 };
 
 type Saved = (String, String, String, Vec<String>);

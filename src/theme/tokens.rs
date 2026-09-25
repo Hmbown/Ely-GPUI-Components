@@ -218,6 +218,11 @@ impl Theme {
         (px_to_rems(96.0), px_to_rems(200.0))
     }
 
+    /// The line that marks a chosen tab.
+    pub fn tab_indicator(&self) -> Rems {
+        px_to_rems(2.0)
+    }
+
     /// Grab bar on a drawer.
     pub fn grip(&self) -> Size<Rems> {
         size(px_to_rems(36.0), px_to_rems(4.0))

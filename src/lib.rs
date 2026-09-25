@@ -4,6 +4,7 @@ pub mod buttons;
 pub mod forms;
 pub mod layout;
 pub mod motion;
+pub mod navigation;
 pub mod primitives;
 pub mod shell;
 pub mod theme;

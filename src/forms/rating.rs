@@ -9,8 +9,10 @@ use gpui::{
     point, prelude::*, transparent_black,
 };
 
-use super::check::tab_stop;
-use crate::theme::{ActiveTheme, IconSize, Radius};
+use crate::{
+    primitives::tab_stop,
+    theme::{ActiveTheme, IconSize, Radius},
+};
 
 /// A five-point star inside `bounds`, filled or outlined with Lucide's stroke ratio.
 fn star(bounds: Bounds<Pixels>, fill: bool) -> Path<Pixels> {

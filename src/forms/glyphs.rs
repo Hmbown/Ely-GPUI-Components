@@ -9,11 +9,10 @@ use gpui::{
 
 use super::{
     Input, TextInput,
-    check::tab_stop,
     text::{Down, Enter},
 };
 use crate::{
-    primitives::{Icon, IconName, Tooltip},
+    primitives::{Icon, IconName, Tooltip, tab_stop},
     theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
     typography::Emoji,
 };

@@ -1,6 +1,6 @@
 use gpui::{
-    AnyElement, App, Div, Entity, FocusHandle, InteractiveElement, IntoElement, ParentElement,
-    RenderOnce, StyleRefinement, Styled, Window, actions, div,
+    AnyElement, App, Div, ElementId, Entity, FocusHandle, InteractiveElement, IntoElement,
+    ParentElement, RenderOnce, StyleRefinement, Styled, Window, actions, div,
 };
 
 use crate::theme::ActiveTheme;
@@ -133,4 +133,18 @@ pub(crate) fn give_back(state: &Entity<Takeover>, window: &mut Window, cx: &App)
         }
         None => log::info!("focus: overlay closed, nothing was focused before"),
     }
+}
+
+/// A focus handle kept for `id`, a Tab stop while enabled.
+pub(crate) fn tab_stop(
+    id: ElementId,
+    enabled: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> FocusHandle {
+    window
+        .use_keyed_state(id, cx, |_, cx| cx.focus_handle())
+        .read(cx)
+        .clone()
+        .tab_stop(enabled)
 }

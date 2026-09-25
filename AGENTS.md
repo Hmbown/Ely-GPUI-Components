@@ -54,8 +54,10 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - The harness types with `dispatch_keystroke` through `AnyWindowHandle`, which leaves the root view free to redraw.
 - The macOS open panel runs out of process too. Escape does not reach it; the harness sends it `cancel:`.
 - gpui's `test-support` swaps its executor: `block` fails on a real dispatcher. It stays behind this crate's `test-support` feature, never on for the gallery.
-- A tracked `FocusHandle` is a Tab stop only when built with `.tab_stop(true)`. `tab_index` on the div reaches only handles gpui makes itself.
+- A tracked `FocusHandle` is a Tab stop only when built with `.tab_stop(true)`. `tab_index` on the div reaches only handles gpui makes itself. `primitives::tab_stop` keeps one per id.
 - Floating lists go below their anchor, or above when only above has room (`forms::options::float`). gpui's own switch keeps the anchor point, so a flipped list would cover its trigger.
+- A trigger that opens a list goes through `forms::select::listing`: toggle, keys, blur and popup live there, for Select, TabOverflowMenu and Breadcrumb alike.
+- A marker that slides between items (segment thumb, tab line) measures them with `motion::slide` and eases with `glide`.
 - A picker hands focus to its popup on open and back to its trigger on pick or Escape; it closes once focus leaves both (`forms::date::picker`).
 - Motion for a value change keys its animation on `motion::changes`, so it replays per change and stays still on first paint.
 - Thumbs stay inside their component's box: the track is padded by half a thumb (`Slider`, `ColorPicker`, `GradientEditor`).
@@ -63,6 +65,8 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - A rounded box does not clip its children. Each layer inside takes the radius itself; `checker` takes one.
 - Only gpui can build `ExternalPaths` with paths, so drop rules live in `forms::files::dropped`, where tests reach them.
 - gpui runs key bindings before key listeners. A container takes a child's bound key through the action with `capture_action`, as `Form` takes `Submit`.
+- `ScrollHandle::scroll_to_item` runs in the container's prepaint before its bounds are stored, so a first-frame call misfires. Call it from a child's prepaint once the handle has bounds, then request one frame (`navigation::editor_tabs`). Never poll layout with `request_animation_frame`.
+- The test platform never runs next-frame callbacks, and its text metrics are simplified: each character takes a fixed advance. Tests refresh the window in place of the display link, and click where layout does not hang on text, such as padding and slots.
 - Long grids scroll in a `uniform_list`. gpui has no nearest scroll, so a key move up scrolls with `Top` and down with `Bottom` (`forms::glyphs`).
 - Masks reshape edits inside `TextInput::set_fit`, which sees the replaced range and the typed text. A diff after the fact cannot tell typed characters from kept ones.
 - Ids inside a reusable component carry its owner's id or `EntityId`, animation ids too. Twin ids share focus, click and animation state.

@@ -10,13 +10,12 @@ use gpui::{
 };
 
 use super::{
-    check::tab_stop,
     path::choose,
     select::{field_button, field_text},
 };
 use crate::{
     buttons::{Button, ButtonVariant, IconButton},
-    primitives::{Icon, IconName},
+    primitives::{Icon, IconName, tab_stop},
     theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
 };
 

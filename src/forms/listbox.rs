@@ -7,10 +7,13 @@ use gpui::{
 
 use super::{
     Choice,
-    check::{tab_stop, toggled},
+    check::toggled,
     options::{OnValues, Pick, option_row, step},
 };
-use crate::theme::{ActiveTheme, Radius, TextSize};
+use crate::{
+    primitives::tab_stop,
+    theme::{ActiveTheme, Radius, TextSize},
+};
 
 /// `selected` after choosing row `ix`: one row replaces, several toggle.
 pub(crate) fn chosen(

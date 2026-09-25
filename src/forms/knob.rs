@@ -7,11 +7,13 @@ use gpui::{
 };
 
 use super::{
-    check::tab_stop,
     options::OnNumber,
     slider::{fraction, keyed, value_at},
 };
-use crate::theme::{ActiveTheme, Elevation};
+use crate::{
+    primitives::tab_stop,
+    theme::{ActiveTheme, Elevation},
+};
 
 /// Where the dial starts, at lower left, and how far it turns.
 const START: f32 = 0.75 * PI;

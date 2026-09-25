@@ -4,13 +4,10 @@ use ely_gpui_component::{
 };
 use gpui::{App, IntoElement, ParentElement, SharedString, Styled, Window, div, px};
 
-use super::{
-    choices::{keep, set},
-    text::field,
-};
+use super::text::field;
 use crate::{
     probe::probe,
-    ui::{blocked, section, specimen, specimens},
+    ui::{blocked, keep, section, set, specimen, specimens},
 };
 
 fn cities() -> Vec<Choice> {

@@ -8,13 +8,10 @@ use ely_gpui_component::forms::{
 use gpui::{App, Div, IntoElement, ParentElement, SharedString, Styled, Window, div, px};
 use jiff::civil::{Date, DateTime, Time, date, time};
 
-use super::{
-    choices::{keep, set},
-    text::field,
-};
+use super::text::field;
 use crate::{
     probe::probe,
-    ui::{code, section, specimen, specimens},
+    ui::{code, keep, section, set, specimen, specimens},
 };
 
 /// Today, fixed so captures stay the same from day to day.

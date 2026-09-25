@@ -1,5 +1,7 @@
 use ely_gpui_component::theme::{ActiveTheme, TextSize};
-use gpui::{App, Div, FontWeight, IntoElement, ParentElement, SharedString, Styled, div};
+use gpui::{
+    App, Div, Entity, FontWeight, IntoElement, ParentElement, SharedString, Styled, Window, div,
+};
 
 /// Titled block of demos.
 pub fn section(title: impl Into<SharedString>, note: impl Into<SharedString>, cx: &App) -> Div {
@@ -73,4 +75,22 @@ pub fn blocked(text: impl Into<SharedString>, cx: &App) -> impl IntoElement {
         .text_color(theme.colors.warning)
         .child(div().size_1p5().rounded_full().bg(theme.colors.warning))
         .child(text.into())
+}
+
+/// A demo's state, kept across frames under `key`.
+pub fn keep<T: 'static>(
+    key: &'static str,
+    init: impl FnOnce() -> T,
+    window: &mut Window,
+    cx: &mut App,
+) -> Entity<T> {
+    window.use_keyed_state(key, cx, move |_, _| init())
+}
+
+/// Replaces a demo's state and redraws.
+pub fn set<T: 'static>(state: &Entity<T>, value: T, cx: &mut App) {
+    state.update(cx, |state, cx| {
+        *state = value;
+        cx.notify();
+    });
 }
