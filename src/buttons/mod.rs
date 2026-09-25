@@ -11,6 +11,9 @@ mod segmented;
 mod share;
 mod sheet;
 
+#[cfg(all(test, feature = "test-support"))]
+mod tests;
+
 pub use bars::{ActionBar, BulkActionBar};
 pub use button::{Button, ButtonVariant};
 pub use confirm::{ConfirmButton, ConfirmMode};

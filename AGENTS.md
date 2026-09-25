@@ -34,6 +34,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - One component, one home. Duplicates point to it.
 - Fail fast. No silent fallbacks. Log state changes with `log`.
 - Files stay at or under 500 lines. Comments are one short line, and rare.
+- A repeating animation (spinner, breath, sweep) holds still under reduced motion instead of shortening, or it would spin at 1 ms a turn.
 - `motion::duration()` honors reduced motion. Springs overshoot: use them inside animators, never as gpui easings, because gpui asserts eased values stay in `0..=1`.
 - `svg()` paints only with its own `text_color`. `Icon` always sets one.
 - Buttons stay out of focus on click (`prevent_default` on mouse down). Tab still reaches them.
@@ -44,6 +45,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - `occlude()` blocks the pointer for everything painted before it, its own ancestors too. Put it on the outermost box that should stop the pointer, as the toast stack does, or the ancestors' hover never fires.
 - gpui sends a drag's moves to every listener of its type. Each drag payload carries its owner's `EntityId`, and handlers check it.
 - A component that takes a starting value from its owner keeps it in `layout::seeded`: a new value from the owner replaces local drags.
+- The capture harness turns on reduced motion, so shots are still: repeating motion rests on one frame, and a shimmer shows no band.
 - The capture harness finds gpui windows by handle through `raw-window-handle`. AppKit popups, which gpui does not own, come from the window list by process and level.
 - Posted events cannot move a macOS window, so window drags are not scripted. `drag_region` follows Zed's title bar.
 - An overlay takes focus with `primitives::take_focus` and returns it with `give_back` on every close path. While open, it takes focus back whenever the focused element leaves the tree (gpui's `on_focus_lost`).

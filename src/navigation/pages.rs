@@ -1,13 +1,16 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, ElementId, InteractiveElement, IntoElement, ParentElement, RenderOnce, Styled, Window, div,
+    App, ElementId, InteractiveElement, IntoElement, ParentElement, RenderOnce, Styled, Window,
+    div, prelude::*,
 };
 
 use crate::{
     buttons::{Button, ButtonVariant, IconButton},
+    forms::Run,
     primitives::IconName,
-    theme::{ActiveTheme, ControlSize},
+    theme::{ActiveTheme, ControlSize, TextSize},
+    typography::format::{self, Separators},
 };
 
 /// The first, the last, `current` and `near` pages either side; `None` marks a gap of two or more.
@@ -162,5 +165,77 @@ mod tests {
         assert_eq!(shown(1, 1), "1");
         assert_eq!(shown(2, 2), "1 2");
         assert_eq!(shown(3, 5), "1 2 3 4 5");
+    }
+}
+
+/// Ends a list that loads in pages: a button that spins while more come, and how many show. Once all show, only the count stays.
+#[derive(IntoElement)]
+pub struct LoadMore {
+    id: ElementId,
+    loading: bool,
+    shown: Option<(usize, usize)>,
+    on_load: Option<Run>,
+}
+
+impl LoadMore {
+    pub fn new(id: impl Into<ElementId>, loading: bool) -> Self {
+        Self {
+            id: id.into(),
+            loading,
+            shown: None,
+            on_load: None,
+        }
+    }
+
+    /// How many show, of how many there are.
+    pub fn shown(mut self, shown: usize, total: usize) -> Self {
+        assert!(shown <= total, "{shown} shown of only {total}");
+        self.shown = Some((shown, total));
+        self
+    }
+
+    pub fn on_load(mut self, handler: impl Fn(&mut Window, &mut App) + 'static) -> Self {
+        self.on_load = Some(Rc::new(handler));
+        self
+    }
+}
+
+impl RenderOnce for LoadMore {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = cx.theme();
+        let count = |value: usize| format::number(value as f64, 0, Separators::EN);
+        let done = self.shown.is_some_and(|(shown, total)| shown == total);
+        let (id, on_load) = (self.id.clone(), self.on_load);
+        div()
+            .id(self.id.clone())
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap_2()
+            .py_4()
+            .when(!done, |more| {
+                more.child(
+                    Button::new((self.id.clone(), "button"), "Load more")
+                        .loading(self.loading)
+                        .on_click(move |_, window, cx| {
+                            log::info!("load more {id:?}: asked");
+                            if let Some(on_load) = &on_load {
+                                on_load(window, cx);
+                            }
+                        }),
+                )
+            })
+            .when_some(self.shown, |more, (shown, total)| {
+                more.child(
+                    div()
+                        .text_size(theme.text_size(TextSize::Xs))
+                        .text_color(theme.colors.fg_subtle)
+                        .child(if done {
+                            format!("All {} shown", count(total))
+                        } else {
+                            format!("Showing {} of {}", count(shown), count(total))
+                        }),
+                )
+            })
     }
 }

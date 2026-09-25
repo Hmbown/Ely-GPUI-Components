@@ -38,8 +38,9 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T09b Overlays · Guides & floats
 - [x] T10a Feedback · Messages
 - [x] T10b Feedback · States
-- [ ] T11a Loading — `tasks/ch11-20.md`
-- [ ] T11b Motion
+- [x] T11a Loading · Spinners & skeletons — `tasks/ch11-20.md`
+- [ ] T11b Loading · Progress & states
+- [ ] T11c Motion
 - [ ] T12 Data Display
 - [ ] T13 Lists & Trees
 - [ ] T14 Tables
@@ -166,3 +167,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T10b | 1 | FAIL | the state view's prose and detail widths were literals again, and pad put zeros ahead of a minus sign |
 | T10b | 2 | FAIL | the error chain did not wrap inside its narrowed box, and ConnectionStatus's doc said OfflineIndicator shows only while offline |
 | T10b | 3 | FAIL | a wrapped body did not push the actions down; the prose is now a plain block, and a test compares a short and a long body's height (fixed after the cap) |
+| T11a | 1 | FAIL | the shimmer band crossed the container's rounded corners, and the skeleton card's picture height was a literal |
+| T11a | 2 | FAIL | a rounded_full shimmer used the raw 9999px radius, so the band's path left the box |
+| T11a | 3 | PASS | |

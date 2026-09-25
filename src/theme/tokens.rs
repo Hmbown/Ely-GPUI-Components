@@ -248,6 +248,11 @@ impl Theme {
         px_to_rems(360.0)
     }
 
+    /// A picture's height in a skeleton card.
+    pub fn skeleton_media(&self) -> Rems {
+        px_to_rems(128.0)
+    }
+
     /// Widest a centered block of prose runs, such as an empty state's help.
     pub fn prose_width(&self) -> Rems {
         px_to_rems(320.0)

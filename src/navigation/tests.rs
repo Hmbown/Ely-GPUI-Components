@@ -5,8 +5,8 @@ use gpui::{
 };
 
 use super::{
-    BackForwardNavigation, Breadcrumb, Crumb, EditorTab, EditorTabs, GoToLine, NavigationMenu,
-    Tabs, Wizard,
+    BackForwardNavigation, Breadcrumb, Crumb, EditorTab, EditorTabs, GoToLine, LoadMore,
+    NavigationMenu, Tabs, Wizard,
 };
 use crate::{
     forms::{Choice, TextInput},
@@ -390,4 +390,51 @@ fn enter_jumps_to_a_line_and_column(cx: &mut TestAppContext) {
     cx.simulate_input("12:4");
     cx.simulate_keystrokes("enter");
     assert_eq!(view.read_with(cx, |view, _| view.to), Some((12, Some(4))));
+}
+
+/// A list's end that loads more, counting what it asked.
+struct More {
+    loading: bool,
+    shown: usize,
+    asks: usize,
+}
+
+impl Render for More {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let view = cx.entity();
+        LoadMore::new("more", self.loading)
+            .shown(self.shown, 30)
+            .on_load(move |_, cx| view.update(cx, |more, _| more.asks += 1))
+    }
+}
+
+#[gpui::test]
+fn load_more_asks_once_per_press_and_goes_once_all_show(cx: &mut TestAppContext) {
+    setup(cx);
+    let (view, cx) = cx.add_window_view(|_, _| More {
+        loading: false,
+        shown: 10,
+        asks: 0,
+    });
+    cx.update(|window, _| window.focus_next());
+    press("enter", cx);
+    assert_eq!(view.read_with(cx, |more, _| more.asks), 1);
+    view.update(cx, |more, cx| {
+        more.loading = true;
+        cx.notify();
+    });
+    press("enter", cx);
+    assert_eq!(view.read_with(cx, |more, _| more.asks), 1, "busy");
+    view.update(cx, |more, cx| {
+        more.loading = false;
+        more.shown = 30;
+        cx.notify();
+    });
+    cx.update(|window, _| window.focus_next());
+    press("enter", cx);
+    assert_eq!(
+        view.read_with(cx, |more, _| more.asks),
+        1,
+        "all shown, no button"
+    );
 }

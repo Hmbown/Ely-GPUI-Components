@@ -21,7 +21,7 @@ pub use history::BackForwardNavigation;
 pub use menu::NavigationMenu;
 pub use nav::{NavGroup, NavItem};
 pub use overflow::TabOverflowMenu;
-pub use pages::Pagination;
+pub use pages::{LoadMore, Pagination};
 pub use palette::{
     Command, CommandPalette, QuickLauncher, QuickOpen, QuickSwitcher, SearchPalette,
 };

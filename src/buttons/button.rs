@@ -4,6 +4,7 @@ use gpui::{
 };
 
 use crate::{
+    motion::Spinner,
     primitives::{FocusRing, Icon, IconName},
     theme::{ActiveTheme, ControlSize, IconSize, Mix, Palette, Radius, TextSize},
     typography::keys::{Platform, keystroke_labels},
@@ -119,6 +120,7 @@ pub struct Button {
     variant: ButtonVariant,
     size: ControlSize,
     disabled: bool,
+    loading: bool,
     full_width: bool,
     pub(crate) slot: Option<Slot>,
     on_click: Option<ClickHandler>,
@@ -135,6 +137,7 @@ impl Button {
             variant: ButtonVariant::default(),
             size: ControlSize::default(),
             disabled: false,
+            loading: false,
             full_width: false,
             slot: None,
             on_click: None,
@@ -178,6 +181,12 @@ impl Button {
         self
     }
 
+    /// Spins in place of its content, at the same width, and ignores presses. Tab still reaches it.
+    pub fn loading(mut self, loading: bool) -> Self {
+        self.loading = loading;
+        self
+    }
+
     pub fn full_width(mut self) -> Self {
         self.full_width = true;
         self
@@ -201,6 +210,23 @@ impl RenderOnce for Button {
         let icon = |name| Icon::new(name).size(icon_size).color(tone.fg);
         let radius = theme.radius(Radius::Md);
         let hint = self.shortcut.as_ref().map(shortcut_text);
+        let spinner = (self.id.clone(), "spinner");
+        let parts = div()
+            .flex()
+            .items_center()
+            .gap_1p5()
+            .when_some(self.icon, |el, name| el.child(icon(name)))
+            .when(!self.label.is_empty(), |el| el.child(self.label))
+            .when_some(self.trailing_icon, |el, name| el.child(icon(name)))
+            .when_some(hint, |el, hint| {
+                el.child(
+                    div()
+                        .pl_1()
+                        .font_weight(FontWeight::NORMAL)
+                        .text_color(tone.fg.opacity(0.55))
+                        .child(hint),
+                )
+            });
 
         div()
             .id(self.id)
@@ -224,21 +250,29 @@ impl RenderOnce for Button {
             .text_color(tone.fg)
             .bg(tone.bg)
             .when(self.full_width, |el| el.w_full())
-            .when_some(self.icon, |el, name| el.child(icon(name)))
-            .when(!self.label.is_empty(), |el| el.child(self.label))
-            .when_some(self.trailing_icon, |el, name| el.child(icon(name)))
-            .when_some(hint, |el, hint| {
-                el.child(
+            .map(|el| {
+                if !self.loading {
+                    return el.child(parts);
+                }
+                el.relative().child(parts.invisible()).child(
                     div()
-                        .pl_1()
-                        .font_weight(FontWeight::NORMAL)
-                        .text_color(tone.fg.opacity(0.55))
-                        .child(hint),
+                        .absolute()
+                        .inset_0()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .child(Spinner::new(spinner).size(icon_size).color(tone.fg)),
                 )
             })
             .map(|el| {
                 if self.disabled {
                     return el.opacity(0.45).cursor_not_allowed();
+                }
+                if self.loading {
+                    return el
+                        .tab_index(0)
+                        .focus_ring(cx)
+                        .on_mouse_down(MouseButton::Left, |_, window, _| window.prevent_default());
                 }
                 el.cursor_pointer()
                     .tab_index(0)
