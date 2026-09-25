@@ -284,6 +284,30 @@ impl Theme {
         px_to_rems(128.0)
     }
 
+    /// A QR code's tile.
+    pub fn qr_code(&self) -> Rems {
+        px_to_rems(160.0)
+    }
+
+    /// The narrowest bar of a barcode; the others are whole multiples.
+    pub fn barcode_module(&self) -> Rems {
+        px_to_rems(2.0)
+    }
+
+    pub fn barcode_height(&self) -> Rems {
+        px_to_rems(56.0)
+    }
+
+    /// A gauge's dial.
+    pub fn gauge(&self) -> Rems {
+        px_to_rems(144.0)
+    }
+
+    /// The track of a meter or a usage bar.
+    pub fn meter_track(&self) -> Rems {
+        px_to_rems(6.0)
+    }
+
     /// One repeat of a watermark's text.
     pub fn watermark_tile(&self) -> Size<Rems> {
         size(px_to_rems(200.0), px_to_rems(96.0))

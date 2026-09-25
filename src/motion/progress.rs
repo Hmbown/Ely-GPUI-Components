@@ -19,7 +19,12 @@ struct Glide {
 }
 
 /// Keeps `value`'s last change; returns where to glide from, and the change's number.
-fn glide(id: &ElementId, value: f32, window: &mut Window, cx: &mut App) -> (f32, usize) {
+pub(crate) fn follow(
+    id: &ElementId,
+    value: f32,
+    window: &mut Window,
+    cx: &mut App,
+) -> (f32, usize) {
     let state = window.use_keyed_state((id.clone(), "glide"), cx, |_, _| Glide {
         from: value,
         to: value,
@@ -136,7 +141,7 @@ impl RenderOnce for ProgressBar {
                 )
                 .into_any_element();
         };
-        let (from, turn) = glide(&self.id, value, window, cx);
+        let (from, turn) = follow(&self.id, value, window, cx);
         let (buffer, segments) = (self.buffer, self.segments);
         let lanes = move |at: f32| {
             (0..segments).map(move |ix| {
@@ -196,7 +201,7 @@ impl ProgressRing {
 impl RenderOnce for ProgressRing {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let (value, percent) = (self.value, self.percent);
-        let (from, turn) = glide(&self.id, value, window, cx);
+        let (from, turn) = follow(&self.id, value, window, cx);
         let theme = cx.theme();
         let (fill, track) = (theme.colors.fg, theme.colors.border);
         let text = theme.text_size(TextSize::Xs);

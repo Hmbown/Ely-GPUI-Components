@@ -1,3 +1,4 @@
+mod measures;
 mod media;
 mod people;
 mod records;
@@ -48,6 +49,9 @@ const SCRIPT: &[Step] = &[
     Step::UpAt("before-after", 390.0, 160.0),
     Step::Wait(200),
     Step::Shot("before-after-drag"),
+    Step::Click("measures-next"),
+    Step::Wait(400),
+    Step::Shot("measures-next"),
     Step::Rest,
 ];
 
@@ -67,5 +71,9 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(media::gallery(cx))
         .child(media::before_after(cx))
         .child(media::watermark(window, cx))
+        .child(measures::codes(cx))
+        .child(measures::measures(window, cx))
+        .child(measures::stars(cx))
+        .child(measures::comparison(cx))
         .into_any_element()
 }

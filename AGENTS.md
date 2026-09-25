@@ -8,6 +8,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - gpui 0.2.2 from crates.io. Feature `runtime_shaders` is on by default: machines without Xcode lack the Metal compiler.
 - Assets, embedded with `rust-embed`: Lucide 1.48.0 icons (ISC), Inter 4.1 and JetBrains Mono 2.304 (OFL).
 - Catalog data: `emojis` (Unicode emoji), `isolang` (ISO 639, native names), `isocountry` (ISO 3166), `iso_currency` (ISO 4217, also minor units for money).
+- Codes: `qrcode` (QR) and `barcoders` (Code 128, EAN-13), both MIT OR Apache-2.0, default features off.
 - macOS extras (tray icon, Dock badge) call AppKit through `cocoa` 0.26 and `objc` 0.2, the crates gpui already links.
 - Gallery: `examples/gallery`. Website: `frontend/` (Vite 8, pnpm), built after the components.
 
@@ -80,6 +81,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - gpui runs key bindings before key listeners. A container takes a child's bound key through the action with `capture_action`, as `Form` takes `Submit`.
 - `ScrollHandle::scroll_to_item` runs in the container's prepaint before its bounds are stored, so a first-frame call misfires. Call it from a child's prepaint once the handle has bounds, then request one frame (`navigation::editor_tabs`). Never poll layout with `request_animation_frame`.
 - gpui animations run on the wall clock; timers run on the executor's clock, which tests advance by hand. A test that needs an animation settled turns on the theme's reduced motion. Clocks read `background_executor().now()` and wake only their own view.
+- Machine-read marks, QR codes and barcodes, paint `ink` on `paper`: dark on light in both themes, so cameras read them.
 - Reduced motion shortens animations to 1ms on the wall clock. Tests sleep past it between refreshes to see where one ends.
 - The test platform never runs next-frame callbacks, and its text metrics are simplified: each character takes a fixed advance. Tests refresh the window in place of the display link, and click where layout does not hang on text, such as padding and slots.
 - An absolute element with no insets sits where it would flow: after the content in a block, inside the padding in a flex box. A canvas that measures its parent pins itself with `.top_0().left_0()`.

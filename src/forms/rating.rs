@@ -1,46 +1,16 @@
-use std::{
-    f32::consts::{FRAC_PI_2, PI},
-    rc::Rc,
-};
+use std::rc::Rc;
 
 use gpui::{
     App, Bounds, ElementId, Hsla, InteractiveElement, IntoElement, MouseButton, ParentElement,
-    Path, PathBuilder, Pixels, RenderOnce, StatefulInteractiveElement, Styled, Window, canvas, div,
-    point, prelude::*, transparent_black,
+    Pixels, RenderOnce, StatefulInteractiveElement, Styled, Window, canvas, div, prelude::*,
+    transparent_black,
 };
 
 use crate::{
+    data_display::star,
     primitives::tab_stop,
     theme::{ActiveTheme, IconSize, Radius},
 };
-
-/// A five-point star inside `bounds`, filled or outlined with Lucide's stroke ratio.
-fn star(bounds: Bounds<Pixels>, fill: bool) -> Path<Pixels> {
-    let side = bounds.size.width.min(bounds.size.height);
-    let stroke = side / 12.0;
-    let center = bounds.center();
-    let outer = side / 2.0 - stroke;
-    let mut path = if fill {
-        PathBuilder::fill()
-    } else {
-        PathBuilder::stroke(stroke)
-    };
-    for k in 0..10 {
-        let radius = if k % 2 == 0 { outer } else { outer * 0.5 };
-        let angle = -FRAC_PI_2 + k as f32 * PI / 5.0;
-        let at = point(
-            center.x + radius * angle.cos(),
-            center.y + radius * angle.sin(),
-        );
-        if k == 0 {
-            path.move_to(at);
-        } else {
-            path.line_to(at);
-        }
-    }
-    path.close();
-    path.build().expect("a star is a simple closed path")
-}
 
 fn paint_star(bounds: Bounds<Pixels>, filled: bool, color: Hsla, window: &mut Window) {
     if filled {

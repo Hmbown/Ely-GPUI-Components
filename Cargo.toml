@@ -15,6 +15,7 @@ test-support = ["gpui/test-support"]
 
 [dependencies]
 anyhow = "1"
+barcoders = { version = "2", default-features = false, features = ["std"] }
 emojis = "0.9"
 gpui = "0.2.2"
 iso_currency = { version = "0.7", features = ["iterator"] }
@@ -22,6 +23,7 @@ isocountry = "0.3"
 isolang = { version = "2.4", features = ["local_names", "list_languages"] }
 jiff = "0.2"
 log = "0.4"
+qrcode = { version = "0.14", default-features = false }
 regex = "1"
 rust-embed = "8.12"
 serde = { version = "1", features = ["derive"] }

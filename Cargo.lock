@@ -545,6 +545,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "barcoders"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3826fb6e98ec72c0c0db8c9a40af4932d16793021027469857e84c1b50a1e8f"
+
+[[package]]
 name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1543,6 +1549,7 @@ name = "ely-gpui-component"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "barcoders",
  "block",
  "cocoa 0.26.0",
  "core-foundation 0.10.0",
@@ -1557,6 +1564,7 @@ dependencies = [
  "jiff",
  "log",
  "objc",
+ "qrcode",
  "raw-window-handle",
  "regex",
  "rust-embed",
@@ -4330,6 +4338,12 @@ checksum = "7f6d64c71eb498fe9eae14ce4ec935c555749aef511cca85b5568910d6e48001"
 dependencies = [
  "bytemuck",
 ]
+
+[[package]]
+name = "qrcode"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d68782463e408eb1e668cf6152704bd856c78c5b6417adaee3203d8f4c1fc9ec"
 
 [[package]]
 name = "quick-error"
