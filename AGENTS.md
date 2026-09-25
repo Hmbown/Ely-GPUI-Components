@@ -7,6 +7,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - Rust 1.95, edition 2024. One crate: `ely-gpui-component`.
 - gpui 0.2.2 from crates.io. Feature `runtime_shaders` is on by default: machines without Xcode lack the Metal compiler.
 - Assets, embedded with `rust-embed`: Lucide 1.48.0 icons (ISC), Inter 4.1 and JetBrains Mono 2.304 (OFL).
+- Catalog data: `emojis` (Unicode emoji), `isolang` (ISO 639, native names), `isocountry` (ISO 3166), `iso_currency` (ISO 4217, also minor units for money).
 - macOS extras (tray icon, Dock badge) call AppKit through `cocoa` 0.26 and `objc` 0.2, the crates gpui already links.
 - Gallery: `examples/gallery`. Website: `frontend/` (Vite 8, pnpm), built after the components.
 
@@ -61,6 +62,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - gpui's `Hsla::opacity` scales alpha; `alpha` sets it.
 - A rounded box does not clip its children. Each layer inside takes the radius itself; `checker` takes one.
 - Only gpui can build `ExternalPaths` with paths, so drop rules live in `forms::files::dropped`, where tests reach them.
+- Long grids scroll in a `uniform_list`. gpui has no nearest scroll, so a key move up scrolls with `Top` and down with `Bottom` (`forms::glyphs`).
 - Masks reshape edits inside `TextInput::set_fit`, which sees the replaced range and the typed text. A diff after the fact cannot tell typed characters from kept ones.
 - Ids inside a reusable component carry its owner's id or `EntityId`. Twin ids share focus and click state.
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.

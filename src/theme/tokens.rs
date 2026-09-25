@@ -266,6 +266,11 @@ impl Theme {
         px_to_rems(152.0)
     }
 
+    /// A signature pad's height and its ink's width.
+    pub fn signature(&self) -> (Rems, Rems) {
+        (px_to_rems(160.0), px_to_rems(2.0))
+    }
+
     /// Tallest a list grows before it scrolls.
     pub fn list_max_height(&self) -> Rems {
         px_to_rems(280.0)

@@ -16,12 +16,13 @@ use crate::{
     theme::{ActiveTheme, ControlSize, IconSize},
 };
 
-/// Rows whose label holds `query`, ignoring case. All rows for an empty query.
+/// Rows whose label or note holds `query`, ignoring case. All rows for an empty query.
 pub(crate) fn matching(choices: &[Choice], query: &str) -> Vec<Choice> {
     let query = query.trim().to_lowercase();
+    let holds = |text: &SharedString| text.to_lowercase().contains(&query);
     choices
         .iter()
-        .filter(|choice| choice.label.to_lowercase().contains(&query))
+        .filter(|choice| holds(&choice.label) || choice.note.as_ref().is_some_and(holds))
         .cloned()
         .collect()
 }
@@ -271,7 +272,7 @@ mod tests {
         let rows = [
             Choice::new("ber", "Berlin"),
             Choice::new("lis", "Lisbon"),
-            Choice::new("oslo", "Oslo"),
+            Choice::new("oslo", "Oslo").note("NO"),
         ];
         let labels = |query| {
             matching(&rows, query)
@@ -282,5 +283,6 @@ mod tests {
         assert_eq!(labels("LI"), ["Berlin", "Lisbon"]);
         assert_eq!(labels(""), ["Berlin", "Lisbon", "Oslo"]);
         assert!(labels("xyz").is_empty());
+        assert_eq!(labels("no"), ["Oslo"]);
     }
 }

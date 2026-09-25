@@ -52,15 +52,17 @@ pub fn group_digits(digits: &str, group: char) -> String {
 
 /// ISO 4217 code to symbol, minor units, and whether a space follows.
 pub fn currency_parts(code: &str) -> (&str, usize, bool) {
+    let places = iso_currency::Currency::from_code(code)
+        .and_then(|currency| currency.exponent())
+        .map_or(2, usize::from);
     match code {
-        "USD" => ("$", 2, false),
-        "EUR" => ("€", 2, false),
-        "GBP" => ("£", 2, false),
-        "JPY" => ("¥", 0, false),
-        "CNY" => ("¥", 2, false),
-        "KRW" => ("₩", 0, false),
-        "INR" => ("₹", 2, false),
-        _ => (code, 2, true),
+        "USD" => ("$", places, false),
+        "EUR" => ("€", places, false),
+        "GBP" => ("£", places, false),
+        "JPY" | "CNY" => ("¥", places, false),
+        "KRW" => ("₩", places, false),
+        "INR" => ("₹", places, false),
+        _ => (code, places, true),
     }
 }
 
@@ -201,6 +203,8 @@ mod tests {
         assert_eq!(currency(-42.0, "EUR"), "−€42.00");
         assert_eq!(currency(1500.4, "JPY"), "¥1,500");
         assert_eq!(currency(9.99, "CHF"), "CHF 9.99");
+        assert_eq!(currency(1.5, "BHD"), "BHD 1.500");
+        assert_eq!(currency(25000.0, "VND"), "VND 25,000");
     }
 
     #[test]

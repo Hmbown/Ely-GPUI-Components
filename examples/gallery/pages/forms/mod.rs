@@ -4,6 +4,7 @@ mod dates;
 mod files;
 mod formats;
 mod numbers;
+mod other;
 mod pickers;
 mod rich;
 mod text;
@@ -244,6 +245,60 @@ const SCRIPT: &[Step] = &[
     Step::CancelPanel,
     Step::Wait(600),
     Step::Shot("files"),
+    Step::DownAt("signature", 40.0, 100.0),
+    Step::DragTo("signature", 70.0, 50.0),
+    Step::DragTo("signature", 100.0, 110.0),
+    Step::DragTo("signature", 130.0, 55.0),
+    Step::DragTo("signature", 160.0, 105.0),
+    Step::DragTo("signature", 210.0, 60.0),
+    Step::DragTo("signature", 250.0, 100.0),
+    Step::DragTo("signature", 320.0, 80.0),
+    Step::UpAt("signature", 320.0, 80.0),
+    Step::Wait(300),
+    Step::Shot("signature"),
+    Step::Click("code"),
+    Step::Key("secondary-a"),
+    Step::Type("let total = price(3) * 1.2; // tax"),
+    Step::Click("json"),
+    Step::Key("secondary-a"),
+    Step::Type("{\"name\": \"Ely\", \"size\": 3,"),
+    Step::Wait(300),
+    Step::Shot("code-json"),
+    Step::DownAt("font", 100.0, 14.0),
+    Step::UpAt("font", 100.0, 14.0),
+    Step::Key("secondary-a"),
+    Step::Type("mono"),
+    Step::Wait(300),
+    Step::Shot("font"),
+    Step::Key("enter"),
+    Step::Wait(300),
+    Step::DownAt("icons", 100.0, 14.0),
+    Step::UpAt("icons", 100.0, 14.0),
+    Step::Key("secondary-a"),
+    Step::Type("arrow"),
+    Step::Key("down"),
+    Step::Key("right"),
+    Step::Key("down"),
+    Step::Wait(300),
+    Step::Shot("icons"),
+    Step::Key("enter"),
+    Step::DownAt("emoji", 100.0, 14.0),
+    Step::UpAt("emoji", 100.0, 14.0),
+    Step::Key("secondary-a"),
+    Step::Type("heart"),
+    Step::Key("down"),
+    Step::Key("right"),
+    Step::Wait(300),
+    Step::Shot("emoji"),
+    Step::Key("enter"),
+    Step::Wait(300),
+    Step::Click("country"),
+    Step::Key("secondary-a"),
+    Step::Type("jap"),
+    Step::Wait(300),
+    Step::Shot("country"),
+    Step::Key("enter"),
+    Step::Wait(300),
     Step::Rest,
 ];
 
@@ -291,5 +346,10 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(colors::swatches(window, cx))
         .child(colors::gradient(window, cx))
         .child(files::files(window, cx))
+        .child(other::signature(window, cx))
+        .child(other::code(window, cx))
+        .child(other::font(window, cx))
+        .child(other::glyphs(window, cx))
+        .child(other::regional(window, cx))
         .into_any_element()
 }

@@ -17,6 +17,9 @@ test-support = ["gpui/test-support"]
 anyhow = "1"
 emojis = "0.9"
 gpui = "0.2.2"
+iso_currency = { version = "0.7", features = ["iterator"] }
+isocountry = "0.3"
+isolang = { version = "2.4", features = ["local_names", "list_languages"] }
 jiff = "0.2"
 log = "0.4"
 regex = "1"
