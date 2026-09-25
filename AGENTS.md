@@ -85,6 +85,9 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - A layer over pressable content that must still pass scrolls to its ancestors uses `block_mouse_except_scroll`; `occlude` hides them from scrolls too.
 - Trackpad momentum arrives as `TouchPhase::Moved` after `Ended`, so a gesture acts only between `Started` and `Ended` (`lists::SwipeableListItem`).
 - Quartz scroll events carry no window. The harness hands them to the window itself, placed in window points (`Step::Swipe`).
+- A chevron that opens and closes is `primitives::Disclosure`.
+- `uniform_list` does not stretch its rows; each row sets `w_full`.
+- Chapters import only earlier chapters, so a select of tree nodes lives in `lists` (`TreeSelect`) and reaches `forms::listing`.
 - Reduced motion shortens animations to 1ms on the wall clock. Tests sleep past it between refreshes to see where one ends.
 - The test platform never runs next-frame callbacks, and its text metrics are simplified: each character takes a fixed advance. Tests refresh the window in place of the display link, and click where layout does not hang on text, such as padding and slots.
 - An absolute element with no insets sits where it would flow: after the content in a block, inside the padding in a flex box. A canvas that measures its parent pins itself with `.top_0().left_0()`.

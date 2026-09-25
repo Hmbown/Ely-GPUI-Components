@@ -1,14 +1,12 @@
 use gpui::{
-    Animation, AnimationExt, AnyElement, App, ElementId, FontWeight, InteractiveElement,
-    IntoElement, ParentElement, RenderOnce, SharedString, StatefulInteractiveElement, Styled,
-    Window, div, prelude::*, radians,
+    AnyElement, App, ElementId, FontWeight, InteractiveElement, IntoElement, ParentElement,
+    RenderOnce, SharedString, StatefulInteractiveElement, Styled, Window, div, prelude::*,
 };
 
 use crate::{
     layout::{Collapsible, seeded::use_seeded},
-    motion,
-    primitives::{Icon, IconName},
-    theme::{ActiveTheme, ControlSize, IconSize, TextSize},
+    primitives::Disclosure,
+    theme::{ActiveTheme, ControlSize, TextSize},
 };
 
 /// Labels and their values, one pair a row with the labels in a quiet column, or stacked with each label above its value.
@@ -149,15 +147,6 @@ impl RenderOnce for PropertyGrid {
                 )
             })
             .collect();
-        let turns: Vec<_> = folds
-            .iter()
-            .enumerate()
-            .map(|(ix, fold)| {
-                let shown = fold.read(cx).value;
-                motion::changes((self.id.clone(), format!("turns-{ix}")), shown, window, cx)
-            })
-            .collect();
-        let length = motion::duration(motion::FAST, cx);
         let theme = cx.theme();
         let colors = &theme.colors;
         let row_height = theme.control_height(ControlSize::Md);
@@ -171,22 +160,7 @@ impl RenderOnce for PropertyGrid {
                 |(ix, PropertyGroup { title, rows, .. })| {
                     let shown = folds[ix].read(cx).value;
                     let (toggle, key) = (folds[ix].clone(), title.clone());
-                    let turn = |share: f32| radians(share * std::f32::consts::FRAC_PI_2);
-                    let chevron = Icon::new(IconName::ChevronRight)
-                        .size(IconSize::Xs)
-                        .color(colors.fg_subtle);
-                    let chevron = match turns[ix] {
-                        0 => chevron
-                            .rotate(turn(if shown { 1.0 } else { 0.0 }))
-                            .into_any_element(),
-                        changes => chevron
-                            .with_animation(
-                                (id.clone(), format!("chevron-{ix}-{changes}")),
-                                Animation::new(length).with_easing(motion::ease_out_cubic),
-                                move |icon, t| icon.rotate(turn(if shown { t } else { 1.0 - t })),
-                            )
-                            .into_any_element(),
-                    };
+                    let chevron = Disclosure::new((id.clone(), format!("chevron-{ix}")), shown);
                     div()
                         .when(ix > 0, |group| {
                             group.border_t_1().border_color(colors.border)

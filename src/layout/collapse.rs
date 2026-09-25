@@ -3,13 +3,13 @@ use std::time::Instant;
 use gpui::{
     Animation, AnimationExt, AnyElement, App, ElementId, Entity, FontWeight, InteractiveElement,
     IntoElement, ParentElement, Pixels, RenderOnce, SharedString, StatefulInteractiveElement,
-    Styled, Window, canvas, div, radians,
+    Styled, Window, canvas, div,
 };
 use smallvec::SmallVec;
 
 use crate::{
     motion,
-    primitives::{FocusRing, Icon, IconName},
+    primitives::{Disclosure, FocusRing},
     theme::{ActiveTheme, IconSize, TextSize},
 };
 
@@ -126,7 +126,6 @@ impl ParentElement for AccordionItem {
 #[derive(Default)]
 struct Folds {
     open: Vec<bool>,
-    toggles: Vec<u64>,
 }
 
 /// Stacked items that fold; one open at a time unless `multiple`.
@@ -171,25 +170,21 @@ impl RenderOnce for Accordion {
         let first_open = self.first_open;
         let state = window.use_keyed_state(self.id.clone(), cx, |_, _| Folds {
             open: (0..count).map(|ix| first_open && ix == 0).collect(),
-            toggles: vec![0; count],
         });
         if state.read(cx).open.len() != count {
-            state.update(cx, |folds, _| {
-                folds.open.resize(count, false);
-                folds.toggles.resize(count, 0);
-            });
+            state.update(cx, |folds, _| folds.open.resize(count, false));
         }
         let theme = cx.theme();
         let (border, muted) = (theme.colors.border, theme.colors.fg_muted);
         let title_size = theme.text_size(TextSize::Base);
         let multiple = self.multiple;
-        let duration = motion::duration(motion::FAST, cx);
+        let id = self.id.clone();
         let folds = state.read(cx);
         let rows: Vec<_> = self
             .items
             .into_iter()
             .enumerate()
-            .map(|(ix, item)| (ix, item, folds.open[ix], folds.toggles[ix]))
+            .map(|(ix, item)| (ix, item, folds.open[ix]))
             .collect();
         div()
             .id(self.id)
@@ -197,19 +192,11 @@ impl RenderOnce for Accordion {
             .flex_col()
             .border_t_1()
             .border_color(border)
-            .children(rows.into_iter().map(|(ix, item, open, toggles)| {
+            .children(rows.into_iter().map(|(ix, item, open)| {
                 let toggle = state.clone();
-                let chevron = Icon::new(IconName::ChevronRight)
+                let chevron = Disclosure::new((id.clone(), format!("chevron-{ix}")), open)
                     .size(IconSize::Sm)
-                    .color(muted)
-                    .with_animation(
-                        ("chevron", toggles),
-                        Animation::new(duration).with_easing(motion::ease_out_cubic),
-                        move |icon, t| {
-                            let turn = if open { t } else { 1.0 - t };
-                            icon.rotate(radians(turn * std::f32::consts::FRAC_PI_2))
-                        },
-                    );
+                    .color(muted);
                 div()
                     .border_b_1()
                     .border_color(border)
@@ -239,10 +226,7 @@ impl RenderOnce for Accordion {
                                         } else {
                                             *open && (multiple || !now)
                                         };
-                                        if next != *open {
-                                            *open = next;
-                                            folds.toggles[other] += 1;
-                                        }
+                                        *open = next;
                                     }
                                     cx.notify();
                                 })

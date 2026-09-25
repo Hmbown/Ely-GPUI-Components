@@ -12,17 +12,44 @@ use crate::{
     theme::{ActiveTheme, ControlSize, IconSize, Radius},
 };
 
-type OnCommit = Rc<dyn Fn(&SharedString, &mut Window, &mut App)>;
+pub(crate) type OnCommit = Rc<dyn Fn(&SharedString, &mut Window, &mut App)>;
 
+/// A text being edited in place: its field while open, and who hears the kept text.
 #[derive(Default)]
-struct Editing {
+pub(crate) struct Editing {
     field: Option<(Entity<TextInput>, Subscription)>,
-    on_commit: Option<OnCommit>,
+    pub on_commit: Option<OnCommit>,
 }
 
 impl Editing {
+    /// Opens a field on `value`, all of it selected and focused; Enter or leaving keeps it.
+    pub(crate) fn begin(state: &Entity<Editing>, value: String, window: &mut Window, cx: &mut App) {
+        let field = cx.new(|cx| {
+            let mut input = TextInput::new(window, cx);
+            input.set_text(value, cx);
+            input
+        });
+        let all = field.read(cx).text().len();
+        field.update(cx, |input, cx| input.select(0..all, cx));
+        window.focus(&field.read(cx).focus().clone());
+        let owner = state.clone();
+        let events = window.subscribe(&field, cx, move |_, event, window, cx| {
+            if matches!(event, InputEvent::Submit | InputEvent::Blur) {
+                owner.update(cx, |editing, cx| editing.finish(false, window, cx));
+            }
+        });
+        state.update(cx, |editing, cx| {
+            editing.field = Some((field, events));
+            cx.notify();
+        });
+    }
+
+    pub(crate) fn field(&self) -> Option<Entity<TextInput>> {
+        self.field.as_ref().map(|(field, _)| field.clone())
+    }
+
     /// Ends editing; keeps the text unless `cancel`.
-    fn finish(&mut self, cancel: bool, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn finish(&mut self, cancel: bool, window: &mut Window, cx: &mut Context<Self>) {
         let Some((field, _)) = self.field.take() else {
             return;
         };
@@ -76,12 +103,7 @@ impl RenderOnce for InlineEdit {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let state = window.use_keyed_state(self.id.clone(), cx, |_, _| Editing::default());
         state.update(cx, |editing, _| editing.on_commit = self.on_commit.clone());
-        if let Some(field) = state
-            .read(cx)
-            .field
-            .as_ref()
-            .map(|(field, _)| field.clone())
-        {
+        if let Some(field) = state.read(cx).field() {
             let escape = state.clone();
             return div()
                 .id(self.id)
@@ -117,25 +139,7 @@ impl RenderOnce for InlineEdit {
             .on_mouse_down(MouseButton::Left, |_, window, _| window.prevent_default())
             .on_click(move |_, window, cx| {
                 log::info!("inline edit: editing");
-                let value = value.to_string();
-                let field = cx.new(|cx| {
-                    let mut input = TextInput::new(window, cx);
-                    input.set_text(value, cx);
-                    input
-                });
-                let all = field.read(cx).text().len();
-                field.update(cx, |input, cx| input.select(0..all, cx));
-                window.focus(&field.read(cx).focus().clone());
-                let owner = start.clone();
-                let events = window.subscribe(&field, cx, move |_, event, window, cx| {
-                    if matches!(event, InputEvent::Submit | InputEvent::Blur) {
-                        owner.update(cx, |editing, cx| editing.finish(false, window, cx));
-                    }
-                });
-                start.update(cx, |editing, cx| {
-                    editing.field = Some((field, events));
-                    cx.notify();
-                });
+                Editing::begin(&start, value.to_string(), window, cx);
             })
             .child(if empty { self.placeholder } else { self.value })
             .child(

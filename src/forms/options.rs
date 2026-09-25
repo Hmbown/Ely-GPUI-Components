@@ -20,6 +20,7 @@ pub struct Choice {
     pub icon: Option<IconName>,
     pub note: Option<SharedString>,
     pub disabled: bool,
+    pub depth: usize,
 }
 
 impl Choice {
@@ -30,7 +31,14 @@ impl Choice {
             icon: None,
             note: None,
             disabled: false,
+            depth: 0,
         }
+    }
+
+    /// How far it sits under a parent, for choices that come from a tree.
+    pub fn depth(mut self, depth: usize) -> Self {
+        self.depth = depth;
+        self
     }
 
     pub fn icon(mut self, icon: IconName) -> Self {
@@ -106,6 +114,13 @@ pub(crate) fn option_row(
                     .when(on, |mark| {
                         mark.child(Icon::new(IconName::Check).size(IconSize::Sm).color(fg))
                     }),
+            )
+        })
+        .when(choice.depth > 0, |row| {
+            row.child(
+                div()
+                    .flex_none()
+                    .w(theme.tree_indent() * choice.depth as f32),
             )
         })
         .when_some(choice.icon, |row, icon| {

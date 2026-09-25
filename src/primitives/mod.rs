@@ -1,4 +1,5 @@
 mod backdrop;
+mod disclosure;
 mod divider;
 mod focus;
 mod ghost;
@@ -10,6 +11,7 @@ mod severity;
 mod tooltip;
 
 pub use backdrop::{Backdrop, Place};
+pub use disclosure::Disclosure;
 pub use divider::Divider;
 pub use focus::{FocusNext, FocusPrev, FocusRing, FocusScope};
 pub(crate) use focus::{Takeover, give_back, tab_stop, take_focus};

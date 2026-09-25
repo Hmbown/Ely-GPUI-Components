@@ -284,6 +284,11 @@ impl Theme {
         px_to_rems(128.0)
     }
 
+    /// How far each level of a tree steps in.
+    pub fn tree_indent(&self) -> Rems {
+        px_to_rems(16.0)
+    }
+
     /// How far past the viewport a long list builds rows ahead.
     pub fn list_overdraw(&self) -> Rems {
         px_to_rems(240.0)
