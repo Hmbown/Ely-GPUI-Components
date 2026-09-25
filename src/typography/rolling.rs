@@ -32,6 +32,7 @@ pub struct AnimatedNumber {
     id: ElementId,
     value: f64,
     decimals: usize,
+    pad: usize,
     tween: Tween,
     size: TextSize,
 }
@@ -42,6 +43,7 @@ impl AnimatedNumber {
             id: id.into(),
             value,
             decimals: 0,
+            pad: 0,
             tween: Tween::Roll,
             size: TextSize::Xxl,
         }
@@ -49,6 +51,12 @@ impl AnimatedNumber {
 
     pub fn decimals(mut self, decimals: usize) -> Self {
         self.decimals = decimals;
+        self
+    }
+
+    /// Zero-pads to `width` characters, as a clock shows minutes.
+    pub fn pad(mut self, width: usize) -> Self {
+        self.pad = width;
         self
     }
 
@@ -61,6 +69,14 @@ impl AnimatedNumber {
     pub fn size(mut self, size: TextSize) -> Self {
         self.size = size;
         self
+    }
+}
+
+/// Zero-pads `text` to `width` characters, after its minus sign.
+fn padded(text: &str, width: usize) -> String {
+    match text.strip_prefix(format::MINUS) {
+        Some(digits) => format!("{}{digits:0>1$}", format::MINUS, width.saturating_sub(1)),
+        None => format!("{text:0>width$}"),
     }
 }
 
@@ -94,8 +110,9 @@ impl RenderOnce for AnimatedNumber {
             let change = state.read(cx);
             (change.from, change.to, change.generation)
         };
-        let decimals = self.decimals;
-        let text = move |number: f64| format::number(number, decimals, Separators::EN);
+        let (decimals, pad) = (self.decimals, self.pad);
+        let text =
+            move |number: f64| padded(&format::number(number, decimals, Separators::EN), pad);
         let duration = motion::duration(motion::SLOW * 2, cx);
         let theme = cx.theme();
         let size = theme.text_size(self.size);
@@ -159,7 +176,14 @@ impl RenderOnce for AnimatedNumber {
 
 #[cfg(test)]
 mod tests {
-    use super::align;
+    use super::{align, padded};
+
+    #[test]
+    fn padding_keeps_the_minus_first() {
+        assert_eq!(padded("7", 2), "07");
+        assert_eq!(padded("\u{2212}12", 5), "\u{2212}0012");
+        assert_eq!(padded("123", 2), "123");
+    }
 
     #[test]
     fn align_pads_by_place() {

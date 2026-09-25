@@ -37,7 +37,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T09a Overlays · Popovers & dialogs
 - [x] T09b Overlays · Guides & floats
 - [x] T10a Feedback · Messages
-- [ ] T10b Feedback · States
+- [x] T10b Feedback · States
 - [ ] T11a Loading — `tasks/ch11-20.md`
 - [ ] T11b Motion
 - [ ] T12 Data Display
@@ -163,3 +163,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T10a | 1 | FAIL | a second press on a leaving toast's Undo ran it again, EmptyState's prose width was a literal, and two gallery callouts described behavior the code lacks |
 | T10a | 2 | FAIL | a gallery callout said reduced motion settles every animation, but the undo line keeps its real time |
 | T10a | 3 | PASS | |
+| T10b | 1 | FAIL | the state view's prose and detail widths were literals again, and pad put zeros ahead of a minus sign |
+| T10b | 2 | FAIL | the error chain did not wrap inside its narrowed box, and ConnectionStatus's doc said OfflineIndicator shows only while offline |
+| T10b | 3 | FAIL | a wrapped body did not push the actions down; the prose is now a plain block, and a test compares a short and a long body's height (fixed after the cap) |

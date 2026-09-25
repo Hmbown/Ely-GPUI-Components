@@ -376,7 +376,8 @@ pub fn empties(cx: &mut App) -> impl IntoElement + use<> {
             .child(
                 frame().child(
                     EmptyState::new("empty-inbox", IconName::Inbox, "No messages yet")
-                        .body("When someone writes to you, it lands here."),
+                        .body("When someone writes to you, it lands here, newest first, until you archive it.")
+                        .action(Button::new("empty-compose", "Write a message")),
                 ),
             )
             .child(

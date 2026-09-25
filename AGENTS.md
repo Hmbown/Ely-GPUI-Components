@@ -76,12 +76,14 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - Only gpui can build `ExternalPaths` with paths, so drop rules live in `forms::files::dropped`, where tests reach them.
 - gpui runs key bindings before key listeners. A container takes a child's bound key through the action with `capture_action`, as `Form` takes `Submit`.
 - `ScrollHandle::scroll_to_item` runs in the container's prepaint before its bounds are stored, so a first-frame call misfires. Call it from a child's prepaint once the handle has bounds, then request one frame (`navigation::editor_tabs`). Never poll layout with `request_animation_frame`.
+- gpui animations run on the wall clock; timers run on the executor's clock, which tests advance by hand. A test that needs an animation settled turns on the theme's reduced motion. Clocks read `background_executor().now()` and wake only their own view.
 - The test platform never runs next-frame callbacks, and its text metrics are simplified: each character takes a fixed advance. Tests refresh the window in place of the display link, and click where layout does not hang on text, such as padding and slots.
 - An absolute element with no insets sits where it would flow: after the content in a block, inside the padding in a flex box. A canvas that measures its parent pins itself with `.top_0().left_0()`.
 - Keyed state lives while its element renders in consecutive frames. An overlay rendered only while open starts fresh each time.
 - Long grids scroll in a `uniform_list`. gpui has no nearest scroll, so a key move up scrolls with `Top` and down with `Bottom` (`forms::glyphs`).
 - Masks reshape edits inside `TextInput::set_fit`, which sees the replaced range and the typed text. A diff after the fact cannot tell typed characters from kept ones.
 - Ids inside a reusable component carry its owner's id or `EntityId`, animation ids too. Twin ids share focus, click and animation state.
+- Text wraps at the width its box had when measured. A cross-axis `max_w` comes too late, and a flex column counts wrapped text as one line. Put prose in a plain block inside a flex row with `flex_1().max_w(..)` (`feedback::states`).
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.
 - gpui's `img` takes its picture's pixel size for any `Auto` side, and its aspect ratio beats percent heights in flow. `Image` pins it absolute at full size, so an `Image` needs a sized box.
 - `img()` keeps loading state only with an id. Content masks are rectangles, so rounded corners survive only when the image fills its box without cropping.

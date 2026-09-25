@@ -20,6 +20,7 @@ pub use crash::CrashReporter;
 pub use dialogs::{AboutDialog, SplashScreen};
 pub use frame::ResizeBorder;
 pub use native::{TrayIcon, TrayItem, dock_badge, set_dock_badge};
+pub(crate) use status::connectivity_dot;
 pub use status::{Connectivity, OfflineIndicator, ZoomControl};
 pub use switcher::WindowSwitcher;
 pub use tabs::{TabBar, WindowTab};

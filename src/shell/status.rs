@@ -1,8 +1,8 @@
 use std::time::{Duration, Instant};
 
 use gpui::{
-    Animation, AnimationExt, App, ElementId, IntoElement, ParentElement, RenderOnce, Styled, Task,
-    Window, div, prelude::*,
+    Animation, AnimationExt, AnyElement, App, ElementId, IntoElement, ParentElement, RenderOnce,
+    Styled, Task, Window, div, prelude::*,
 };
 
 use crate::{
@@ -29,6 +29,33 @@ struct Seen {
     back_at: Option<Instant>,
     generation: u64,
     _hide: Option<Task<()>>,
+}
+
+/// The state's dot, in its color; it breathes while reconnecting.
+pub(crate) fn connectivity_dot(
+    id: impl Into<ElementId>,
+    state: Connectivity,
+    cx: &App,
+) -> AnyElement {
+    let theme = cx.theme();
+    let colors = &theme.colors;
+    let tone = match state {
+        Connectivity::Online => colors.success,
+        Connectivity::Reconnecting => colors.warning,
+        Connectivity::Offline => colors.fg_subtle,
+    };
+    let dot = div().size(theme.status_dot()).rounded_full().bg(tone);
+    if state != Connectivity::Reconnecting || theme.reduced_motion {
+        return dot.into_any_element();
+    }
+    dot.with_animation(
+        id,
+        Animation::new(motion::duration(motion::SLOW, cx) * 3)
+            .repeat()
+            .with_easing(motion::ease_in_out_cubic),
+        |dot, t| dot.opacity(0.35 + 0.65 * (1.0 - (2.0 * t - 1.0).abs())),
+    )
+    .into_any_element()
 }
 
 /// A quiet pill while offline or reconnecting, and briefly once back.
@@ -77,14 +104,10 @@ impl RenderOnce for OfflineIndicator {
         let (back_at, generation) = (seen.read(cx).back_at, seen.read(cx).generation);
         let theme = cx.theme();
         let colors = &theme.colors;
-        let (icon, dot, label) = match state {
-            Connectivity::Offline => (
-                IconName::WifiOff,
-                colors.fg_subtle,
-                "Offline · changes stay on this device",
-            ),
-            Connectivity::Reconnecting => (IconName::Wifi, colors.warning, "Reconnecting…"),
-            Connectivity::Online => (IconName::Wifi, colors.success, "Back online"),
+        let (icon, label) = match state {
+            Connectivity::Offline => (IconName::WifiOff, "Offline · changes stay on this device"),
+            Connectivity::Reconnecting => (IconName::Wifi, "Reconnecting…"),
+            Connectivity::Online => (IconName::Wifi, "Back online"),
         };
         let showing =
             state != Connectivity::Online || back_at.is_some_and(|at| at.elapsed() < HOLD);
@@ -107,25 +130,7 @@ impl RenderOnce for OfflineIndicator {
             .shadow(theme.elevation(crate::theme::Elevation::Raised))
             .text_size(theme.text_size(TextSize::Sm))
             .text_color(colors.fg_muted)
-            .child({
-                let light = div()
-                    .size(theme.icon_size(IconSize::Xs) / 2.0)
-                    .rounded_full()
-                    .bg(dot);
-                if state == Connectivity::Reconnecting && !still {
-                    light
-                        .with_animation(
-                            "reconnect-pulse",
-                            Animation::new(motion::duration(motion::SLOW, cx) * 3)
-                                .repeat()
-                                .with_easing(motion::ease_in_out_cubic),
-                            |dot, t| dot.opacity(0.35 + 0.65 * (1.0 - (2.0 * t - 1.0).abs())),
-                        )
-                        .into_any_element()
-                } else {
-                    light.into_any_element()
-                }
-            })
+            .child(connectivity_dot("dot", state, cx))
             .child(Icon::new(icon).size(IconSize::Sm).color(colors.fg_muted))
             .child(label)
             .with_animation(

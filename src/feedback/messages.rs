@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
 use gpui::{
-    Animation, AnimationExt, AnyElement, App, ElementId, FontWeight, IntoElement, ParentElement,
-    RenderOnce, SharedString, Styled, Window, div, prelude::*,
+    Animation, AnimationExt, AnyElement, App, Div, ElementId, FontWeight, IntoElement,
+    ParentElement, RenderOnce, SharedString, Styled, Window, div, prelude::*,
 };
 use smallvec::SmallVec;
 
@@ -331,10 +331,9 @@ impl StatusMessage {
 
 impl RenderOnce for StatusMessage {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let turn = motion::changes((self.id.clone(), "text"), self.text.clone(), window, cx);
         let theme = cx.theme();
         let muted = theme.colors.fg_muted;
-        div()
+        let line = div()
             .flex()
             .items_center()
             .gap_1p5()
@@ -343,18 +342,29 @@ impl RenderOnce for StatusMessage {
             .when_some(self.icon, |line, icon| {
                 line.child(Icon::new(icon).size(IconSize::Xs).color(muted))
             })
-            .child(self.text)
-            .with_animation(
-                (self.id, format!("turn-{turn}")),
-                Animation::new(motion::duration(motion::BASE, cx))
-                    .with_easing(motion::ease_out_cubic),
-                move |line, t| {
-                    if turn == 0 {
-                        line
-                    } else {
-                        line.opacity(t).mt(motion::NUDGE * (1.0 - t))
-                    }
-                },
-            )
+            .child(self.text.clone());
+        rise(self.id, self.text, line, window, cx)
     }
+}
+
+/// `line`, rising in each time `key` changes; still on first paint.
+pub(super) fn rise<T: Clone + PartialEq + 'static>(
+    id: ElementId,
+    key: T,
+    line: Div,
+    window: &mut Window,
+    cx: &mut App,
+) -> impl IntoElement + use<T> {
+    let turn = motion::changes((id.clone(), "key"), key, window, cx);
+    line.with_animation(
+        (id, format!("turn-{turn}")),
+        Animation::new(motion::duration(motion::BASE, cx)).with_easing(motion::ease_out_cubic),
+        move |line, t| {
+            if turn == 0 {
+                line
+            } else {
+                line.opacity(t).mt(motion::NUDGE * (1.0 - t))
+            }
+        },
+    )
 }

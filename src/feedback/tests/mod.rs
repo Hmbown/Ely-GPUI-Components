@@ -5,6 +5,8 @@ use gpui::{
     Modifiers, ParentElement, Render, Styled, TestAppContext, VisualTestContext, Window, point, px,
 };
 
+mod states;
+
 use super::{Alert, Notification, NotificationCenter, Toast, ToastViewport, Toaster};
 use crate::{
     primitives::{FocusNext, FocusScope, IconName, Severity},
@@ -52,13 +54,18 @@ impl Render for Desk {
     }
 }
 
-fn desk(cx: &mut TestAppContext) -> (Entity<Desk>, &mut VisualTestContext) {
+/// The theme with reduced motion, text keys and Tab.
+fn setup(cx: &mut TestAppContext) {
     cx.update(|cx| {
         Theme::init(cx);
         Theme::update(cx, |theme| theme.reduced_motion = true);
         crate::forms::bind_keys(cx);
         cx.bind_keys([KeyBinding::new("tab", FocusNext, None)]);
     });
+}
+
+fn desk(cx: &mut TestAppContext) -> (Entity<Desk>, &mut VisualTestContext) {
+    setup(cx);
     let (view, cx) = cx.add_window_view(|_, cx| Desk {
         root: cx.focus_handle(),
         toaster: cx.new(|_| Toaster::default()),

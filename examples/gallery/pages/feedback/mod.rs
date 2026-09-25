@@ -1,4 +1,5 @@
 mod messages;
+mod states;
 
 use gpui::{AnyElement, App, IntoElement, ParentElement, Window, div};
 
@@ -36,6 +37,23 @@ const SCRIPT: &[Step] = &[
     Step::Click("status"),
     Step::Wait(80),
     Step::Shot("status-rising"),
+    Step::Click("boundary-break"),
+    Step::Wait(700),
+    Step::Shot("boundary"),
+    Step::Click("boundary-break"),
+    Step::Click("result-replay"),
+    Step::Wait(120),
+    Step::Shot("result-drawing"),
+    Step::Wait(1000),
+    Step::Shot("result"),
+    Step::Click("saving-next"),
+    Step::Click("sync-next"),
+    Step::Click("connection-next"),
+    Step::Wait(400),
+    Step::Shot("statuses"),
+    Step::Click("countdown-restart"),
+    Step::Wait(1500),
+    Step::Shot("clocks"),
     Step::Rest,
 ];
 
@@ -48,5 +66,11 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(messages::callouts(cx))
         .child(messages::lines(window, cx))
         .child(messages::empties(cx))
+        .child(states::errors(cx))
+        .child(states::boundary(window, cx))
+        .child(states::results(window, cx))
+        .child(states::confirmations(window, cx))
+        .child(states::statuses(window, cx))
+        .child(states::clocks(window, cx))
         .into_any_element()
 }
