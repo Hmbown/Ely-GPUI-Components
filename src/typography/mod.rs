@@ -15,6 +15,7 @@ mod text;
 pub use copy::CopyableText;
 pub use effects::{GradientText, ShimmerText, Typewriter};
 pub use emoji::Emoji;
+pub(crate) use fit::LEADING;
 pub use fit::{EllipsisTooltip, MiddleEllipsis};
 pub use format::DurationStyle;
 pub use formatted::{

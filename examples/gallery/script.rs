@@ -7,6 +7,7 @@ use crate::{
     capture::{number, popup_number, snapshot},
     probe::{Opened, Probes},
     shell::Gallery,
+    swipe::{BEGAN, CHANGED, ENDED, swipe},
 };
 
 /// One scripted input, aimed at a probe by key.
@@ -24,6 +25,8 @@ pub enum Step {
     RightAt(&'static str, f32, f32),
     /// Drags from the last point to an offset, in small steps.
     DragTo(&'static str, f32, f32),
+    /// Swipes two fingers sideways across the probe's middle, as a trackpad does: begin, move, end.
+    Swipe(&'static str, f32),
     UpAt(&'static str, f32, f32),
     Key(&'static str),
     /// Types text into whatever holds focus, one key at a time.
@@ -116,6 +119,18 @@ pub async fn play(
                 send(window, Mouse::Move, at, cx)?;
                 send(window, Mouse::RightDown, at, cx)?;
                 send(window, Mouse::RightUp, at, cx)?;
+            }
+            Step::Swipe(key, across) => {
+                let at = target_bounds(window, key, cx).await?.center();
+                send(window, Mouse::Move, at, cx)?;
+                swipe(window, at, 0.0, BEGAN, cx)?;
+                for _ in 0..DRAG_STEPS {
+                    swipe(window, at, across / DRAG_STEPS as f32, CHANGED, cx)?;
+                    cx.background_executor()
+                        .timer(Duration::from_millis(16))
+                        .await;
+                }
+                swipe(window, at, 0.0, ENDED, cx)?;
             }
             Step::DragTo(key, x, y) => {
                 let goal = target_bounds(window, key, cx).await?.origin + point(px(x), px(y));

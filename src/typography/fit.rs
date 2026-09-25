@@ -9,7 +9,7 @@ use crate::{
     theme::{ActiveTheme, TextSize},
 };
 
-const LEADING: f32 = 1.4;
+pub(crate) const LEADING: f32 = 1.4;
 
 /// Keeps `kept` chars: half from the front, half from the back.
 fn elide(chars: &[char], kept: usize) -> String {

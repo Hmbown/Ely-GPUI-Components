@@ -82,6 +82,9 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - `ScrollHandle::scroll_to_item` runs in the container's prepaint before its bounds are stored, so a first-frame call misfires. Call it from a child's prepaint once the handle has bounds, then request one frame (`navigation::editor_tabs`). Never poll layout with `request_animation_frame`.
 - gpui animations run on the wall clock; timers run on the executor's clock, which tests advance by hand. A test that needs an animation settled turns on the theme's reduced motion. Clocks read `background_executor().now()` and wake only their own view.
 - Machine-read marks, QR codes and barcodes, paint `ink` on `paper`: dark on light in both themes, so cameras read them.
+- A layer over pressable content that must still pass scrolls to its ancestors uses `block_mouse_except_scroll`; `occlude` hides them from scrolls too.
+- Trackpad momentum arrives as `TouchPhase::Moved` after `Ended`, so a gesture acts only between `Started` and `Ended` (`lists::SwipeableListItem`).
+- Quartz scroll events carry no window. The harness hands them to the window itself, placed in window points (`Step::Swipe`).
 - Reduced motion shortens animations to 1ms on the wall clock. Tests sleep past it between refreshes to see where one ends.
 - The test platform never runs next-frame callbacks, and its text metrics are simplified: each character takes a fixed advance. Tests refresh the window in place of the display link, and click where layout does not hang on text, such as padding and slots.
 - An absolute element with no insets sits where it would flow: after the content in a block, inside the padding in a flex box. A canvas that measures its parent pins itself with `.top_0().left_0()`.

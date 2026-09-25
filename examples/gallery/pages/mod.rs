@@ -3,6 +3,7 @@ mod data;
 mod feedback;
 mod forms;
 mod layout;
+mod lists;
 mod menus;
 mod motion;
 mod navigation;
@@ -39,6 +40,7 @@ pub const ALL: &[Page] = &[
     feedback::PAGE,
     motion::PAGE,
     data::PAGE,
+    lists::PAGE,
     theme::PAGE,
 ];
 

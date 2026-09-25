@@ -284,6 +284,16 @@ impl Theme {
         px_to_rems(128.0)
     }
 
+    /// How far past the viewport a long list builds rows ahead.
+    pub fn list_overdraw(&self) -> Rems {
+        px_to_rems(240.0)
+    }
+
+    /// One action behind a swiped row.
+    pub fn swipe_action(&self) -> Rems {
+        px_to_rems(72.0)
+    }
+
     /// A QR code's tile.
     pub fn qr_code(&self) -> Rems {
         px_to_rems(160.0)

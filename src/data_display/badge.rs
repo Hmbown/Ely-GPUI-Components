@@ -37,7 +37,7 @@ impl From<Severity> for Tone {
 
 impl Tone {
     /// The fill, then the text on it.
-    pub(super) fn colors(self, colors: &Palette) -> (Hsla, Hsla) {
+    pub(crate) fn colors(self, colors: &Palette) -> (Hsla, Hsla) {
         let severity = |severity: Severity| (severity.subtle(colors), severity.color(colors));
         match self {
             Self::Neutral => (colors.hover, colors.fg_muted),

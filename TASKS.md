@@ -46,7 +46,9 @@ Per-component lines live in `tasks/`. Tags there:
 - [ ] T12b Data Display · Records
 - [ ] T12c Data Display · Media
 - [ ] T12d Data Display · Codes & measures
-- [ ] T13 Lists & Trees
+- [ ] T13a Lists & Trees · Lists
+- [ ] T13b Lists & Trees · Trees
+- [ ] T13c Lists & Trees · Files
 - [ ] T14 Tables
 - [ ] T15 Charts
 - [ ] T16a Finance · Market charts
@@ -186,3 +188,4 @@ Per-component lines live in `tasks/`. Tags there:
 | T12b | 1 | — | pending: codex still logged out |
 | T12c | 1 | — | pending: codex still logged out |
 | T12d | 1 | — | pending: codex still logged out |
+| T13a | 1 | — | pending: codex still logged out |

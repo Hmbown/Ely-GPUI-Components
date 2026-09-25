@@ -3,6 +3,7 @@ mod pages;
 mod probe;
 mod script;
 mod shell;
+mod swipe;
 mod ui;
 
 use std::path::PathBuf;
