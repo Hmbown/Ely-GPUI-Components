@@ -41,7 +41,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T11a Loading · Spinners & skeletons — `tasks/ch11-20.md`
 - [x] T11b Loading · Progress & states
 - [x] T11c Motion · Presence & order
-- [ ] T11d Motion · Effects
+- [x] T11d Motion · Effects
 - [ ] T12 Data Display
 - [ ] T13 Lists & Trees
 - [ ] T14 Tables
@@ -176,3 +176,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T11c | 1 | FAIL | a drag kept a stale row index and panicked when the list shrank, a move changed each row's animation id and rebuilt its state, and repeated demo tags shared a key |
 | T11c | 2 | FAIL | a row first seen hidden drew open and asked for no frame, so it lingered until something else redrew |
 | T11c | 3 | PASS | |
+| T11d | 1 | FAIL | the ripple drew inverted columns in a cut corner, motes crossed rounded corners, a narrow marquee jumped, confetti burst on a falling count, and the Lottie note misread velato |
+| T11d | 2 | FAIL | Marquee's doc still said its content is drawn twice |
+| T11d | 3 | PASS | |

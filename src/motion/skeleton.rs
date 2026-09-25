@@ -260,8 +260,20 @@ impl ParentElement for Shimmer {
 /// The corners' radii, clockwise from the top left.
 type Radii = [Pixels; 4];
 
+/// A style's corner radii in pixels, clockwise from the top left.
+pub(super) fn radii(style: &StyleRefinement, rem: Pixels) -> Radii {
+    let corners = &style.corner_radii;
+    let radius = |corner: Option<AbsoluteLength>| corner.map_or(Pixels::ZERO, |r| r.to_pixels(rem));
+    [
+        radius(corners.top_left),
+        radius(corners.top_right),
+        radius(corners.bottom_right),
+        radius(corners.bottom_left),
+    ]
+}
+
 /// Where a rounded box's outline crosses the column at `x`: its top and bottom. Radii past half the box are clamped, as gpui draws them.
-fn span(bounds: Bounds<Pixels>, radii: Radii, x: Pixels) -> (Pixels, Pixels) {
+pub(super) fn span(bounds: Bounds<Pixels>, radii: Radii, x: Pixels) -> (Pixels, Pixels) {
     let limit = bounds.size.width.min(bounds.size.height) / 2.0;
     let [tl, tr, br, bl] = radii.map(|radius| radius.min(limit));
     let bite = |radius: Pixels, from_edge: Pixels| {
@@ -326,16 +338,7 @@ impl RenderOnce for Shimmer {
     fn render(mut self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
         let (shine, clear) = (theme.colors.shimmer, theme.colors.shimmer.alpha(0.0));
-        let rem = window.rem_size();
-        let radius =
-            |corner: Option<AbsoluteLength>| corner.map_or(Pixels::ZERO, |r| r.to_pixels(rem));
-        let corners = self.base.style().corner_radii.clone();
-        let radii: Radii = [
-            radius(corners.top_left),
-            radius(corners.top_right),
-            radius(corners.bottom_right),
-            radius(corners.bottom_left),
-        ];
+        let radii = radii(self.base.style(), window.rem_size());
         let still = theme.reduced_motion;
         let base = self.base.relative().children(self.body);
         if still {

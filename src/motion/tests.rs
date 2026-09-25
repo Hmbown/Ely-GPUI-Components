@@ -339,3 +339,66 @@ fn a_row_hidden_from_the_start_is_gone_at_once(cx: &mut TestAppContext) {
     let log = view.read_with(cx, |stage, _| stage.log.clone());
     assert_eq!(log, ["gone c"], "no fold to wait for");
 }
+
+/// A shaken and a flashed box around keyed state, and a press target under a ripple and confetti.
+struct Effects {
+    key: usize,
+    presses: usize,
+    seen: Rc<std::cell::RefCell<std::collections::HashMap<&'static str, gpui::EntityId>>>,
+}
+
+impl Render for Effects {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let view = cx.entity();
+        let marker = |key| Marker {
+            key,
+            seen: self.seen.clone(),
+        };
+        div()
+            .child(super::Shake::new("shake", self.key).child(marker("shaken")))
+            .child(super::Flash::new("flash", self.key).child(marker("flashed")))
+            .child(
+                div()
+                    .relative()
+                    .w(px(200.0))
+                    .h(px(100.0))
+                    .child(super::Ripple::new("ripple").size_full().child(
+                        div().id("target").size_full().on_click(move |_, _, cx| {
+                            view.update(cx, |effects, _| effects.presses += 1)
+                        }),
+                    ))
+                    .child(super::Confetti::new("confetti", self.key)),
+            )
+    }
+}
+
+#[gpui::test]
+fn effects_keep_their_content_and_let_presses_through(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        Theme::init(cx);
+        Theme::update(cx, |theme| theme.reduced_motion = true);
+    });
+    let (view, cx) = cx.add_window_view(|_, _| Effects {
+        key: 0,
+        presses: 0,
+        seen: Rc::default(),
+    });
+    settle(cx);
+    let seen = view.read_with(cx, |effects, _| effects.seen.clone());
+    let before = seen.borrow().clone();
+    view.update(cx, |effects, cx| {
+        effects.key += 1;
+        cx.notify();
+    });
+    settle(cx);
+    assert_eq!(
+        *seen.borrow(),
+        before,
+        "a shake and a flash keep what they hold"
+    );
+    let at = point(px(100.0), px(90.0));
+    cx.simulate_mouse_move(at, None, Modifiers::none());
+    cx.simulate_click(at, Modifiers::none());
+    settle(cx);
+    assert_eq!(view.read_with(cx, |effects, _| effects.presses), 1);
+}

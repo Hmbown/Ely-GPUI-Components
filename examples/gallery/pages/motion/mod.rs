@@ -1,3 +1,4 @@
+mod effects;
 mod loading;
 mod moves;
 mod progress;
@@ -53,6 +54,13 @@ const SCRIPT: &[Step] = &[
     Step::Click("flip-shuffle"),
     Step::Wait(100),
     Step::Shot("flip-gliding"),
+    Step::Click("ripple"),
+    Step::Wait(120),
+    Step::Shot("ripple"),
+    Step::Click("flash-tick"),
+    Step::Click("shake-try"),
+    Step::Wait(100),
+    Step::Shot("cues"),
     Step::Rest,
 ];
 
@@ -74,5 +82,10 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(moves::presence(window, cx))
         .child(moves::flip(window, cx))
         .child(moves::reorder(window, cx))
+        .child(effects::marquee(cx))
+        .child(effects::ripple(window, cx))
+        .child(effects::light(cx))
+        .child(effects::cues(window, cx))
+        .child(effects::backdrops(cx))
         .into_any_element()
 }

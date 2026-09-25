@@ -253,6 +253,11 @@ impl Theme {
         px_to_rems(360.0)
     }
 
+    /// How far a glow's light reaches at its brightest.
+    pub fn glow_reach(&self) -> Rems {
+        px_to_rems(20.0)
+    }
+
     /// A picture's height in a skeleton card.
     pub fn skeleton_media(&self) -> Rems {
         px_to_rems(128.0)

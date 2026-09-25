@@ -1,7 +1,9 @@
 mod changes;
 mod curve;
+mod effects;
 mod list;
 mod overlay;
+mod particles;
 mod progress;
 mod reorder;
 mod skeleton;
@@ -14,8 +16,10 @@ mod tests;
 
 pub(crate) use changes::changes;
 pub use curve::*;
+pub use effects::{Blink, Flash, Glow, Marquee, Pulse, Shake};
 pub use list::{AnimatePresence, Flip};
 pub use overlay::{LazyLoad, LoadingOverlay, Refresh, RefreshIndicator, TypingIndicator};
+pub use particles::{AnimatedGradient, Confetti, ParticleBackground, Ripple};
 pub use progress::{ProgressBar, ProgressRing};
 pub use reorder::Reorder;
 pub use skeleton::{Shimmer, Skeleton, SkeletonAvatar, SkeletonCard, SkeletonTable, SkeletonText};
