@@ -7,6 +7,7 @@ mod color;
 mod combobox;
 mod date;
 mod expression;
+mod files;
 mod group;
 mod hotkey;
 mod inline;
@@ -49,6 +50,7 @@ pub use date::{
     WeekPicker, YearPicker,
 };
 pub use expression::{ExpressionInput, evaluate, expression_highlights};
+pub use files::{DropZone, FileInput};
 pub use group::{InputAddon, InputGroup};
 pub use hotkey::HotkeyInput;
 pub use inline::InlineEdit;

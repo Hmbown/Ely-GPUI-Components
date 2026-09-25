@@ -26,7 +26,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T06b Forms · Selection
 - [x] T06c Forms · Date & Time
 - [x] T06d Forms · Color
-- [ ] T06e Forms · Files
+- [x] T06e Forms · Files
 - [ ] T06f Forms · Other
 - [ ] T06g Forms · Structure
 - [ ] T07 Navigation
@@ -130,3 +130,4 @@ Per-component lines live in `tasks/`. Tags there:
 | T06c | 3 | PASS | |
 | T06d | 1 | FAIL | a zero-size checker hung the paint loop; a dragged stop lost its grip after passing another; `opacity(1.0)` kept alpha, so opaque pickers stayed see-through; inset thumbs drifted from the drawn gradients; swatch fills and checkers crossed rounded corners; the thumb ring was a literal white |
 | T06d | 2 | PASS | |
+| T06e | 1 | PASS | |

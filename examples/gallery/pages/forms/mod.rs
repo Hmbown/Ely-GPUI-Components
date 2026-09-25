@@ -1,6 +1,7 @@
 mod choices;
 mod colors;
 mod dates;
+mod files;
 mod formats;
 mod numbers;
 mod pickers;
@@ -237,6 +238,12 @@ const SCRIPT: &[Step] = &[
     Step::UpAt("gradient", 108.0, 16.0),
     Step::Wait(300),
     Step::Shot("gradient"),
+    Step::DownAt("file-one", 100.0, 14.0),
+    Step::UpAt("file-one", 100.0, 14.0),
+    Step::Wait(1200),
+    Step::CancelPanel,
+    Step::Wait(600),
+    Step::Shot("files"),
     Step::Rest,
 ];
 
@@ -283,5 +290,6 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(colors::picker(window, cx))
         .child(colors::swatches(window, cx))
         .child(colors::gradient(window, cx))
+        .child(files::files(window, cx))
         .into_any_element()
 }

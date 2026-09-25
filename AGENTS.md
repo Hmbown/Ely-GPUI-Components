@@ -60,6 +60,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - Thumbs stay inside their component's box: the track is padded by half a thumb (`Slider`, `ColorPicker`, `GradientEditor`).
 - gpui's `Hsla::opacity` scales alpha; `alpha` sets it.
 - A rounded box does not clip its children. Each layer inside takes the radius itself; `checker` takes one.
+- Only gpui can build `ExternalPaths` with paths, so drop rules live in `forms::files::dropped`, where tests reach them.
 - Masks reshape edits inside `TextInput::set_fit`, which sees the replaced range and the typed text. A diff after the fact cannot tell typed characters from kept ones.
 - Ids inside a reusable component carry its owner's id or `EntityId`. Twin ids share focus and click state.
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.

@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use gpui::{
     App, ElementId, Entity, IntoElement, PathPromptOptions, RenderOnce, SharedString, Window,
 };
@@ -8,6 +10,45 @@ use crate::{
     primitives::{Icon, IconName},
     theme::{ActiveTheme, ControlSize, IconSize},
 };
+
+/// Opens the system's file dialog; `then` gets the chosen paths back in the window.
+pub(crate) fn choose(
+    what: SharedString,
+    options: PathPromptOptions,
+    window: &mut Window,
+    cx: &mut App,
+    then: impl FnOnce(Vec<PathBuf>, &mut Window, &mut App) + 'static,
+) {
+    let chosen = cx.prompt_for_paths(options);
+    log::info!("{what}: dialog opened");
+    window
+        .spawn(cx, async move |cx| {
+            let paths = match chosen.await {
+                Ok(Ok(Some(paths))) => paths,
+                Ok(Ok(None)) => {
+                    log::info!("{what}: dialog cancelled");
+                    return;
+                }
+                Ok(Err(error)) => {
+                    log::error!("{what}: dialog failed: {error:#}");
+                    return;
+                }
+                Err(_) => {
+                    log::error!("{what}: dialog closed without an answer");
+                    return;
+                }
+            };
+            if paths.is_empty() {
+                log::error!("{what}: dialog chose nothing");
+                return;
+            }
+            log::info!("{what}: chose {} paths", paths.len());
+            if let Err(error) = cx.update(|window, cx| then(paths, window, cx)) {
+                log::error!("{what}: window closed first: {error:#}");
+            }
+        })
+        .detach();
+}
 
 /// A path field with Browse, which opens the system's file dialog.
 #[derive(IntoElement)]
@@ -49,44 +90,23 @@ impl RenderOnce for PathInput {
                     .size(ControlSize::Sm)
                     .variant(ButtonVariant::Ghost)
                     .on_click(move |_, window, cx| {
-                        let chosen = cx.prompt_for_paths(PathPromptOptions {
+                        let state = state.clone();
+                        let options = PathPromptOptions {
                             files: !directories,
                             directories,
                             multiple: false,
                             prompt: Some(SharedString::from("Choose")),
-                        });
-                        log::info!("path input: dialog opened");
-                        let state = state.clone();
-                        window
-                            .spawn(cx, async move |cx| {
-                                let path = match chosen.await {
-                                    Ok(Ok(Some(paths))) => paths.into_iter().next(),
-                                    Ok(Ok(None)) => {
-                                        log::info!("path input: dialog cancelled");
-                                        return;
-                                    }
-                                    Ok(Err(error)) => {
-                                        log::error!("path input: dialog failed: {error:#}");
-                                        return;
-                                    }
-                                    Err(_) => {
-                                        log::error!("path input: dialog closed without an answer");
-                                        return;
-                                    }
-                                };
-                                let Some(path) = path else {
-                                    log::error!("path input: dialog chose nothing");
-                                    return;
-                                };
-                                let shown = path.display().to_string();
-                                log::info!("path input: chose a path");
-                                if let Err(error) =
-                                    state.update(cx, |input, cx| input.set_text(shown, cx))
-                                {
-                                    log::error!("path input: field gone: {error:#}");
-                                }
-                            })
-                            .detach();
+                        };
+                        choose(
+                            "path input".into(),
+                            options,
+                            window,
+                            cx,
+                            move |paths, _, cx| {
+                                let shown = paths[0].display().to_string();
+                                state.update(cx, |input, cx| input.set_text(shown, cx));
+                            },
+                        );
                     }),
             )
     }
