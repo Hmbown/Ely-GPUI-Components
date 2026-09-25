@@ -151,8 +151,24 @@ pub(crate) fn float(
     let rem = window.rem_size();
     let row = theme.control_height(ControlSize::Md).to_pixels(rem);
     let height = (row * (rows + 1) as f32).min(theme.list_max_height().to_pixels(rem));
-    let below = window.viewport_size().height - anchor.bottom();
-    let up = height > below && anchor.top() > below;
+    float_height(anchor, height, content, window, cx)
+}
+
+/// Whether `height` goes over `anchor`: it does not fit below, and above has more room.
+pub(crate) fn opens_up(anchor: Bounds<Pixels>, height: Pixels, viewport: Pixels) -> bool {
+    let below = viewport - anchor.bottom();
+    height > below && anchor.top() > below
+}
+
+/// Floats `content` of a known `height` under `anchor`, or over it when only above has room.
+pub(crate) fn float_height(
+    anchor: Bounds<Pixels>,
+    height: Pixels,
+    content: impl IntoElement,
+    window: &Window,
+    cx: &App,
+) -> AnyElement {
+    let up = opens_up(anchor, height, window.viewport_size().height);
     let enter =
         Animation::new(motion::duration(motion::FAST, cx)).with_easing(motion::ease_out_cubic);
     let placed = if up {
@@ -237,7 +253,18 @@ impl Popup<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Choice, step};
+    use gpui::{Bounds, point, px, size};
+
+    use super::{Choice, opens_up, step};
+
+    #[test]
+    fn a_panel_opens_up_only_when_it_does_not_fit_below_and_above_has_more() {
+        let low = Bounds::new(point(px(0.0), px(600.0)), size(px(80.0), px(28.0)));
+        assert!(opens_up(low, px(260.0), px(790.0)));
+        assert!(!opens_up(low, px(120.0), px(790.0)));
+        let high = Bounds::new(point(px(0.0), px(100.0)), size(px(80.0), px(28.0)));
+        assert!(!opens_up(high, px(700.0), px(790.0)));
+    }
 
     #[test]
     fn stepping_wraps_and_skips_disabled_rows() {

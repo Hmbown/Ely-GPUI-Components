@@ -6,6 +6,7 @@ pub mod layout;
 pub mod menus;
 pub mod motion;
 pub mod navigation;
+pub mod overlays;
 pub mod primitives;
 pub mod shell;
 pub mod theme;

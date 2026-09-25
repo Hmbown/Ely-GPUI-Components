@@ -233,6 +233,11 @@ impl Theme {
         (px_to_rems(84.0), px_to_rems(40.0))
     }
 
+    /// Width of a dialog's card.
+    pub fn dialog_width(&self) -> Rems {
+        px_to_rems(440.0)
+    }
+
     /// Narrowest a menu's panel gets.
     pub fn menu_width(&self) -> Rems {
         px_to_rems(200.0)

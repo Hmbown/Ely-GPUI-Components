@@ -6,6 +6,7 @@ mod icon;
 mod image;
 mod measure;
 mod pressable;
+mod severity;
 mod tooltip;
 
 pub use backdrop::{Backdrop, Place};
@@ -17,4 +18,5 @@ pub use icon::{Icon, IconName};
 pub use image::Image;
 pub use measure::{IntersectionObserver, Measure};
 pub use pressable::Pressable;
+pub use severity::Severity;
 pub use tooltip::{Tooltip, TooltipTrigger};

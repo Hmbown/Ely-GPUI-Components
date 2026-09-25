@@ -34,7 +34,8 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T07c Navigation · Palettes & tour
 - [x] T08a Menus · Menu & hosts
 - [x] T08b Menus · Bar, search & pie
-- [ ] T09 Overlays
+- [x] T09a Overlays · Popovers & dialogs
+- [ ] T09b Overlays · Guides & floats
 - [ ] T10 Feedback
 - [ ] T11a Loading — `tasks/ch11-20.md`
 - [ ] T11b Motion
@@ -152,3 +153,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T08b | 1 | FAIL | a shrinking pie kept a mark past its end, a hub press lost focus, pie confirm keys bubbled and modified releases picked, an open dropdown stayed put when its host moved, clearing the filter kept the old mark, and the ring sat half a slice off its hub |
 | T08b | 2 | FAIL | the pie's opening right click let a root FocusScope take focus before take_focus recorded it |
 | T08b | 3 | PASS | |
+| T09a | 1 | FAIL | dialog buttons closed through the owner and skipped give_back, popover and hover panels let presses through, and the popover guessed its height |
+| T09a | 2 | FAIL | the prompt's Enter release ran from anywhere in the dialog, so Enter on Cancel submitted and on Submit sent twice |
+| T09a | 3 | PASS | |

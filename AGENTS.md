@@ -62,6 +62,8 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - gpui focuses the nearest focusable ancestor on mouse down, and apps wrap everything in a `FocusScope`. A press that must leave focus alone calls `prevent_default`, as buttons and context regions do.
 - gpui draws a window's first frame inside `open_window`. State the first frame reads, such as `cx.set_menus`, is set before it opens.
 - gpui clicks a focused element when Enter or Space is released. An overlay that hands focus back picks on release too; a pick on press returns focus first, and the release clicks the opener again.
+- A dialog goes through `overlays::Dialog`: scrim, focus trap, Escape and focus return live there. AlertDialog, ConfirmDialog and PromptDialog build on it; a fullscreen dialog fills the window below its title bar.
+- `primitives::Severity` names info, success, warning and danger with their colors and icons, for alerts and feedback alike.
 - A marker that slides between items (segment thumb, tab line) measures them with `motion::slide` and eases with `glide`.
 - A picker hands focus to its popup on open and back to its trigger on pick or Escape; it closes once focus leaves both (`forms::date::picker`).
 - Motion for a value change keys its animation on `motion::changes`, so it replays per change and stays still on first paint.
