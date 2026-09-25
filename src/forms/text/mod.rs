@@ -10,7 +10,7 @@ use gpui::{
     Subscription, Task, Window, WrappedLine,
 };
 
-pub(crate) use actions::{Backspace, Down, Enter, Up, bind_keys};
+pub(crate) use actions::{Backspace, Down, Enter, Submit, Up, bind_keys};
 use edit::{History, Snapshot};
 
 use crate::theme::ActiveTheme;

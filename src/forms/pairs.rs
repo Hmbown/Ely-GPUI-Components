@@ -1,11 +1,11 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, Context, ElementId, Entity, IntoElement, ParentElement, RenderOnce, SharedString, Styled,
-    Subscription, Window, div, prelude::*,
+    AnyElement, App, Context, ElementId, Entity, IntoElement, ParentElement, RenderOnce,
+    SharedString, Styled, Subscription, Window, div, prelude::*,
 };
 
-use super::{Input, InputEvent, TextInput};
+use super::{Input, InputEvent, TextInput, options::Run};
 use crate::{
     buttons::{Button, ButtonVariant, IconButton},
     primitives::IconName,
@@ -85,68 +85,131 @@ fn rows_state(
     })
 }
 
-fn render_rows(
-    id: &ElementId,
-    state: Entity<Rows>,
-    add: &'static str,
-    cx: &App,
-) -> impl IntoElement + use<> {
-    let rows = state.read(cx).rows.len();
-    let lines = (0..rows).map(|ix| {
-        let fields: Vec<Entity<TextInput>> = state.read(cx).rows[ix]
-            .iter()
-            .map(|(field, _)| field.clone())
-            .collect();
-        let remove = state.clone();
+type OnRemove = Rc<dyn Fn(usize, &mut Window, &mut App)>;
+
+/// Rows the owner builds, each with a remove button, and a button that adds one.
+#[derive(IntoElement)]
+pub struct FieldArray {
+    id: ElementId,
+    rows: Vec<AnyElement>,
+    add_label: SharedString,
+    on_add: Option<Run>,
+    on_remove: Option<OnRemove>,
+}
+
+impl FieldArray {
+    pub fn new(id: impl Into<ElementId>) -> Self {
+        Self {
+            id: id.into(),
+            rows: Vec::new(),
+            add_label: SharedString::from("Add"),
+            on_add: None,
+            on_remove: None,
+        }
+    }
+
+    pub fn row(mut self, row: impl IntoElement) -> Self {
+        self.rows.push(row.into_any_element());
+        self
+    }
+
+    pub fn add_label(mut self, text: impl Into<SharedString>) -> Self {
+        self.add_label = text.into();
+        self
+    }
+
+    pub fn on_add(mut self, handler: impl Fn(&mut Window, &mut App) + 'static) -> Self {
+        self.on_add = Some(Rc::new(handler));
+        self
+    }
+
+    /// Runs with the index of the row to remove.
+    pub fn on_remove(mut self, handler: impl Fn(usize, &mut Window, &mut App) + 'static) -> Self {
+        self.on_remove = Some(Rc::new(handler));
+        self
+    }
+}
+
+impl RenderOnce for FieldArray {
+    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+        let id = self.id.clone();
+        let lines = self.rows.into_iter().enumerate().map(|(ix, row)| {
+            let (id, remove) = (id.clone(), self.on_remove.clone());
+            div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .child(div().flex_1().min_w_0().child(row))
+                .child(
+                    IconButton::new(("remove-row", ix), IconName::Minus)
+                        .size(ControlSize::Sm)
+                        .tooltip("Remove")
+                        .on_click(move |_, window, cx| {
+                            log::info!("field array {id:?}: removed row {ix}");
+                            if let Some(remove) = &remove {
+                                remove(ix, window, cx);
+                            }
+                        }),
+                )
+        });
+        let add = self.on_add;
         div()
+            .id(self.id)
             .flex()
-            .items_center()
+            .flex_col()
             .gap_2()
-            .children(fields.iter().map(|field| {
-                div()
-                    .flex_1()
-                    .child(Input::new(field).size(ControlSize::Sm))
-            }))
+            .w_full()
+            .children(lines)
             .child(
-                IconButton::new(("remove-row", ix), IconName::Minus)
-                    .size(ControlSize::Sm)
-                    .tooltip("Remove")
-                    .on_click(move |_, window, cx| {
-                        log::info!("rows: removed {ix}");
-                        remove.update(cx, |rows, cx| {
-                            rows.rows.remove(ix);
-                            rows.report(window, cx);
-                            cx.notify();
-                        })
-                    }),
+                div().flex().child(
+                    Button::new(("add-row", 0usize), self.add_label)
+                        .size(ControlSize::Sm)
+                        .variant(ButtonVariant::Ghost)
+                        .icon(IconName::Plus)
+                        .on_click(move |_, window, cx| {
+                            log::info!("field array {id:?}: added a row");
+                            if let Some(add) = &add {
+                                add(window, cx);
+                            }
+                        }),
+                ),
             )
-    });
-    let grow = state.clone();
-    div()
-        .id(id.clone())
-        .flex()
-        .flex_col()
-        .gap_2()
-        .w_full()
-        .children(lines)
-        .child(
-            div().child(
-                Button::new(("add-row", 0usize), add)
-                    .size(ControlSize::Sm)
-                    .variant(ButtonVariant::Ghost)
-                    .icon(IconName::Plus)
-                    .on_click(move |_, window, cx| {
-                        log::info!("rows: added one");
-                        grow.update(cx, |rows, cx| {
-                            rows.push(&[], window, cx);
-                            let last = rows.rows.last().expect("just pushed");
-                            window.focus(&last[0].0.read(cx).focus().clone());
-                            rows.report(window, cx);
-                            cx.notify();
-                        })
-                    }),
-            ),
+    }
+}
+
+fn render_rows(id: &ElementId, state: Entity<Rows>, add: &'static str, cx: &App) -> FieldArray {
+    let (grow, remove) = (state.clone(), state.clone());
+    let array = FieldArray::new(id.clone())
+        .add_label(add)
+        .on_add(move |window, cx| {
+            grow.update(cx, |rows, cx| {
+                rows.push(&[], window, cx);
+                let last = rows.rows.last().expect("just pushed");
+                window.focus(&last[0].0.read(cx).focus().clone());
+                rows.report(window, cx);
+                cx.notify();
+            })
+        })
+        .on_remove(move |ix, window, cx| {
+            remove.update(cx, |rows, cx| {
+                rows.rows.remove(ix);
+                rows.report(window, cx);
+                cx.notify();
+            })
+        });
+    state.read(cx).rows.iter().fold(array, |array, row| {
+        array.row(
+            div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .children(row.iter().map(|(field, _)| {
+                    div()
+                        .flex_1()
+                        .child(Input::new(field).size(ControlSize::Sm))
+                })),
         )
+    })
 }
 
 /// Rows of key and value fields; add and remove rows.

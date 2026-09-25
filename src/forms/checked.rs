@@ -18,11 +18,13 @@ static URL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^https?://[^\s/?#]+\.[^\s/?#]+\S*$").expect("url pattern compiles")
 });
 
-pub(crate) fn is_email(text: &str) -> bool {
+/// Whether `text` reads as one email address.
+pub fn is_email(text: &str) -> bool {
     EMAIL.is_match(text)
 }
 
-pub(crate) fn is_url(text: &str) -> bool {
+/// Whether `text` reads as a web link.
+pub fn is_url(text: &str) -> bool {
     URL.is_match(text)
 }
 

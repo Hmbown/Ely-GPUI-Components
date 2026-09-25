@@ -243,6 +243,11 @@ impl Theme {
         px_to_rems(6.0)
     }
 
+    /// A dot that marks a state, such as unsaved changes.
+    pub fn status_dot(&self) -> Rems {
+        px_to_rems(6.0)
+    }
+
     /// A switch's track; its thumb fills the height inside a small inset.
     pub fn switch_track(&self) -> Size<Rems> {
         size(px_to_rems(32.0), px_to_rems(18.0))

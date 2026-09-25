@@ -7,6 +7,7 @@ mod numbers;
 mod other;
 mod pickers;
 mod rich;
+mod structure;
 mod text;
 mod values;
 
@@ -299,6 +300,22 @@ const SCRIPT: &[Step] = &[
     Step::Shot("country"),
     Step::Key("enter"),
     Step::Wait(300),
+    Step::Click("form-name"),
+    Step::Key("secondary-a"),
+    Step::Type("Ada Lovelace"),
+    Step::Click("form-email"),
+    Step::Key("secondary-a"),
+    Step::Type("ada.example.com"),
+    Step::Wait(400),
+    Step::Shot("form"),
+    Step::Hover("form-actions"),
+    Step::Wait(300),
+    Step::Shot("form-dirty"),
+    Step::Key("secondary-a"),
+    Step::Type("ada@example.com"),
+    Step::Key("cmd-enter"),
+    Step::Wait(400),
+    Step::Shot("form-saved"),
     Step::Rest,
 ];
 
@@ -351,5 +368,7 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(other::font(window, cx))
         .child(other::glyphs(window, cx))
         .child(other::regional(window, cx))
+        .child(structure::form(window, cx))
+        .child(structure::inline(window, cx))
         .into_any_element()
 }

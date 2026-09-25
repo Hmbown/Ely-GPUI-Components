@@ -28,7 +28,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T06d Forms · Color
 - [x] T06e Forms · Files
 - [x] T06f Forms · Other
-- [ ] T06g Forms · Structure
+- [x] T06g Forms · Structure
 - [ ] T07 Navigation
 - [ ] T08 Menus
 - [ ] T09 Overlays
@@ -133,3 +133,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T06e | 1 | PASS | |
 | T06f | 1 | FAIL | a stroke lost the move that started the drag and its release point; language codes were not searchable though the gallery said so; emoji search compared a lowercase query with mixed-case names |
 | T06f | 2 | PASS | |
+| T06g | 1 | FAIL | form errors shared one animation id, so a later error skipped its entrance; the demo left links out of its saved snapshot; the demo let a lone @ pass as an email |
+| T06g | 2 | FAIL | a field's error still keyed its entrance by the label, so twin labels in one form shared it |
+| T06g | 3 | PASS | |

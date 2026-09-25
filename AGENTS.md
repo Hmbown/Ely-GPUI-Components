@@ -62,9 +62,10 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - gpui's `Hsla::opacity` scales alpha; `alpha` sets it.
 - A rounded box does not clip its children. Each layer inside takes the radius itself; `checker` takes one.
 - Only gpui can build `ExternalPaths` with paths, so drop rules live in `forms::files::dropped`, where tests reach them.
+- gpui runs key bindings before key listeners. A container takes a child's bound key through the action with `capture_action`, as `Form` takes `Submit`.
 - Long grids scroll in a `uniform_list`. gpui has no nearest scroll, so a key move up scrolls with `Top` and down with `Bottom` (`forms::glyphs`).
 - Masks reshape edits inside `TextInput::set_fit`, which sees the replaced range and the typed text. A diff after the fact cannot tell typed characters from kept ones.
-- Ids inside a reusable component carry its owner's id or `EntityId`. Twin ids share focus and click state.
+- Ids inside a reusable component carry its owner's id or `EntityId`, animation ids too. Twin ids share focus, click and animation state.
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.
 - `img()` keeps loading state only with an id. Content masks are rectangles, so rounded corners survive only when the image fills its box without cropping.
 

@@ -33,6 +33,7 @@ mod select;
 mod signature;
 mod slider;
 mod stepper;
+mod structure;
 mod switch;
 mod tags;
 #[cfg(all(test, feature = "test-support"))]
@@ -45,7 +46,7 @@ pub use card::{CheckboxCard, RadioCard};
 pub use cascade::{Cascade, Cascader};
 pub use catalogs::FontPicker;
 pub use check::{CheckState, Checkbox, CheckboxGroup};
-pub use checked::{EmailInput, UrlInput};
+pub use checked::{EmailInput, UrlInput, is_email, is_url};
 pub use chips::ChoiceChips;
 pub use code::{CodeInput, JsonInput, code_highlights, json_highlights};
 pub use color::{ColorPalette, ColorPicker, ColorSwatch, EyeDropper, GradientEditor, GradientStop};
@@ -69,7 +70,7 @@ pub use mention::{MentionInput, mention_highlights};
 pub use multi::MultiSelect;
 pub use number::{NumberInput, ScrubInput};
 pub use options::Choice;
-pub use pairs::{KeyValueInput, ListInput};
+pub use pairs::{FieldArray, KeyValueInput, ListInput};
 pub use path::PathInput;
 pub use pattern::{RegexInput, regex_highlights};
 pub use pin::PinInput;
@@ -80,6 +81,9 @@ pub use select::Select;
 pub use signature::{SignaturePad, Stroke};
 pub use slider::{RangeSlider, Slider};
 pub use stepper::Stepper;
+pub use structure::{
+    DirtyIndicator, Form, FormError, FormField, FormLabel, FormSection, InlineForm,
+};
 pub use switch::Switch;
 pub use tags::TagInput;
 pub(crate) use text::bind_keys;
