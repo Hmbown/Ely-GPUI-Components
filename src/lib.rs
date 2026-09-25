@@ -1,6 +1,7 @@
 mod assets;
 
 pub mod buttons;
+pub mod feedback;
 pub mod forms;
 pub mod layout;
 pub mod menus;

@@ -36,7 +36,8 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T08b Menus · Bar, search & pie
 - [x] T09a Overlays · Popovers & dialogs
 - [x] T09b Overlays · Guides & floats
-- [ ] T10 Feedback
+- [x] T10a Feedback · Messages
+- [ ] T10b Feedback · States
 - [ ] T11a Loading — `tasks/ch11-20.md`
 - [ ] T11b Motion
 - [ ] T12 Data Display
@@ -159,3 +160,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T09b | 1 | FAIL | the lightbox photo was cropped, the toolbar kept last frame's anchor, Escape missed a spotlight whose target held focus, a disabled Next dropped focus, and a dead arrow's press closed the lightbox |
 | T09b | 2 | FAIL | Enter on a focused Back that returned the tour to its first step removed the button and lost focus, so the arrows stopped |
 | T09b | 3 | FAIL | Left from a focused Back also removed it and lost focus; take_focus now takes focus back whenever the focused element leaves the tree (fixed after the cap) |
+| T10a | 1 | FAIL | a second press on a leaving toast's Undo ran it again, EmptyState's prose width was a literal, and two gallery callouts described behavior the code lacks |
+| T10a | 2 | FAIL | a gallery callout said reduced motion settles every animation, but the undo line keeps its real time |
+| T10a | 3 | PASS | |

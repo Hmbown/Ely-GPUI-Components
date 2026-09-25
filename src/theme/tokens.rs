@@ -189,7 +189,7 @@ impl Theme {
         px(16.0)
     }
 
-    /// Gap between a mini window and the screen edge.
+    /// Gap between the edge of a screen or window and what floats by it: a mini window, a toast stack.
     pub fn window_margin(&self) -> Pixels {
         px(24.0)
     }
@@ -241,6 +241,16 @@ impl Theme {
     /// Width of a dialog's card.
     pub fn dialog_width(&self) -> Rems {
         px_to_rems(440.0)
+    }
+
+    /// Width of a toast stack.
+    pub fn toast_width(&self) -> Rems {
+        px_to_rems(360.0)
+    }
+
+    /// Widest a centered block of prose runs, such as an empty state's help.
+    pub fn prose_width(&self) -> Rems {
+        px_to_rems(320.0)
     }
 
     /// Narrowest a menu's panel gets.

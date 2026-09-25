@@ -47,6 +47,7 @@ impl<T: IntoElement + Clone + 'static> Render for Hosted<T> {
             })
             .child(
                 FocusScope::new(&self.focus)
+                    .root()
                     .size_full()
                     .flex()
                     .flex_col()

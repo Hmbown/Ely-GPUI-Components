@@ -199,6 +199,7 @@ impl Render for Gallery {
         let colors = &theme.colors;
 
         FocusScope::new(&self.focus)
+            .root()
             .size_full()
             .flex()
             .bg(colors.bg)

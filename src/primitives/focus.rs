@@ -23,6 +23,7 @@ pub struct FocusScope {
     base: Div,
     handle: FocusHandle,
     trap: bool,
+    root: bool,
 }
 
 impl FocusScope {
@@ -31,6 +32,7 @@ impl FocusScope {
             base: div().track_focus(handle),
             handle: handle.clone(),
             trap: false,
+            root: false,
         }
     }
 
@@ -38,6 +40,17 @@ impl FocusScope {
         self.trap = true;
         self
     }
+
+    /// The window's outermost scope: it takes focus when the focused element leaves the tree.
+    pub fn root(mut self) -> Self {
+        self.root = true;
+        self
+    }
+}
+
+/// Keeps a root scope's claim on lost focus while it renders.
+struct Root {
+    _lost: Subscription,
 }
 
 impl Styled for FocusScope {
@@ -53,7 +66,16 @@ impl ParentElement for FocusScope {
 }
 
 impl RenderOnce for FocusScope {
-    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        if self.root {
+            let handle = self.handle.clone();
+            window.use_keyed_state("focus-root", cx, |window, cx| Root {
+                _lost: cx.on_focus_lost(window, move |_: &mut Root, window, _| {
+                    log::info!("focus: its element left the tree; the root takes it");
+                    window.focus(&handle);
+                }),
+            });
+        }
         let (next, prev) = (self.handle.clone(), self.handle);
         let trap = self.trap;
         self.base

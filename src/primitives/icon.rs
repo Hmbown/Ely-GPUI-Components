@@ -205,6 +205,7 @@ icons! {
     Save => "save",
     Scissors => "scissors",
     Search => "search",
+    SearchX => "search-x",
     Send => "send",
     Server => "server",
     Settings => "settings",
