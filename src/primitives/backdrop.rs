@@ -11,10 +11,22 @@ use crate::{motion, theme::ActiveTheme};
 
 type Dismiss = Rc<dyn Fn(&mut Window, &mut App)>;
 
-/// Full-window scrim. Children sit centered above it.
+/// Where a `Backdrop` holds its children.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Place {
+    #[default]
+    Center,
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
+/// Full-window scrim. Children sit above it, centered or on an edge.
 #[derive(IntoElement)]
 pub struct Backdrop {
     id: ElementId,
+    place: Place,
     on_dismiss: Option<Dismiss>,
     children: SmallVec<[AnyElement; 1]>,
 }
@@ -23,9 +35,16 @@ impl Backdrop {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
             id: id.into(),
+            place: Place::Center,
             on_dismiss: None,
             children: SmallVec::new(),
         }
+    }
+
+    /// Edges stretch children along that edge.
+    pub fn place(mut self, place: Place) -> Self {
+        self.place = place;
+        self
     }
 
     /// Runs on a click outside the children.
@@ -69,8 +88,13 @@ impl RenderOnce for Backdrop {
                     .w(viewport.width)
                     .h(viewport.height)
                     .flex()
-                    .items_center()
-                    .justify_center()
+                    .map(|layer| match self.place {
+                        Place::Center => layer.items_center().justify_center(),
+                        Place::Left => layer.flex_row().justify_start(),
+                        Place::Right => layer.flex_row().justify_end(),
+                        Place::Top => layer.flex_col().justify_start(),
+                        Place::Bottom => layer.flex_col().justify_end(),
+                    })
                     .child(scrim)
                     .children(
                         self.children

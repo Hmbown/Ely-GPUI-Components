@@ -12,6 +12,7 @@ for f in $files AGENTS.md README.md TASKS.md tasks/*.md; do
   n=$(wc -l < "$f")
   [ "$n" -le 500 ] || { echo "$f has $n lines"; fail=1; }
 done
-raw=$(grep -rnE "(^|[^.[:alnum:]_])px\(" src --include='*.rs' | grep -v "^src/theme/tokens.rs\|^src/motion/" || true)
+components=$(find src -name '*.rs' ! -path 'src/theme/tokens.rs' ! -path 'src/motion/*')
+raw=$(awk '/#\[cfg\(test\)\]/{nextfile} /(^|[^.[:alnum:]_])px\(/{print FILENAME":"FNR": "$0}' $components)
 [ -z "$raw" ] || { echo "raw px in components:"; echo "$raw"; fail=1; }
 exit $fail

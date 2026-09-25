@@ -14,17 +14,24 @@ pub enum Step {
     Click(&'static str),
     /// Clicks just inside the probe's right edge.
     ClickEnd(&'static str),
+    /// Presses at an offset from the probe's top-left corner.
+    DownAt(&'static str, f32, f32),
+    /// Drags from the last point to an offset, in small steps.
+    DragTo(&'static str, f32, f32),
+    UpAt(&'static str, f32, f32),
     Key(&'static str),
     Wait(u64),
     Shot(&'static str),
 }
 
 const FRAME: Duration = Duration::from_millis(120);
+const DRAG_STEPS: u32 = 10;
 
 #[derive(Clone, Copy)]
 enum Mouse {
     Move,
     Down,
+    Drag,
     Up,
 }
 
@@ -39,6 +46,7 @@ pub async fn play(
     path: impl Fn(&str) -> PathBuf,
     cx: &mut AsyncApp,
 ) -> Result<()> {
+    let mut last = point(px(0.0), px(0.0));
     for step in steps {
         match *step {
             Step::Rest => park(window, cx)?,
@@ -67,6 +75,30 @@ pub async fn play(
                 send(window, Mouse::Move, at, cx)?;
                 send(window, Mouse::Down, at, cx)?;
                 send(window, Mouse::Up, at, cx)?;
+            }
+            Step::DownAt(key, x, y) => {
+                last = target_bounds(window, key, cx).await?.origin + point(px(x), px(y));
+                send(window, Mouse::Move, last, cx)?;
+                send(window, Mouse::Down, last, cx)?;
+            }
+            Step::DragTo(key, x, y) => {
+                let goal = target_bounds(window, key, cx).await?.origin + point(px(x), px(y));
+                for step in 1..=DRAG_STEPS {
+                    let t = step as f32 / DRAG_STEPS as f32;
+                    let at = point(
+                        last.x + (goal.x - last.x) * t,
+                        last.y + (goal.y - last.y) * t,
+                    );
+                    send(window, Mouse::Drag, at, cx)?;
+                    cx.background_executor()
+                        .timer(Duration::from_millis(16))
+                        .await;
+                }
+                last = goal;
+            }
+            Step::UpAt(key, x, y) => {
+                last = target_bounds(window, key, cx).await?.origin + point(px(x), px(y));
+                send(window, Mouse::Up, last, cx)?;
             }
             Step::Key(stroke) => {
                 let stroke =
@@ -113,6 +145,7 @@ fn post(kind: Mouse, x: f64, y: f64) -> Result<()> {
     let kind = match kind {
         Mouse::Move => NSEventType::NSMouseMoved,
         Mouse::Down => NSEventType::NSLeftMouseDown,
+        Mouse::Drag => NSEventType::NSLeftMouseDragged,
         Mouse::Up => NSEventType::NSLeftMouseUp,
     };
     unsafe {

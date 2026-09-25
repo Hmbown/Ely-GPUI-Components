@@ -7,7 +7,7 @@ use gpui::{App, Global, SharedString, WindowAppearance};
 
 use crate::motion;
 pub use palette::{Mix, Palette, Syntax};
-pub use tokens::{ControlSize, Density, Elevation, IconSize, Radius, TextSize};
+pub use tokens::{ContainerSize, ControlSize, Density, Elevation, IconSize, Radius, TextSize};
 
 const FRAME: Duration = Duration::from_millis(8);
 

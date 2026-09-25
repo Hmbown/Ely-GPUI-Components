@@ -1,4 +1,4 @@
-use gpui::{BoxShadow, Hsla, Rems, point, px, rems};
+use gpui::{BoxShadow, Hsla, Rems, Size, point, px, rems, size};
 
 use super::{Mode, Theme};
 
@@ -39,6 +39,14 @@ pub enum TextSize {
     Xl,
     Xxl,
     Display,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ContainerSize {
+    Sm,
+    #[default]
+    Md,
+    Lg,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -99,6 +107,46 @@ impl Theme {
             IconSize::Xxl => 32.0,
         };
         px_to_rems(base * self.font_scale)
+    }
+
+    pub fn container_width(&self, size: ContainerSize) -> Rems {
+        px_to_rems(match size {
+            ContainerSize::Sm => 640.0,
+            ContainerSize::Md => 960.0,
+            ContainerSize::Lg => 1200.0,
+        })
+    }
+
+    pub fn sidebar_width(&self, collapsed: bool) -> Rems {
+        px_to_rems(if collapsed { 56.0 } else { 240.0 })
+    }
+
+    /// Width of a side sheet, height of a top or bottom one.
+    pub fn sheet_size(&self) -> Rems {
+        px_to_rems(380.0)
+    }
+
+    pub fn scrollbar_thickness(&self) -> Rems {
+        px_to_rems(6.0)
+    }
+
+    pub fn scrollbar_min_thumb(&self) -> Rems {
+        px_to_rems(24.0)
+    }
+
+    /// Smallest a split pane or dock may shrink to.
+    pub fn pane_min(&self) -> Rems {
+        px_to_rems(160.0)
+    }
+
+    /// Grab bar on a drawer.
+    pub fn grip(&self) -> Size<Rems> {
+        size(px_to_rems(36.0), px_to_rems(4.0))
+    }
+
+    /// Hit area of a split or resize handle.
+    pub fn handle_hit(&self) -> Rems {
+        px_to_rems(6.0)
     }
 
     /// Gap between the pointer and a tooltip.

@@ -19,7 +19,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T00 Foundation: package, theme, motion, assets, Icon, Button, gallery shell, docs
 - [x] T01 Primitives — `tasks/ch01-10.md`
 - [x] T02 Typography
-- [ ] T03 Layout
+- [x] T03 Layout
 - [ ] T04 Window & Shell
 - [ ] T05 Buttons & Actions
 - [ ] T06a Forms · Text
@@ -110,3 +110,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T01 | 3 | FAIL | two-line doc comment; fixed after the cap, verified by scan, no fourth review |
 | T02 | 1 | FAIL | stale selection; strftime and zone fallbacks; \\text flattening; probes missed targets; ellipsis overflow; u64 precision; caret sizes; LineClamp copy; 500-line wording |
 | T02 | 2 | PASS | |
+| T03 | 1 | FAIL | restore kept cached split and float state; drags lacked an owner; weights unchecked; pane id overflow broke atomic restore; sticky copy escaped the clip; wheel propagated past the viewport; drawer pull lost the pointer; no top dock; grip sizes raw |
+| T03 | 2 | FAIL | closing a pane made NaN or infinite weights; drag ghost text black in dark |
+| T03 | 3 | FAIL | even split of a denormal weight underflowed; fixed after the cap by normalizing on close and split, verified by tests and capture, no fourth review |

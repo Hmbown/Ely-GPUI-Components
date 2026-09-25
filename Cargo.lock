@@ -1530,6 +1530,8 @@ dependencies = [
  "log",
  "regex",
  "rust-embed",
+ "serde",
+ "serde_json",
  "smallvec",
  "unicode-segmentation",
 ]

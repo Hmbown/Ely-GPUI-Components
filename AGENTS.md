@@ -12,7 +12,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 ## Commands
 
 - `cargo run --example gallery` opens the gallery. `-- --page <slug>` starts on a page.
-- `cargo run --example gallery -- --capture <dir>` writes PNGs of every page, light and dark, top to bottom. macOS only.
+- `cargo run --example gallery -- --capture <dir>` writes PNGs of every page, light and dark, top to bottom, then each page's scripted states. macOS only.
 - `cargo test --lib`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`.
 - `rm -rf target/debug/incremental` after each task item keeps the disk lean.
 - `scripts/icons.sh <lucide-name>...` adds icons. Then add a line to `IconName` in `src/primitives/icon.rs`.
@@ -49,3 +49,4 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - 2026-09-24: gpui 0.2.2 has no accessibility tree and no tray, badge, or notification API. Those entries carry `blocked` or `prove`.
 - 2026-09-24: the gallery photographs its own window with `CGWindowListCreateImage`. No Screen Recording permission needed.
 - 2026-09-24: license MIT OR Apache-2.0.
+- 2026-09-25: layouts persist as versioned JSON through serde. Unknown fields are ignored. Newer versions, unknown panels and bad pane trees are refused, and restore is all or nothing.

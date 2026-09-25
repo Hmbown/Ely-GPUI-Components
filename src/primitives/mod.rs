@@ -7,7 +7,7 @@ mod measure;
 mod pressable;
 mod tooltip;
 
-pub use backdrop::Backdrop;
+pub use backdrop::{Backdrop, Place};
 pub use divider::Divider;
 pub use focus::{FocusNext, FocusPrev, FocusRing, FocusScope};
 pub use icon::{Icon, IconName};

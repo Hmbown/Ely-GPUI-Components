@@ -1,4 +1,5 @@
 mod buttons;
+mod layout;
 mod primitives;
 mod theme;
 mod typography;
@@ -20,6 +21,7 @@ pub struct Page {
 pub const ALL: &[Page] = &[
     primitives::PAGE,
     typography::PAGE,
+    layout::PAGE,
     buttons::PAGE,
     theme::PAGE,
 ];
