@@ -1,4 +1,5 @@
 mod loading;
+mod moves;
 mod progress;
 
 use gpui::{AnyElement, App, IntoElement, ParentElement, Window, div};
@@ -42,6 +43,16 @@ const SCRIPT: &[Step] = &[
     Step::Click("uploads-tick"),
     Step::Wait(400),
     Step::Shot("uploads"),
+    Step::Click("transition-toggle"),
+    Step::Wait(80),
+    Step::Shot("transition-leaving"),
+    Step::Click("transition-toggle"),
+    Step::Click("presence-add"),
+    Step::Wait(80),
+    Step::Shot("presence-arriving"),
+    Step::Click("flip-shuffle"),
+    Step::Wait(100),
+    Step::Shot("flip-gliding"),
     Step::Rest,
 ];
 
@@ -58,5 +69,10 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(progress::suspense(window, cx))
         .child(progress::refresh(window, cx))
         .child(progress::uploads(window, cx))
+        .child(moves::transitions(window, cx))
+        .child(moves::stagger(window, cx))
+        .child(moves::presence(window, cx))
+        .child(moves::flip(window, cx))
+        .child(moves::reorder(window, cx))
         .into_any_element()
 }

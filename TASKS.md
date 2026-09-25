@@ -40,7 +40,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T10b Feedback · States
 - [x] T11a Loading · Spinners & skeletons — `tasks/ch11-20.md`
 - [x] T11b Loading · Progress & states
-- [ ] T11c Motion · Presence & order
+- [x] T11c Motion · Presence & order
 - [ ] T11d Motion · Effects
 - [ ] T12 Data Display
 - [ ] T13 Lists & Trees
@@ -173,3 +173,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T11a | 3 | PASS | |
 | T11b | 1 | FAIL | the sweeping bar grew in a tall flex column, the overlay's veil ignored rounded corners, the fail demo could not start a load, and two UploadList docs said more than the rows show |
 | T11b | 2 | PASS | |
+| T11c | 1 | FAIL | a drag kept a stale row index and panicked when the list shrank, a move changed each row's animation id and rebuilt its state, and repeated demo tags shared a key |
+| T11c | 2 | FAIL | a row first seen hidden drew open and asked for no frame, so it lingered until something else redrew |
+| T11c | 3 | PASS | |

@@ -67,6 +67,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - gpui clicks a focused element when Enter or Space is released. An overlay that hands focus back picks on release too; a pick on press returns focus first, and the release clicks the opener again.
 - A dialog goes through `overlays::Dialog`: scrim, focus trap, Escape and focus return live there. AlertDialog, ConfirmDialog and PromptDialog build on it; a fullscreen dialog fills the window below its title bar.
 - `primitives::Severity` names info, success, warning and danger with their colors and icons, for alerts and feedback alike.
+- Rows that move are keyed. `motion::Flip` places them absolutely from last frame's heights, so no frame shows a row at its new place before it glides there, and drives the glide from elapsed time: an animation id that changes per move would rebuild the row's keyed state. `Reorder` holds a row by key, drags with an empty ghost and moves the held row itself.
 - A marker that slides between items (segment thumb, tab line) measures them with `motion::slide` and eases with `glide`.
 - A picker hands focus to its popup on open and back to its trigger on pick or Escape; it closes once focus leaves both (`forms::date::picker`).
 - Motion for a value change keys its animation on `motion::changes`, so it replays per change and stays still on first paint. Key only the part that moves: a keyed ancestor gives every descendant a new id, and focused buttons lose focus.
