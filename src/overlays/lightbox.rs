@@ -16,8 +16,8 @@ use crate::{
 /// One picture in a lightbox, and the line under it.
 #[derive(Clone)]
 pub struct Slide {
-    source: ImageSource,
-    caption: SharedString,
+    pub(crate) source: ImageSource,
+    pub(crate) caption: SharedString,
 }
 
 impl Slide {

@@ -284,6 +284,11 @@ impl Theme {
         px_to_rems(128.0)
     }
 
+    /// One repeat of a watermark's text.
+    pub fn watermark_tile(&self) -> Size<Rems> {
+        size(px_to_rems(200.0), px_to_rems(96.0))
+    }
+
     /// The label column of a description list.
     pub fn label_width(&self) -> Rems {
         px_to_rems(160.0)

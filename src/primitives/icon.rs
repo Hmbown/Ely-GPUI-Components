@@ -74,6 +74,7 @@ icons! {
     ChevronRight => "chevron-right",
     ChevronUp => "chevron-up",
     ChevronsLeft => "chevrons-left",
+    ChevronsLeftRight => "chevrons-left-right",
     ChevronsRight => "chevrons-right",
     ChevronsUpDown => "chevrons-up-down",
     CircleAlert => "circle-alert",

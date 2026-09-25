@@ -1,3 +1,4 @@
+mod media;
 mod people;
 mod records;
 
@@ -29,6 +30,24 @@ const SCRIPT: &[Step] = &[
     Step::Click("feed-post"),
     Step::Wait(300),
     Step::Shot("feed-arrival"),
+    Step::Hover("carousel"),
+    Step::Wait(300),
+    Step::Shot("carousel-hover"),
+    Step::DownAt("carousel", 530.0, 133.0),
+    Step::UpAt("carousel", 530.0, 133.0),
+    Step::Wait(600),
+    Step::Shot("carousel-next"),
+    Step::DownAt("gallery", 60.0, 60.0),
+    Step::UpAt("gallery", 60.0, 60.0),
+    Step::Wait(400),
+    Step::Shot("gallery-lightbox"),
+    Step::Key("escape"),
+    Step::Wait(300),
+    Step::DownAt("before-after", 240.0, 160.0),
+    Step::DragTo("before-after", 390.0, 160.0),
+    Step::UpAt("before-after", 390.0, 160.0),
+    Step::Wait(200),
+    Step::Shot("before-after-drag"),
     Step::Rest,
 ];
 
@@ -44,5 +63,9 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(records::timelines(cx))
         .child(records::feed(window, cx))
         .child(records::changelog(cx))
+        .child(media::carousel(cx))
+        .child(media::gallery(cx))
+        .child(media::before_after(cx))
+        .child(media::watermark(window, cx))
         .into_any_element()
 }

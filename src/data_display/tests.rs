@@ -1,11 +1,15 @@
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+    time::Duration,
+};
 
 use gpui::{
     Context, IntoElement, Modifiers, ParentElement, Pixels, Render, Styled, TestAppContext,
     VisualTestContext, Window, div, point, px,
 };
 
-use super::{PropertyGrid, PropertyGroup};
+use super::{Carousel, PropertyGrid, PropertyGroup};
 use crate::{primitives::Measure, theme::Theme};
 
 /// A property grid whose drawn height the test reads.
@@ -62,4 +66,75 @@ fn a_property_group_folds_from_its_header_and_stays_folded(cx: &mut TestAppConte
     cx.simulate_click(header, Modifiers::none());
     settle(cx);
     assert_eq!(height.get(), open, "a second press opens it");
+}
+
+/// A three-slide carousel, 200 wide, that turns every five seconds; each slide reports where it sits.
+struct Deck(Rc<RefCell<[Pixels; 3]>>);
+
+impl Render for Deck {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        let slides = (0..3).map(|ix| {
+            let seen = self.0.clone();
+            Measure::new(("slide", ix), move |bounds, _, _| {
+                seen.borrow_mut()[ix] = bounds.origin.x
+            })
+            .size_full()
+        });
+        Carousel::new("deck")
+            .autoplay(Duration::from_secs(5))
+            .w(px(200.0))
+            .h(px(100.0))
+            .children(slides)
+    }
+}
+
+fn deck(cx: &mut TestAppContext) -> (Rc<RefCell<[Pixels; 3]>>, &mut VisualTestContext) {
+    cx.update(|cx| {
+        Theme::init(cx);
+        Theme::update(cx, |theme| theme.reduced_motion = true);
+    });
+    let places = Rc::new(RefCell::new([Pixels::ZERO; 3]));
+    let seen = places.clone();
+    let (_, cx) = cx.add_window_view(|_, _| Deck(seen));
+    settle(cx);
+    (places, cx)
+}
+
+/// The slide in view: the one at the viewport's left edge, inside its border.
+fn front(places: &Rc<RefCell<[Pixels; 3]>>) -> Option<usize> {
+    places.borrow().iter().position(|x| *x == px(1.0))
+}
+
+fn wait(time: Duration, cx: &mut VisualTestContext) {
+    cx.executor().advance_clock(time);
+    settle(cx);
+}
+
+#[gpui::test]
+fn autoplay_turns_the_carousel_and_holds_while_pointed_at(cx: &mut TestAppContext) {
+    let (places, cx) = deck(cx);
+    assert_eq!(front(&places), Some(0));
+    wait(Duration::from_secs(5), cx);
+    assert_eq!(front(&places), Some(1), "five seconds turn it once");
+    cx.simulate_mouse_move(point(px(100.0), px(50.0)), None, Modifiers::none());
+    settle(cx);
+    wait(Duration::from_secs(12), cx);
+    assert_eq!(front(&places), Some(1), "held while pointed at");
+    cx.simulate_mouse_move(point(px(600.0), px(400.0)), None, Modifiers::none());
+    settle(cx);
+    wait(Duration::from_secs(5), cx);
+    assert_eq!(front(&places), Some(2));
+}
+
+#[gpui::test]
+fn left_from_the_first_slide_wraps_to_the_last(cx: &mut TestAppContext) {
+    let (places, cx) = deck(cx);
+    cx.simulate_click(point(px(100.0), px(50.0)), Modifiers::none());
+    settle(cx);
+    cx.simulate_keystrokes("left");
+    settle(cx);
+    assert_eq!(front(&places), Some(2));
+    cx.simulate_keystrokes("right");
+    settle(cx);
+    assert_eq!(front(&places), Some(0));
 }
