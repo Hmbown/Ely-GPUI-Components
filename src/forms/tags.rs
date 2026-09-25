@@ -1,12 +1,12 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, Context, ElementId, Entity, InteractiveElement, IntoElement, MouseButton, ParentElement,
-    RenderOnce, SharedString, StatefulInteractiveElement, Styled, Subscription, Window, div,
-    prelude::*,
+    App, Context, Div, ElementId, Entity, InteractiveElement, IntoElement, MouseButton,
+    ParentElement, RenderOnce, SharedString, StatefulInteractiveElement, Styled, Subscription,
+    Window, div, prelude::*,
 };
 
-use super::{InputEvent, TextInput, text::Backspace};
+use super::{InputEvent, TextInput, options::Run, text::Backspace};
 use crate::{
     primitives::{Icon, IconName},
     theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
@@ -43,6 +43,41 @@ impl Tags {
             on_change(next, window, cx);
         }
     }
+}
+
+/// A small label with an x that removes it.
+pub(crate) fn chip(id: ElementId, label: SharedString, remove: Run, cx: &App) -> Div {
+    let theme = cx.theme();
+    let colors = &theme.colors;
+    div()
+        .flex()
+        .items_center()
+        .gap_1()
+        .pl_2()
+        .pr_1()
+        .h(theme.control_height(ControlSize::Sm))
+        .rounded(theme.radius(Radius::Sm))
+        .bg(colors.hover)
+        .text_size(theme.text_size(TextSize::Sm))
+        .text_color(colors.fg)
+        .child(label)
+        .child(
+            div()
+                .id(id)
+                .rounded(theme.radius(Radius::Sm))
+                .cursor_pointer()
+                .hover(|style| style.bg(colors.active))
+                .on_mouse_down(MouseButton::Left, |_, window, _| window.prevent_default())
+                .on_click(move |_, window, cx| {
+                    cx.stop_propagation();
+                    remove(window, cx)
+                })
+                .child(
+                    Icon::new(IconName::X)
+                        .size(IconSize::Xs)
+                        .color(colors.fg_muted),
+                ),
+        )
 }
 
 /// A chip per tag, then a field. Enter or a comma adds; Backspace on empty drops the last.
@@ -111,39 +146,20 @@ impl RenderOnce for TagInput {
         let theme = cx.theme();
         let colors = &theme.colors;
         let chips = self.tags.iter().enumerate().map(|(ix, tag)| {
-            let (remove, tags, on_change) = (ix, self.tags.clone(), self.on_change.clone());
-            div()
-                .flex()
-                .items_center()
-                .gap_1()
-                .pl_2()
-                .pr_1()
-                .h(theme.control_height(ControlSize::Sm))
-                .rounded(theme.radius(Radius::Sm))
-                .bg(colors.hover)
-                .text_size(theme.text_size(TextSize::Sm))
-                .child(tag.clone())
-                .child(
-                    div()
-                        .id(("tag-remove", ix))
-                        .rounded(theme.radius(Radius::Sm))
-                        .cursor_pointer()
-                        .hover(|style| style.bg(colors.active))
-                        .on_mouse_down(MouseButton::Left, |_, window, _| window.prevent_default())
-                        .on_click(move |_, window, cx| {
-                            let mut next = tags.clone();
-                            next.remove(remove);
-                            log::info!("tag input: removed one, {} left", next.len());
-                            if let Some(on_change) = &on_change {
-                                on_change(next, window, cx);
-                            }
-                        })
-                        .child(
-                            Icon::new(IconName::X)
-                                .size(IconSize::Xs)
-                                .color(colors.fg_muted),
-                        ),
-                )
+            let (tags, on_change) = (self.tags.clone(), self.on_change.clone());
+            chip(
+                ("tag-remove", ix).into(),
+                tag.clone(),
+                Rc::new(move |window, cx| {
+                    let mut next = tags.clone();
+                    next.remove(ix);
+                    log::info!("tag input: removed one, {} left", next.len());
+                    if let Some(on_change) = &on_change {
+                        on_change(next, window, cx);
+                    }
+                }),
+                cx,
+            )
         });
         let (tags, on_change, empty_check) =
             (self.tags.clone(), self.on_change.clone(), input.clone());

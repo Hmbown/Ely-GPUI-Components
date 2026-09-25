@@ -7,7 +7,7 @@ use gpui::{
 
 use super::{
     Highlight, Input, TextInput,
-    suggest::{Suggestion, suggestion_list},
+    options::{Choice, Popup},
     text::{Down, Enter, Up},
 };
 use crate::theme::ActiveTheme;
@@ -162,13 +162,13 @@ impl RenderOnce for MentionInput {
             "mention input: open {open}, {} matches, caret {anchor:?}",
             matches.len()
         );
-        let rows: Vec<Suggestion> = matches
+        let rows: Vec<Choice> = matches
             .iter()
-            .map(|name| Suggestion {
-                label: active.map_or(name.clone(), |(_, trigger)| {
+            .map(|name| {
+                let label = active.map_or(name.clone(), |(_, trigger)| {
                     SharedString::from(format!("{trigger}{name}"))
-                }),
-                note: None,
+                });
+                Choice::new(name.clone(), label)
             })
             .collect();
         let insert = {
@@ -231,15 +231,19 @@ impl RenderOnce for MentionInput {
             })
             .child(Input::new(&self.state))
             .when_some(anchor.filter(|_| open), |field, anchor| {
-                field.child(suggestion_list(
-                    "mentions",
-                    anchor,
-                    &rows,
-                    highlighted,
-                    insert,
-                    None,
-                    cx,
-                ))
+                field.child(
+                    Popup {
+                        id: "mentions".into(),
+                        anchor,
+                        rows: &rows,
+                        highlighted: Some(highlighted),
+                        checked: None,
+                        pick: insert,
+                        dismiss: None,
+                        scroll: None,
+                    }
+                    .render(window, cx),
+                )
             })
     }
 }

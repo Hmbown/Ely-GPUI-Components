@@ -8,7 +8,7 @@ use gpui::{
 
 use super::{
     Input, TextInput,
-    suggest::{Suggestion, suggestion_list},
+    options::{Choice, Popup},
 };
 use crate::{
     primitives::{Icon, IconName},
@@ -227,12 +227,9 @@ impl RenderOnce for PhoneInput {
             .expect("checked at construction");
         let theme = cx.theme();
         let (hover, muted) = (theme.colors.hover, theme.colors.fg_muted);
-        let rows: Vec<Suggestion> = COUNTRIES
+        let rows: Vec<Choice> = COUNTRIES
             .iter()
-            .map(|(code, dial, flag, _)| Suggestion {
-                label: SharedString::from(format!("{flag}  {code}")),
-                note: Some(SharedString::from(*dial)),
-            })
+            .map(|(code, dial, flag, _)| Choice::new(*code, format!("{flag}  {code}")).note(*dial))
             .collect();
         let (toggle, close, measure) = (picker.clone(), picker.clone(), picker.clone());
         let on_country = self.on_country;
@@ -290,23 +287,25 @@ impl RenderOnce for PhoneInput {
                 .size_full(),
             )
             .when(open, |field| {
-                let current = COUNTRIES
-                    .iter()
-                    .position(|(code, ..)| *code == self.country);
-                field.child(suggestion_list(
-                    (self.id.clone(), "countries"),
-                    anchor,
-                    &rows,
-                    current.unwrap_or(usize::MAX),
-                    pick,
-                    Some(Rc::new(move |_, cx| {
-                        dismiss.update(cx, |picker, cx| {
-                            picker.open = false;
-                            cx.notify();
-                        })
-                    })),
-                    cx,
-                ))
+                let current = [SharedString::from(self.country)];
+                field.child(
+                    Popup {
+                        id: (self.id.clone(), "countries").into(),
+                        anchor,
+                        rows: &rows,
+                        highlighted: None,
+                        checked: Some(&current),
+                        pick,
+                        dismiss: Some(Rc::new(move |_, cx| {
+                            dismiss.update(cx, |picker, cx| {
+                                picker.open = false;
+                                cx.notify();
+                            })
+                        })),
+                        scroll: None,
+                    }
+                    .render(window, cx),
+                )
             })
     }
 }

@@ -233,6 +233,39 @@ impl Theme {
         px_to_rems(18.0)
     }
 
+    /// A checkbox or radio mark.
+    pub fn check_size(&self) -> Rems {
+        px_to_rems(16.0)
+    }
+
+    /// The dot inside a chosen radio.
+    pub fn radio_dot(&self) -> Rems {
+        px_to_rems(6.0)
+    }
+
+    /// A switch's track; its thumb fills the height inside a small inset.
+    pub fn switch_track(&self) -> Size<Rems> {
+        size(px_to_rems(32.0), px_to_rems(18.0))
+    }
+
+    pub fn slider_track(&self) -> Rems {
+        px_to_rems(4.0)
+    }
+
+    pub fn slider_thumb(&self) -> Rems {
+        px_to_rems(16.0)
+    }
+
+    /// Diameter and arc width of a knob.
+    pub fn knob(&self) -> (Rems, Rems) {
+        (px_to_rems(48.0), px_to_rems(3.0))
+    }
+
+    /// Tallest a list grows before it scrolls.
+    pub fn list_max_height(&self) -> Rems {
+        px_to_rems(280.0)
+    }
+
     pub fn tooltip_max_width(&self) -> Rems {
         px_to_rems(256.0)
     }

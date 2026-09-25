@@ -7,7 +7,7 @@ use gpui::{
 
 use super::{
     Input, TextInput,
-    suggest::{Suggestion, suggestion_list},
+    options::{Choice, Popup},
 };
 use crate::{
     primitives::{Icon, IconName},
@@ -65,13 +65,10 @@ impl RenderOnce for SearchInput {
         let open = input.focus().is_focused(window) && input.is_empty() && !self.history.is_empty();
         let anchor = *frame.read(cx);
         let subtle = cx.theme().colors.fg_subtle;
-        let rows: Vec<Suggestion> = self
+        let rows: Vec<Choice> = self
             .history
             .iter()
-            .map(|query| Suggestion {
-                label: query.clone(),
-                note: None,
-            })
+            .map(|query| Choice::new(query.clone(), query.clone()))
             .collect();
         let (state, history, on_pick) = (self.state.clone(), self.history, self.on_pick);
         let pick = Rc::new(move |ix: usize, window: &mut Window, cx: &mut App| {
@@ -106,15 +103,19 @@ impl RenderOnce for SearchInput {
                 .size_full(),
             )
             .when(open, |field| {
-                field.child(suggestion_list(
-                    (self.id.clone(), "recent"),
-                    anchor,
-                    &rows,
-                    usize::MAX,
-                    pick,
-                    None,
-                    cx,
-                ))
+                field.child(
+                    Popup {
+                        id: (self.id.clone(), "recent").into(),
+                        anchor,
+                        rows: &rows,
+                        highlighted: None,
+                        checked: None,
+                        pick,
+                        dismiss: None,
+                        scroll: None,
+                    }
+                    .render(window, cx),
+                )
             })
     }
 }

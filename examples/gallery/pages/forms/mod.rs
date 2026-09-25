@@ -1,7 +1,10 @@
+mod choices;
 mod formats;
 mod numbers;
+mod pickers;
 mod rich;
 mod text;
+mod values;
 
 use gpui::{AnyElement, App, IntoElement, ParentElement, Window, div};
 
@@ -109,6 +112,74 @@ const SCRIPT: &[Step] = &[
     Step::Wait(1200),
     Step::CancelPanel,
     Step::Wait(600),
+    Step::DownAt("checks", 40.0, 66.0),
+    Step::UpAt("checks", 40.0, 66.0),
+    Step::Wait(300),
+    Step::Shot("checks"),
+    Step::DownAt("radios", 30.0, 66.0),
+    Step::UpAt("radios", 30.0, 66.0),
+    Step::Wait(400),
+    Step::Shot("radios"),
+    Step::DownAt("cards", 480.0, 30.0),
+    Step::UpAt("cards", 480.0, 30.0),
+    Step::Wait(400),
+    Step::Shot("cards"),
+    Step::DownAt("switches", 16.0, 39.0),
+    Step::UpAt("switches", 16.0, 39.0),
+    Step::Wait(600),
+    Step::Shot("switches"),
+    Step::Click("select"),
+    Step::Wait(300),
+    Step::Key("down"),
+    Step::Wait(200),
+    Step::Shot("select-open"),
+    Step::Key("enter"),
+    Step::Wait(300),
+    Step::Click("combobox"),
+    Step::Key("secondary-a"),
+    Step::Type("lis"),
+    Step::Wait(300),
+    Step::Shot("combobox"),
+    Step::Key("enter"),
+    Step::Wait(200),
+    Step::Click("multi"),
+    Step::Wait(300),
+    Step::Key("down"),
+    Step::Key("enter"),
+    Step::Wait(300),
+    Step::Shot("multi"),
+    Step::Key("escape"),
+    Step::Click("cascader"),
+    Step::Wait(300),
+    Step::Key("down"),
+    Step::Key("right"),
+    Step::Wait(300),
+    Step::Shot("cascader"),
+    Step::Key("escape"),
+    Step::DownAt("transfer", 60.0, 45.0),
+    Step::UpAt("transfer", 60.0, 45.0),
+    Step::Wait(200),
+    Step::DownAt("transfer", 280.0, 134.0),
+    Step::UpAt("transfer", 280.0, 134.0),
+    Step::Wait(300),
+    Step::Shot("transfer"),
+    Step::DownAt("chips", 120.0, 14.0),
+    Step::UpAt("chips", 120.0, 14.0),
+    Step::DownAt("rating", 79.0, 13.0),
+    Step::UpAt("rating", 79.0, 13.0),
+    Step::Wait(300),
+    Step::Shot("chips-rating"),
+    Step::DownAt("slider", 130.0, 8.0),
+    Step::DragTo("slider", 220.0, 8.0),
+    Step::UpAt("slider", 220.0, 8.0),
+    Step::Wait(200),
+    Step::DownAt("knob", 24.0, 24.0),
+    Step::DragTo("knob", 24.0, -36.0),
+    Step::UpAt("knob", 24.0, -36.0),
+    Step::DownAt("stepper", 76.0, 16.0),
+    Step::UpAt("stepper", 76.0, 16.0),
+    Step::Wait(300),
+    Step::Shot("values"),
     Step::Rest,
 ];
 
@@ -133,5 +204,19 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(rich::regex(window, cx))
         .child(rich::expression(window, cx))
         .child(rich::hotkey(window, cx))
+        .child(choices::checkboxes(window, cx))
+        .child(choices::radios(window, cx))
+        .child(choices::cards(window, cx))
+        .child(choices::switches(window, cx))
+        .child(pickers::select(window, cx))
+        .child(pickers::list_box(window, cx))
+        .child(pickers::combobox(window, cx))
+        .child(pickers::multi_select(window, cx))
+        .child(pickers::cascader(window, cx))
+        .child(pickers::transfer(window, cx))
+        .child(values::chips(window, cx))
+        .child(values::rating(window, cx))
+        .child(values::sliders(window, cx))
+        .child(values::dials(window, cx))
         .into_any_element()
 }

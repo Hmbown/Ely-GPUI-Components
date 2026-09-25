@@ -23,7 +23,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T04 Window & Shell
 - [x] T05 Buttons & Actions
 - [x] T06a Forms · Text
-- [ ] T06b Forms · Selection
+- [x] T06b Forms · Selection
 - [ ] T06c Forms · Date & Time
 - [ ] T06d Forms · Color
 - [ ] T06e Forms · Files
@@ -122,3 +122,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T06a | 1 | FAIL | twin ids in clear and eye buttons; text fields not Tab stops; IME undo; stepping from a stale value; mask literals re-read as input; undo while disabled; Down past the last line; clamp before rounding; stuck mention dismissal; NaN swallowed by min and max |
 | T06a | 2 | FAIL | float error in rounded bounds; composition commit skipped filter and length; a typed leading literal was eaten; PIN select-all collapsed; stepper state read the old value |
 | T06a | 3 | FAIL | a mask diff misread a select-all replacement; grid tolerance too wide for large numbers; fixed after the cap by fitting masks inside `TextInput` with the exact edit, and a float-error tolerance; verified by tests and capture, no fourth review |
+| T06b | 1 | FAIL | kept highlight and cascade trail went out of bounds; keyboard click reclosed MultiSelect and Cascader; disabled rows committed by keyboard; Combobox hid its owner's value; a disabled chosen radio left no Tab stop; a disabled Rating took arrows |
+| T06b | 2 | FAIL | a free Combobox cleared the text it mounted with |
+| T06b | 3 | PASS | |

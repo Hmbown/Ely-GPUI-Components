@@ -1,6 +1,6 @@
 use gpui::{
     App, Hsla, IntoElement, Radians, RenderOnce, SharedString, Transformation, Window, prelude::*,
-    svg,
+    size, svg,
 };
 
 use crate::theme::{ActiveTheme, IconSize};
@@ -261,6 +261,7 @@ pub struct Icon {
     color: Option<Hsla>,
     hover: Option<(SharedString, Hsla)>,
     rotation: Option<Radians>,
+    scale: f32,
 }
 
 impl Icon {
@@ -271,6 +272,7 @@ impl Icon {
             color: None,
             hover: None,
             rotation: None,
+            scale: 1.0,
         }
     }
 
@@ -299,6 +301,12 @@ impl Icon {
         self.rotation = Some(angle.into());
         self
     }
+
+    /// Draws the glyph larger or smaller inside the same box.
+    pub fn scale(mut self, factor: f32) -> Self {
+        self.scale = factor;
+        self
+    }
 }
 
 impl From<IconName> for Icon {
@@ -319,8 +327,11 @@ impl RenderOnce for Icon {
             .when_some(self.hover, |svg, (group, hover)| {
                 svg.group_hover(group, |style| style.text_color(hover))
             })
-            .when_some(self.rotation, |svg, angle| {
-                svg.with_transformation(Transformation::rotate(angle))
+            .when(self.rotation.is_some() || self.scale != 1.0, |svg| {
+                svg.with_transformation(
+                    Transformation::rotate(self.rotation.unwrap_or(Radians(0.0)))
+                        .with_scaling(size(self.scale, self.scale)),
+                )
             })
     }
 }

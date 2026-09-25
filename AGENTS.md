@@ -53,6 +53,8 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - The macOS open panel runs out of process too. Escape does not reach it; the harness sends it `cancel:`.
 - gpui's `test-support` swaps its executor: `block` fails on a real dispatcher. It stays behind this crate's `test-support` feature, never on for the gallery.
 - A tracked `FocusHandle` is a Tab stop only when built with `.tab_stop(true)`. `tab_index` on the div reaches only handles gpui makes itself.
+- Floating lists go below their anchor, or above when only above has room (`forms::options::float`). gpui's own switch keeps the anchor point, so a flipped list would cover its trigger.
+- Motion for a value change keys its animation on `motion::changes`, so it replays per change and stays still on first paint.
 - Masks reshape edits inside `TextInput::set_fit`, which sees the replaced range and the typed text. A diff after the fact cannot tell typed characters from kept ones.
 - Ids inside a reusable component carry its owner's id or `EntityId`. Twin ids share focus and click state.
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.

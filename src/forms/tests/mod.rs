@@ -1,3 +1,5 @@
+mod choices;
+
 use gpui::{
     AppContext as _, Context, Entity, EntityInputHandler, IntoElement, KeyUpEvent, Keystroke,
     ParentElement, Render, TestAppContext, VisualTestContext, Window, div,
@@ -24,7 +26,7 @@ impl Render for Fields {
     }
 }
 
-fn setup(cx: &mut TestAppContext) {
+pub(super) fn setup(cx: &mut TestAppContext) {
     cx.update(|cx| {
         Theme::init(cx);
         bind_keys(cx);
