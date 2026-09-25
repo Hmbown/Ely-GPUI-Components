@@ -7,12 +7,13 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - Rust 1.95, edition 2024. One crate: `ely-gpui-component`.
 - gpui 0.2.2 from crates.io. Feature `runtime_shaders` is on by default: machines without Xcode lack the Metal compiler.
 - Assets, embedded with `rust-embed`: Lucide 1.48.0 icons (ISC), Inter 4.1 and JetBrains Mono 2.304 (OFL).
+- macOS extras (tray icon, Dock badge) call AppKit through `cocoa` 0.26 and `objc` 0.2, the crates gpui already links.
 - Gallery: `examples/gallery`. Website: `frontend/` (Vite 8, pnpm), built after the components.
 
 ## Commands
 
 - `cargo run --example gallery` opens the gallery. `-- --page <slug>` starts on a page.
-- `cargo run --example gallery -- --capture <dir>` writes PNGs of every page, light and dark, top to bottom, then each page's scripted states. macOS only.
+- `cargo run --example gallery -- --capture <dir>` writes PNGs of every page, light and dark, top to bottom, then each page's scripted states, including windows the demos open. macOS only.
 - `cargo test --lib`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`.
 - `rm -rf target/debug/incremental` after each task item keeps the disk lean.
 - `scripts/icons.sh <lucide-name>...` adds icons. Then add a line to `IconName` in `src/primitives/icon.rs`.
@@ -39,6 +40,10 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - `ely_gpui_component::init` binds Tab and Shift-Tab to `FocusNext` and `FocusPrev`. Wrap the root in `FocusScope` and focus its handle.
 - gpui's `Window::dispatch_event` returns a private type, so the gallery scripts mouse input by posting `NSEvent`s to its own queue.
 - `hover()` needs an element id.
+- gpui sends a drag's moves to every listener of its type. Each drag payload carries its owner's `EntityId`, and handlers check it.
+- A component that takes a starting value from its owner keeps it in `layout::seeded`: a new value from the owner replaces local drags.
+- The capture harness finds windows by gpui handle through `raw-window-handle`, never by scanning the process's windows.
+- Posted events cannot move a macOS window, so window drags are not scripted. `drag_region` follows Zed's title bar.
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.
 - `img()` keeps loading state only with an id. Content masks are rectangles, so rounded corners survive only when the image fills its box without cropping.
 
@@ -50,3 +55,6 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - 2026-09-24: the gallery photographs its own window with `CGWindowListCreateImage`. No Screen Recording permission needed.
 - 2026-09-24: license MIT OR Apache-2.0.
 - 2026-09-25: layouts persist as versioned JSON through serde. Unknown fields are ignored. Newer versions, unknown panels and bad pane trees are refused, and restore is all or nothing.
+- 2026-09-25: an entry built from a later chapter's parts lands with that chapter; its line points there. MenuBar goes to Menus, QuickLauncher to Navigation.
+- 2026-09-25: SystemNotification is blocked. An unbundled app has no notification center (probed on macOS 27.2), and gpui 0.2.2 has no API.
+- 2026-09-25: `unexpected_cfgs` declares `feature = "cargo-clippy"`, which the objc 0.2 macros test.

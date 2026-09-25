@@ -7,43 +7,13 @@ use gpui::{
 use super::{Dock, DockSide, Spot};
 use crate::{
     layout::{FloatingPanel, resize_handle},
-    primitives::{Icon, IconName},
-    theme::{ActiveTheme, ControlSize, Elevation, IconSize, Radius, TextSize},
+    primitives::{DragGhost, Icon},
+    theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
 };
 
 struct DraggedPanel {
     dock: EntityId,
     id: SharedString,
-}
-
-struct PanelGhost {
-    title: SharedString,
-    icon: IconName,
-}
-
-impl Render for PanelGhost {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.theme();
-        div()
-            .flex()
-            .items_center()
-            .gap_1p5()
-            .px_2()
-            .py_1()
-            .rounded(theme.radius(Radius::Md))
-            .bg(theme.colors.overlay)
-            .border_1()
-            .border_color(theme.colors.border)
-            .shadow(theme.elevation(Elevation::Floating))
-            .text_size(theme.text_size(TextSize::Sm))
-            .text_color(theme.colors.fg)
-            .child(
-                Icon::new(self.icon)
-                    .size(IconSize::Sm)
-                    .color(theme.colors.fg_muted),
-            )
-            .child(self.title.clone())
-    }
 }
 
 struct DockResize {
@@ -98,8 +68,7 @@ impl Dock {
                     .child(title.clone())
                     .on_click(cx.listener(move |dock, _, _, cx| dock.activate(&id, cx)))
                     .on_drag(drag, move |_, _, _, cx| {
-                        let (title, icon) = (title.clone(), icon);
-                        cx.new(|_| PanelGhost { title, icon })
+                        DragGhost::new(title.clone(), Some(icon), cx)
                     })
             }))
             .into_any_element()

@@ -3,7 +3,11 @@ use std::{path::PathBuf, time::Duration};
 use anyhow::{Context as _, Result};
 use gpui::{AsyncApp, Bounds, Keystroke, Pixels, Point, WindowHandle, point, px};
 
-use crate::{capture::snapshot, probe::Probes, shell::Gallery};
+use crate::{
+    capture::{number, snapshot},
+    probe::{Opened, Probes},
+    shell::Gallery,
+};
 
 /// One scripted input, aimed at a probe by key.
 pub enum Step {
@@ -22,6 +26,15 @@ pub enum Step {
     Key(&'static str),
     Wait(u64),
     Shot(&'static str),
+    /// Photographs a window a demo opened, by its key.
+    ShotWindow(&'static str, &'static str),
+    CloseWindow(&'static str),
+    /// Sends a keystroke to a window a demo opened.
+    KeyWindow(&'static str, &'static str),
+    /// Asks AppKit to close a window, as its close button would.
+    CloseNative(&'static str),
+    /// Fails unless the window is gone.
+    ExpectClosed(&'static str),
 }
 
 const FRAME: Duration = Duration::from_millis(120);
@@ -38,6 +51,11 @@ enum Mouse {
 /// Parks the pointer on empty sidebar space.
 pub fn park(window: WindowHandle<Gallery>, cx: &mut AsyncApp) -> Result<()> {
     send(window, Mouse::Move, point(px(24.0), px(720.0)), cx)
+}
+
+fn opened(key: &str, cx: &mut AsyncApp) -> Result<gpui::AnyWindowHandle> {
+    cx.update(|cx| Opened::get(key, cx))?
+        .with_context(|| format!("no window opened as {key}"))
 }
 
 pub async fn play(
@@ -114,8 +132,37 @@ pub async fn play(
             }
             Step::Shot(name) => {
                 let file = path(name);
-                snapshot(&file)?;
+                snapshot(window.update(cx, |_, window, _| number(window))??, &file)?;
                 log::info!("script: wrote {}", file.display());
+            }
+            Step::ShotWindow(key, name) => {
+                let file = path(name);
+                let handle = opened(key, cx)?;
+                snapshot(handle.update(cx, |_, window, _| number(window))??, &file)?;
+                log::info!("script: wrote {}", file.display());
+            }
+            Step::KeyWindow(key, stroke) => {
+                let stroke =
+                    Keystroke::parse(stroke).with_context(|| format!("bad keystroke {stroke}"))?;
+                opened(key, cx)?.update(cx, |_, window, cx| {
+                    window.dispatch_keystroke(stroke, cx);
+                })?;
+            }
+            Step::CloseNative(key) => {
+                let number = opened(key, cx)?.update(cx, |_, window, _| number(window))??;
+                perform_close(number)?;
+            }
+            Step::ExpectClosed(key) => {
+                let handle = opened(key, cx)?;
+                let open = cx.update(|cx| cx.windows().contains(&handle))?;
+                anyhow::ensure!(!open, "window {key} is still open");
+                cx.update(|cx| Opened::take(key, cx))?;
+                log::info!("script: {key} closed");
+            }
+            Step::CloseWindow(key) => {
+                let handle = opened(key, cx)?;
+                handle.update(cx, |_, window, _| window.remove_window())?;
+                cx.update(|cx| Opened::take(key, cx))?;
             }
         }
         cx.background_executor().timer(FRAME).await;
@@ -129,19 +176,20 @@ fn send(
     at: Point<Pixels>,
     cx: &mut AsyncApp,
 ) -> Result<()> {
-    let height = window.update(cx, |_, window, _| window.viewport_size().height)?;
-    post(kind, f64::from(at.x), f64::from(height - at.y))
+    let (height, number) = window.update(cx, |_, window, _| {
+        (window.viewport_size().height, number(window))
+    })?;
+    post(kind, f64::from(at.x), f64::from(height - at.y), number?)
 }
 
 /// Queues a real mouse event on this app. No permission needed.
 #[cfg(target_os = "macos")]
-fn post(kind: Mouse, x: f64, y: f64) -> Result<()> {
+fn post(kind: Mouse, x: f64, y: f64, number: u32) -> Result<()> {
     use cocoa::{
         appkit::{NSApp, NSApplication, NSEvent, NSEventModifierFlags, NSEventType},
         base::{NO, id, nil},
         foundation::NSPoint,
     };
-    let number = crate::capture::window_number()?;
     let kind = match kind {
         Mouse::Move => NSEventType::NSMouseMoved,
         Mouse::Down => NSEventType::NSLeftMouseDown,
@@ -167,8 +215,29 @@ fn post(kind: Mouse, x: f64, y: f64) -> Result<()> {
     Ok(())
 }
 
+/// Runs `performClose:` on a window, which asks before closing.
+#[cfg(target_os = "macos")]
+fn perform_close(number: u32) -> Result<()> {
+    use cocoa::{
+        appkit::NSApp,
+        base::{id, nil},
+    };
+    use objc::{msg_send, sel, sel_impl};
+    unsafe {
+        let window: id = msg_send![NSApp(), windowWithWindowNumber: i64::from(number)];
+        anyhow::ensure!(window != nil, "no AppKit window numbered {number}");
+        let _: () = msg_send![window, performClose: nil];
+    }
+    Ok(())
+}
+
 #[cfg(not(target_os = "macos"))]
-fn post(_: Mouse, _: f64, _: f64) -> Result<()> {
+fn perform_close(_: u32) -> Result<()> {
+    anyhow::bail!("native close needs macOS")
+}
+
+#[cfg(not(target_os = "macos"))]
+fn post(_: Mouse, _: f64, _: f64, _: u32) -> Result<()> {
     anyhow::bail!("scripted mouse input needs macOS")
 }
 

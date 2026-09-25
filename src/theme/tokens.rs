@@ -1,4 +1,4 @@
-use gpui::{BoxShadow, Hsla, Rems, Size, point, px, rems, size};
+use gpui::{BoxShadow, Hsla, Pixels, Point, Rems, Size, point, px, rems, size};
 
 use super::{Mode, Theme};
 
@@ -137,6 +137,71 @@ impl Theme {
     /// Smallest a split pane or dock may shrink to.
     pub fn pane_min(&self) -> Rems {
         px_to_rems(160.0)
+    }
+
+    pub fn titlebar_height(&self) -> Rems {
+        px_to_rems(38.0)
+    }
+
+    /// Room kept for the macOS traffic lights.
+    pub fn traffic_light_inset(&self) -> Rems {
+        px_to_rems(78.0)
+    }
+
+    /// Where the system traffic lights sit in a window this crate opens.
+    pub fn traffic_light_origin(&self) -> Point<Pixels> {
+        point(px(14.0), px(13.0))
+    }
+
+    pub fn progress_thickness(&self) -> Rems {
+        px_to_rems(2.0)
+    }
+
+    pub fn about_window(&self) -> Size<Pixels> {
+        size(px(360.0), px(400.0))
+    }
+
+    /// Update and crash windows.
+    pub fn dialog_window(&self) -> Size<Pixels> {
+        size(px(400.0), px(480.0))
+    }
+
+    pub fn splash_window(&self) -> Size<Pixels> {
+        size(px(480.0), px(300.0))
+    }
+
+    /// A window's rem size at 100% zoom; gpui's own default.
+    pub fn base_rem(&self) -> Pixels {
+        px(16.0)
+    }
+
+    /// Gap between a mini window and the screen edge.
+    pub fn window_margin(&self) -> Pixels {
+        px(24.0)
+    }
+
+    /// One drawn traffic light.
+    pub fn traffic_light(&self) -> Rems {
+        px_to_rems(12.0)
+    }
+
+    /// A Windows caption button.
+    pub fn caption_button_width(&self) -> Rems {
+        px_to_rems(46.0)
+    }
+
+    /// Resize margin of a client-drawn window.
+    pub fn window_inset(&self) -> Rems {
+        px_to_rems(10.0)
+    }
+
+    pub fn rail_width(&self) -> Rems {
+        px_to_rems(48.0)
+    }
+
+    /// Narrowest and widest window tab.
+    pub fn tab_width(&self) -> (Rems, Rems) {
+        (px_to_rems(96.0), px_to_rems(200.0))
     }
 
     /// Grab bar on a drawer.

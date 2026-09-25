@@ -1,6 +1,7 @@
 mod backdrop;
 mod divider;
 mod focus;
+mod ghost;
 mod icon;
 mod image;
 mod measure;
@@ -10,6 +11,7 @@ mod tooltip;
 pub use backdrop::{Backdrop, Place};
 pub use divider::Divider;
 pub use focus::{FocusNext, FocusPrev, FocusRing, FocusScope};
+pub use ghost::DragGhost;
 pub use icon::{Icon, IconName};
 pub use image::Image;
 pub use measure::{IntersectionObserver, Measure};

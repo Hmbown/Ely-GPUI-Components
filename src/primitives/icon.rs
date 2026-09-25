@@ -1,4 +1,7 @@
-use gpui::{App, Hsla, IntoElement, Radians, RenderOnce, Transformation, Window, prelude::*, svg};
+use gpui::{
+    App, Hsla, IntoElement, Radians, RenderOnce, SharedString, Transformation, Window, prelude::*,
+    svg,
+};
 
 use crate::theme::{ActiveTheme, IconSize};
 
@@ -36,6 +39,7 @@ icons! {
     AlignCenter => "align-center",
     AlignLeft => "align-left",
     AlignRight => "align-right",
+    AppWindow => "app-window",
     Archive => "archive",
     ArrowDownLeft => "arrow-down-left",
     ArrowDownWideNarrow => "arrow-down-wide-narrow",
@@ -182,6 +186,7 @@ icons! {
     Pencil => "pencil",
     PhoneOff => "phone-off",
     Phone => "phone",
+    PictureInPicture2 => "picture-in-picture-2",
     PinOff => "pin-off",
     Pin => "pin",
     Play => "play",
@@ -254,6 +259,7 @@ pub struct Icon {
     name: IconName,
     size: IconSize,
     color: Option<Hsla>,
+    hover: Option<(SharedString, Hsla)>,
     rotation: Option<Radians>,
 }
 
@@ -263,6 +269,7 @@ impl Icon {
             name,
             size: IconSize::Md,
             color: None,
+            hover: None,
             rotation: None,
         }
     }
@@ -275,6 +282,16 @@ impl Icon {
     /// Defaults to `colors.fg`.
     pub fn color(mut self, color: impl Into<Hsla>) -> Self {
         self.color = Some(color.into());
+        self
+    }
+
+    /// Color while the pointer is over `group`.
+    pub fn group_hover_color(
+        mut self,
+        group: impl Into<SharedString>,
+        color: impl Into<Hsla>,
+    ) -> Self {
+        self.hover = Some((group.into(), color.into()));
         self
     }
 
@@ -299,6 +316,9 @@ impl RenderOnce for Icon {
             .size(theme.icon_size(self.size))
             .flex_none()
             .text_color(color)
+            .when_some(self.hover, |svg, (group, hover)| {
+                svg.group_hover(group, |style| style.text_color(hover))
+            })
             .when_some(self.rotation, |svg, angle| {
                 svg.with_transformation(Transformation::rotate(angle))
             })

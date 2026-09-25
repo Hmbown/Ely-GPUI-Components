@@ -1528,6 +1528,8 @@ dependencies = [
  "image",
  "jiff",
  "log",
+ "objc",
+ "raw-window-handle",
  "regex",
  "rust-embed",
  "serde",

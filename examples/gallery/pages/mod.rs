@@ -1,6 +1,7 @@
 mod buttons;
 mod layout;
 mod primitives;
+mod shell;
 mod theme;
 mod typography;
 
@@ -22,9 +23,12 @@ pub const ALL: &[Page] = &[
     primitives::PAGE,
     typography::PAGE,
     layout::PAGE,
+    shell::PAGE,
     buttons::PAGE,
     theme::PAGE,
 ];
+
+pub use shell::{open_about, open_managed};
 
 pub fn find(slug: &str) -> Option<usize> {
     ALL.iter().position(|page| page.slug == slug)

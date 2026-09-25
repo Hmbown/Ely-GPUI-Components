@@ -10,11 +10,44 @@ use std::path::PathBuf;
 use anyhow::{Context as _, Result, bail};
 use ely_gpui_component::Assets;
 use gpui::{
-    App, AppContext, Application, Bounds, KeyBinding, TitlebarOptions, WindowBounds, WindowOptions,
-    actions, point, px, size,
+    App, AppContext, Application, Bounds, KeyBinding, Menu, MenuItem, TitlebarOptions,
+    WindowBounds, WindowHandle, WindowOptions, actions, point, px, size,
 };
 
-actions!(gallery, [Quit]);
+actions!(gallery, [Quit, About, LightMode, DarkMode, NewWindow]);
+
+/// The gallery's menu bar and Dock menu: NativeMenu and JumpList at work.
+fn menus(window: WindowHandle<shell::Gallery>, cx: &mut App) {
+    cx.set_menus(vec![
+        Menu {
+            name: "Ely".into(),
+            items: vec![
+                MenuItem::action("About Ely", About),
+                MenuItem::separator(),
+                MenuItem::action("Quit Ely", Quit),
+            ],
+        },
+        Menu {
+            name: "View".into(),
+            items: vec![
+                MenuItem::action("Light", LightMode),
+                MenuItem::action("Dark", DarkMode),
+            ],
+        },
+    ]);
+    cx.set_dock_menu(vec![MenuItem::action("New Window", NewWindow)]);
+    cx.on_action(|_: &About, cx| pages::open_about(cx));
+    cx.on_action(|_: &NewWindow, cx| pages::open_managed(cx));
+    cx.on_action(move |_: &LightMode, cx| choose(window, shell::Choice::Light, cx));
+    cx.on_action(move |_: &DarkMode, cx| choose(window, shell::Choice::Dark, cx));
+}
+
+fn choose(window: WindowHandle<shell::Gallery>, choice: shell::Choice, cx: &mut App) {
+    if let Err(error) = window.update(cx, |gallery, window, cx| gallery.choose(choice, window, cx))
+    {
+        log::error!("gallery: menu could not reach the window: {error:#}");
+    }
+}
 
 struct Args {
     page: Option<usize>,
@@ -67,6 +100,7 @@ fn main() -> Result<()> {
                     cx.new(|cx| shell::Gallery::new(args.page.unwrap_or(0), window, cx))
                 })
                 .expect("gallery window failed to open");
+            menus(window, cx);
             cx.activate(true);
             if let Some(dir) = args.capture {
                 capture::run(window, dir, args.page, cx);

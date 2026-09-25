@@ -20,7 +20,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T01 Primitives — `tasks/ch01-10.md`
 - [x] T02 Typography
 - [x] T03 Layout
-- [ ] T04 Window & Shell
+- [x] T04 Window & Shell
 - [ ] T05 Buttons & Actions
 - [ ] T06a Forms · Text
 - [ ] T06b Forms · Selection
@@ -113,3 +113,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T03 | 1 | FAIL | restore kept cached split and float state; drags lacked an owner; weights unchecked; pane id overflow broke atomic restore; sticky copy escaped the clip; wheel propagated past the viewport; drawer pull lost the pointer; no top dock; grip sizes raw |
 | T03 | 2 | FAIL | closing a pane made NaN or infinite weights; drag ghost text black in dark |
 | T03 | 3 | FAIL | even split of a denormal weight underflowed; fixed after the cap by normalizing on close and split, verified by tests and capture, no fourth review |
+| T04 | 1 | FAIL | system close skipped TitleBar::on_close; hosted windows had no Tab scope; switcher lost Tab to an ancestor, dropped focus on close, kept a stale index |
+| T04 | 2 | FAIL | a removed on_close kept blocking the system close; switcher keys bubbled past it |
+| T04 | 3 | PASS | |

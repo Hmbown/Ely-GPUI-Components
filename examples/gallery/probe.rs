@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use ely_gpui_component::primitives::Measure;
-use gpui::{App, Bounds, Div, Global, IntoElement, ParentElement, Pixels, Styled, div};
+use gpui::{
+    AnyWindowHandle, App, Bounds, Div, Global, IntoElement, ParentElement, Pixels, Styled, div,
+};
 
 /// Window bounds of named demo elements, for scripted capture.
 #[derive(Default)]
@@ -24,4 +26,25 @@ pub fn probe(key: &'static str, element: impl IntoElement) -> Div {
         })
         .child(element),
     )
+}
+
+/// Windows the demos opened, by key, for scripted capture.
+#[derive(Default)]
+pub struct Opened(HashMap<&'static str, AnyWindowHandle>);
+
+impl Global for Opened {}
+
+impl Opened {
+    pub fn insert(key: &'static str, handle: AnyWindowHandle, cx: &mut App) {
+        cx.default_global::<Opened>().0.insert(key, handle);
+    }
+
+    pub fn take(key: &str, cx: &mut App) -> Option<AnyWindowHandle> {
+        cx.default_global::<Opened>().0.remove(key)
+    }
+
+    pub fn get(key: &str, cx: &App) -> Option<AnyWindowHandle> {
+        cx.try_global::<Opened>()
+            .and_then(|opened| opened.0.get(key).copied())
+    }
 }

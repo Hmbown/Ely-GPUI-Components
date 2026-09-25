@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{Context as _, Result, bail};
 use ely_gpui_component::theme::Theme;
-use gpui::{App, AsyncApp, WindowHandle, px};
+use gpui::{App, AsyncApp, Window, WindowHandle, px};
 
 use crate::{
     pages, script,
@@ -39,6 +39,7 @@ async fn shoot_all(
         .iter()
         .enumerate()
         .filter(|(ix, _)| only.is_none_or(|only| only == *ix));
+    let gallery = window.update(cx, |_, window, _| number(window))??;
     for (ix, page) in chosen {
         for (choice, name) in [(Choice::Light, "light"), (Choice::Dark, "dark")] {
             window.update(cx, |gallery, window, cx| {
@@ -59,7 +60,7 @@ async fn shoot_all(
                     format!("-{segment}")
                 };
                 let path = dir.join(format!("{}-{name}{suffix}.png", page.slug));
-                snapshot(&path)?;
+                snapshot(gallery, &path)?;
                 log::info!("capture: wrote {}", path.display());
                 if offset >= max {
                     break;
@@ -79,39 +80,33 @@ async fn shoot_all(
     Ok(())
 }
 
-/// This process's on-screen window, as CoreGraphics numbers it.
+/// A gpui window's number, as AppKit and CoreGraphics know it.
 #[cfg(target_os = "macos")]
-pub fn window_number() -> Result<u32> {
-    use core_foundation::{
-        base::{CFType, TCFType},
-        dictionary::CFDictionary,
-        number::CFNumber,
-        string::CFString,
-    };
-    use core_graphics::window;
+pub fn number(window: &Window) -> Result<u32> {
+    use cocoa::base::id;
+    use objc::{msg_send, sel, sel_impl};
+    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
-    let number = |dict: &CFDictionary<CFString, CFType>, key: &'static str| {
-        dict.find(CFString::from_static_string(key))
-            .and_then(|value| value.downcast::<CFNumber>())
-            .and_then(|value| value.to_i64())
+    let handle = HasWindowHandle::window_handle(window)
+        .map_err(|error| anyhow::anyhow!("window has no native handle: {error:?}"))?;
+    let RawWindowHandle::AppKit(appkit) = handle.as_raw() else {
+        bail!("window is not an AppKit window");
     };
-    let pid = i64::from(std::process::id());
-    let list = window::copy_window_info(
-        window::kCGWindowListOptionOnScreenOnly,
-        window::kCGNullWindowID,
-    )
-    .context("window list unavailable")?;
-    let id = list
-        .iter()
-        .map(|item| unsafe { CFDictionary::<CFString, CFType>::wrap_under_get_rule(*item as _) })
-        .find(|dict| number(dict, "kCGWindowOwnerPID") == Some(pid))
-        .and_then(|dict| number(&dict, "kCGWindowNumber"))
-        .context("gallery window not on screen")?;
-    u32::try_from(id).context("window number out of range")
+    let number: i64 = unsafe {
+        let view = appkit.ns_view.as_ptr() as id;
+        let ns_window: id = msg_send![view, window];
+        msg_send![ns_window, windowNumber]
+    };
+    u32::try_from(number).context("window number out of range")
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn number(_: &Window) -> Result<u32> {
+    bail!("capture needs macOS window APIs")
 }
 
 #[cfg(target_os = "macos")]
-pub fn snapshot(path: &Path) -> Result<()> {
+pub fn snapshot(number: u32, path: &Path) -> Result<()> {
     use core_graphics::{
         geometry::{CGPoint, CGRect, CGSize},
         window,
@@ -120,7 +115,7 @@ pub fn snapshot(path: &Path) -> Result<()> {
     let image = window::create_image(
         CGRect::new(&CGPoint::new(0.0, 0.0), &CGSize::new(0.0, 0.0)),
         window::kCGWindowListOptionIncludingWindow,
-        window_number()?,
+        number,
         window::kCGWindowImageBoundsIgnoreFraming | window::kCGWindowImageBestResolution,
     )
     .context("window capture returned nothing")?;
@@ -151,6 +146,6 @@ pub fn snapshot(path: &Path) -> Result<()> {
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn snapshot(_: &Path) -> Result<()> {
+pub fn snapshot(_: u32, _: &Path) -> Result<()> {
     bail!("capture needs macOS window APIs")
 }
