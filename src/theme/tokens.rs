@@ -228,6 +228,11 @@ impl Theme {
         px_to_rems(480.0)
     }
 
+    /// A pie menu's ring radius and the size of each slice's button.
+    pub fn pie(&self) -> (Rems, Rems) {
+        (px_to_rems(84.0), px_to_rems(40.0))
+    }
+
     /// Narrowest a menu's panel gets.
     pub fn menu_width(&self) -> Rems {
         px_to_rems(200.0)

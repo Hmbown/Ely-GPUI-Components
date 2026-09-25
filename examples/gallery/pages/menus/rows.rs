@@ -4,59 +4,15 @@ use ely_gpui_component::{
     primitives::IconName,
     theme::{ActiveTheme, Radius},
 };
-use gpui::{
-    AnyElement, App, Entity, IntoElement, ParentElement, SharedString, Styled, Window, div, px,
-};
+use gpui::{App, Entity, IntoElement, ParentElement, SharedString, Styled, Window, div, px};
 
-use super::Page;
 use crate::{
     probe::probe,
-    script::Step,
     ui::{keep, row, section, set, specimen},
 };
 
-pub const PAGE: Page = Page {
-    number: 8,
-    slug: "menus",
-    title: "Menus",
-    summary: "Rows of actions that open from a button, a right click or an arrow, and nest.",
-    render,
-    script: SCRIPT,
-};
-
-const SCRIPT: &[Step] = &[
-    Step::Rest,
-    Step::Click("file-menu"),
-    Step::Wait(300),
-    Step::Key("down"),
-    Step::Key("down"),
-    Step::Key("down"),
-    Step::Key("right"),
-    Step::Wait(400),
-    Step::Shot("submenu"),
-    Step::Key("escape"),
-    Step::Key("escape"),
-    Step::Click("view-menu"),
-    Step::Wait(400),
-    Step::Shot("checks"),
-    Step::Key("escape"),
-    Step::ClickEnd("merge"),
-    Step::Wait(400),
-    Step::Shot("split"),
-    Step::Key("escape"),
-    Step::Click("more"),
-    Step::Wait(400),
-    Step::Shot("overflow"),
-    Step::Key("escape"),
-    Step::RightAt("canvas", 180.0, 70.0),
-    Step::Wait(400),
-    Step::Shot("context"),
-    Step::Key("escape"),
-    Step::Rest,
-];
-
 /// Records the last row run, for the captions.
-fn ran(
+pub(super) fn ran(
     key: &'static str,
     window: &mut Window,
     cx: &mut App,
@@ -69,7 +25,7 @@ fn ran(
     (last, caption)
 }
 
-fn run(
+pub(super) fn run(
     last: &Entity<Option<SharedString>>,
     name: &'static str,
 ) -> impl Fn(&mut Window, &mut App) + 'static {
@@ -77,7 +33,7 @@ fn run(
     move |_, cx| set(&last, Some(name.into()), cx)
 }
 
-fn file_menu(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
+pub fn file_menu(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
     let (last, caption) = ran("file-ran", window, cx);
     let recent = Menu::new()
         .item(
@@ -142,7 +98,7 @@ fn file_menu(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
     ))
 }
 
-fn view_menu(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
+pub fn view_menu(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
     let shown = keep("view-shown", || [true, false, true], window, cx);
     let density = keep("view-density", || 1usize, window, cx);
     let (now, dense) = (*shown.read(cx), *density.read(cx));
@@ -192,7 +148,7 @@ fn view_menu(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
     ))
 }
 
-fn hosts(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
+pub fn hosts(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
     let (last, caption) = ran("hosts-ran", window, cx);
     let merge = Menu::new()
         .item(MenuItem::new("Squash and merge").on_click(run(&last, "squash and merge")))
@@ -252,7 +208,7 @@ fn hosts(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
     ))
 }
 
-fn context(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
+pub fn context(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
     let (last, caption) = ran("context-ran", window, cx);
     let menu = Menu::new()
         .item(
@@ -310,13 +266,4 @@ fn context(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
         ),
         cx,
     ))
-}
-
-fn render(window: &mut Window, cx: &mut App) -> AnyElement {
-    div()
-        .child(file_menu(window, cx))
-        .child(view_menu(window, cx))
-        .child(hosts(window, cx))
-        .child(context(window, cx))
-        .into_any_element()
 }

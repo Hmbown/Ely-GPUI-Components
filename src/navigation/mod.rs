@@ -7,6 +7,7 @@ mod nav;
 mod overflow;
 mod pages;
 mod palette;
+pub(crate) use palette::{fuzzy, marked};
 mod steps;
 mod tabs;
 #[cfg(all(test, feature = "test-support"))]

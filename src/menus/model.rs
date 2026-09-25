@@ -1,8 +1,8 @@
-use std::rc::Rc;
+use std::{ops::Range, rc::Rc};
 
 use gpui::{App, SharedString, Window};
 
-use crate::{forms::Run, primitives::IconName};
+use crate::{forms::Run, navigation::fuzzy, primitives::IconName};
 
 /// What a row does when chosen.
 #[derive(Clone)]
@@ -22,6 +22,7 @@ pub struct MenuItem {
     pub(super) kind: Kind,
     pub(super) disabled: bool,
     pub(super) on_click: Option<Run>,
+    pub(super) hits: Vec<Range<usize>>,
 }
 
 impl MenuItem {
@@ -33,6 +34,7 @@ impl MenuItem {
             kind,
             disabled: false,
             on_click: None,
+            hits: Vec::new(),
         }
     }
 
@@ -137,5 +139,33 @@ impl Menu {
             }
         }
         None
+    }
+
+    /// The rows whose labels fit `query`, best first, with the letters that matched. All of it for an empty query.
+    pub(super) fn filtered(&self, query: &str) -> Menu {
+        if query.is_empty() {
+            return self.clone();
+        }
+        let mut found: Vec<(i32, MenuItem)> = self
+            .entries
+            .iter()
+            .filter_map(|entry| match entry {
+                Entry::Item(item) => fuzzy(query, &item.label).map(|fit| {
+                    let item = MenuItem {
+                        hits: fit.hits,
+                        ..item.clone()
+                    };
+                    (fit.score, item)
+                }),
+                _ => None,
+            })
+            .collect();
+        found.sort_by(|(a, _), (b, _)| b.cmp(a));
+        Menu {
+            entries: found
+                .into_iter()
+                .map(|(_, item)| Entry::Item(item))
+                .collect(),
+        }
     }
 }

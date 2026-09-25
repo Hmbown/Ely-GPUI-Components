@@ -16,8 +16,8 @@ use gpui::{
 
 actions!(gallery, [Quit, About, LightMode, DarkMode, NewWindow]);
 
-/// The gallery's menu bar and Dock menu: NativeMenu and JumpList at work.
-fn menus(window: WindowHandle<shell::Gallery>, cx: &mut App) {
+/// The gallery's menu bar and Dock menu: NativeMenu and JumpList at work. Set before the window opens, whose first frame may draw them.
+fn menus(cx: &mut App) {
     cx.set_menus(vec![
         Menu {
             name: "Ely".into(),
@@ -36,6 +36,10 @@ fn menus(window: WindowHandle<shell::Gallery>, cx: &mut App) {
         },
     ]);
     cx.set_dock_menu(vec![MenuItem::action("New Window", NewWindow)]);
+}
+
+/// What the menus' actions do; the theme ones need the window.
+fn menu_actions(window: WindowHandle<shell::Gallery>, cx: &mut App) {
     cx.on_action(|_: &About, cx| pages::open_about(cx));
     cx.on_action(|_: &NewWindow, cx| pages::open_managed(cx));
     cx.on_action(move |_: &LightMode, cx| choose(window, shell::Choice::Light, cx));
@@ -84,6 +88,7 @@ fn main() -> Result<()> {
             ely_gpui_component::init(cx);
             cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
             cx.on_action(|_: &Quit, cx| cx.quit());
+            menus(cx);
             let bounds = Bounds::centered(None, size(px(1280.0), px(820.0)), cx);
             let options = WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
@@ -100,7 +105,7 @@ fn main() -> Result<()> {
                     cx.new(|cx| shell::Gallery::new(args.page.unwrap_or(0), window, cx))
                 })
                 .expect("gallery window failed to open");
-            menus(window, cx);
+            menu_actions(window, cx);
             cx.activate(true);
             if let Some(dir) = args.capture {
                 capture::run(window, dir, args.page, cx);

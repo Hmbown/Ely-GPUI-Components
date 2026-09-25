@@ -1,22 +1,24 @@
 use std::rc::Rc;
 
 use gpui::{
-    Animation, AnimationExt, AnyElement, App, Bounds, Div, ElementId, Entity, FontWeight,
-    InteractiveElement, IntoElement, MouseButton, ParentElement, Pixels, Point, Stateful, Styled,
-    Window, anchored, canvas, deferred, div, prelude::*,
+    Animation, AnimationExt, AnyElement, App, Bounds, ElementId, Entity, InteractiveElement,
+    IntoElement, ParentElement, Pixels, Point, Styled, Window, anchored, canvas, deferred, div,
+    prelude::*,
 };
 
-use super::model::{Entry, Kind, Menu, MenuItem};
+use super::{
+    draw,
+    model::{Kind, Menu},
+};
 use crate::{
-    forms::{Run, float, surface},
+    forms::{Down, Enter, Run, TextInput, Up, float},
     motion,
     primitives::{Icon, IconName, Takeover, give_back, take_focus},
-    theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
-    typography::KbdCombo,
+    theme::{ActiveTheme, IconSize},
 };
 
 /// The menu open at `depth`, following the marked rows above it; `None` once those rows changed.
-fn at_depth<'a>(menu: &'a Menu, levels: &[Level], depth: usize) -> Option<&'a Menu> {
+pub(super) fn at_depth<'a>(menu: &'a Menu, levels: &[Level], depth: usize) -> Option<&'a Menu> {
     levels.get(..depth)?.iter().try_fold(menu, |menu, level| {
         match level
             .at
@@ -49,24 +51,25 @@ fn settle(menu: &Menu, levels: &mut Vec<Level>) {
 
 /// One open level: its marked row, that row's box and its panel's box.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-struct Level {
-    at: Option<usize>,
-    row: Bounds<Pixels>,
-    panel: Bounds<Pixels>,
+pub(super) struct Level {
+    pub(super) at: Option<usize>,
+    pub(super) row: Bounds<Pixels>,
+    pub(super) panel: Bounds<Pixels>,
 }
 
-/// Where an open menu hangs: under its host's box, or at a point.
+/// Where an open menu hangs: under its anchor box, or at a point.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Spot {
     Under,
     At(Point<Pixels>),
 }
 
-/// A host's menu: where it hangs, its open levels root first, the host's box, and the focus to hand back.
+/// A host's menu: where it hangs, its open levels root first, the host's box, the box it hangs under, and the focus to hand back.
 #[derive(Default)]
 pub(crate) struct Open {
     spot: Option<Spot>,
-    levels: Vec<Level>,
+    pub(super) levels: Vec<Level>,
+    host: Bounds<Pixels>,
     anchor: Bounds<Pixels>,
     takeover: Option<Entity<Takeover>>,
 }
@@ -76,11 +79,33 @@ impl Open {
         self.spot.is_some()
     }
 
+    /// Hangs the menu under `anchor`, kept current as its owner moves.
+    pub(crate) fn set_anchor(state: &Entity<Open>, anchor: Bounds<Pixels>, cx: &mut App) {
+        if state.read(cx).anchor != anchor {
+            state.update(cx, |open, cx| {
+                open.anchor = anchor;
+                cx.notify();
+            });
+        }
+    }
+
     /// Opens at `spot`, with the first row marked when `marked`.
     pub(crate) fn show(state: &Entity<Open>, menu: &Menu, spot: Spot, marked: bool, cx: &mut App) {
         let first = menu.step(None, 1).filter(|_| marked);
         state.update(cx, |open, cx| {
             open.spot = Some(spot);
+            open.levels = vec![Level {
+                at: first,
+                ..Level::default()
+            }];
+            cx.notify();
+        });
+    }
+
+    /// Starts over on new rows with the first marked; the menu stays where it hangs.
+    pub(crate) fn restart(state: &Entity<Open>, menu: &Menu, cx: &mut App) {
+        let first = menu.step(None, 1);
+        state.update(cx, |open, cx| {
             open.levels = vec![Level {
                 at: first,
                 ..Level::default()
@@ -104,7 +129,14 @@ impl Open {
 }
 
 /// Marks row `at` of level `depth` and drops deeper levels; a submenu row opens when `open_sub`.
-fn mark(state: &Entity<Open>, menu: &Menu, depth: usize, at: usize, open_sub: bool, cx: &mut App) {
+pub(super) fn mark(
+    state: &Entity<Open>,
+    menu: &Menu,
+    depth: usize,
+    at: usize,
+    open_sub: bool,
+    cx: &mut App,
+) {
     state.update(cx, |open, cx| {
         let Some(here) = at_depth(menu, &open.levels, depth) else {
             return;
@@ -123,7 +155,7 @@ fn mark(state: &Entity<Open>, menu: &Menu, depth: usize, at: usize, open_sub: bo
 }
 
 /// Runs a row. A submenu opens with its first row marked; anything else closes the menu first.
-fn choose(
+pub(super) fn choose(
     state: &Entity<Open>,
     menu: &Menu,
     depth: usize,
@@ -203,7 +235,7 @@ fn keys(
 }
 
 /// Records a box into the host's state: the host's own, a marked row's or a panel's.
-fn measure(
+pub(super) fn measure(
     state: Entity<Open>,
     write: impl Fn(&mut Open, Bounds<Pixels>) -> bool + 'static,
 ) -> impl IntoElement {
@@ -221,157 +253,16 @@ fn measure(
     .size_full()
 }
 
-/// Measures the host's box, which a dropdown hangs under.
-pub(crate) fn measure_host(state: Entity<Open>) -> impl IntoElement {
-    measure(state, |open, bounds| {
-        let changed = open.anchor != bounds;
-        open.anchor = bounds;
+/// Measures the host's box: presses on it are the host's, and when `hangs_under` the menu hangs under it.
+pub(crate) fn measure_host(state: Entity<Open>, hangs_under: bool) -> impl IntoElement {
+    measure(state, move |open, bounds| {
+        let changed = open.host != bounds || (hangs_under && open.anchor != bounds);
+        open.host = bounds;
+        if hangs_under {
+            open.anchor = bounds;
+        }
         changed
     })
-}
-
-fn row(item: &MenuItem, ix: usize, marked: bool, cx: &App) -> Stateful<Div> {
-    let theme = cx.theme();
-    let colors = &theme.colors;
-    let fg = if item.disabled {
-        colors.fg_disabled
-    } else {
-        colors.fg
-    };
-    let (lead, lead_color) = match &item.kind {
-        Kind::Check(true) => (Some(IconName::Check), fg),
-        Kind::Radio(true) => (Some(IconName::Dot), fg),
-        _ => (item.icon, if item.disabled { fg } else { colors.fg_muted }),
-    };
-    div()
-        .id(("row", ix))
-        .relative()
-        .flex()
-        .items_center()
-        .gap_2()
-        .h(theme.control_height(ControlSize::Md))
-        .px_2()
-        .rounded(theme.radius(Radius::Md))
-        .text_color(fg)
-        .when(marked && !item.disabled, |row| row.bg(colors.hover))
-        .when(!item.disabled, |row| row.cursor_pointer())
-        .child(
-            div()
-                .flex()
-                .flex_none()
-                .items_center()
-                .justify_center()
-                .size(theme.icon_size(IconSize::Sm))
-                .when_some(lead, |slot, icon| {
-                    slot.child(Icon::new(icon).size(IconSize::Sm).color(lead_color))
-                }),
-        )
-        .child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .overflow_hidden()
-                .text_ellipsis()
-                .whitespace_nowrap()
-                .child(item.label.clone()),
-        )
-        .when_some(item.keys.clone(), |row, keys| {
-            row.child(
-                div()
-                    .flex_none()
-                    .pl_4()
-                    .text_color(colors.fg_subtle)
-                    .child(KbdCombo::new(&keys)),
-            )
-        })
-        .when(matches!(item.kind, Kind::Sub(_)), |row| {
-            row.child(
-                Icon::new(IconName::ChevronRight)
-                    .size(IconSize::Xs)
-                    .color(colors.fg_subtle),
-            )
-        })
-}
-
-fn panel(
-    id: &ElementId,
-    menu: &Menu,
-    state: &Entity<Open>,
-    depth: usize,
-    close: &Run,
-    cx: &App,
-) -> Stateful<Div> {
-    let open = state.read(cx);
-    let here = at_depth(menu, &open.levels, depth).expect("settled levels follow submenu rows");
-    let at = open.levels[depth].at;
-    let theme = cx.theme();
-    let colors = &theme.colors;
-    let rows = here
-        .entries
-        .iter()
-        .enumerate()
-        .map(|(ix, entry)| match entry {
-            Entry::Separator => div().h_px().my_1().bg(colors.border).into_any_element(),
-            Entry::Heading(title) => div()
-                .px_2()
-                .pt_1p5()
-                .pb_1()
-                .text_size(theme.text_size(TextSize::Xs))
-                .font_weight(FontWeight::MEDIUM)
-                .text_color(colors.fg_subtle)
-                .child(title.clone())
-                .into_any_element(),
-            Entry::Item(item) => {
-                let marked = at == Some(ix);
-                let sub = matches!(item.kind, Kind::Sub(_));
-                let (hover, click, close, menu) =
-                    (state.clone(), state.clone(), close.clone(), menu.clone());
-                let hover_menu = menu.clone();
-                row(item, ix, marked, cx)
-                    .when(!item.disabled, |row| {
-                        row.on_mouse_move(move |_, _, cx| {
-                            let open = hover.read(cx);
-                            let Some(level) = open.levels.get(depth) else {
-                                return;
-                            };
-                            let shown = open.levels.len() > depth + 1;
-                            if level.at != Some(ix) || (sub && !shown) {
-                                mark(&hover, &hover_menu, depth, ix, true, cx);
-                            }
-                        })
-                        .on_mouse_down(
-                            MouseButton::Left,
-                            move |_, window, cx| {
-                                window.prevent_default();
-                                cx.stop_propagation();
-                                choose(&click, &menu, depth, ix, &close, window, cx);
-                            },
-                        )
-                    })
-                    .when(marked && sub, |row| {
-                        row.child(measure(state.clone(), move |open, bounds| {
-                            let level = &mut open.levels[depth];
-                            let changed = level.row != bounds;
-                            level.row = bounds;
-                            changed
-                        }))
-                    })
-                    .into_any_element()
-            }
-        });
-    surface((id.clone(), format!("panel-{depth}")), cx)
-        .relative()
-        .min_w(theme.menu_width())
-        .p_1()
-        .flex()
-        .flex_col()
-        .children(rows)
-        .child(measure(state.clone(), move |open, bounds| {
-            let level = &mut open.levels[depth];
-            let changed = level.panel != bounds;
-            level.panel = bounds;
-            changed
-        }))
 }
 
 /// The open menu of host `id`, placed at its spot. It holds focus while open and gives it back on every close.
@@ -379,6 +270,7 @@ pub(crate) fn hang(
     id: &ElementId,
     menu: &Menu,
     state: &Entity<Open>,
+    field: Option<&Entity<TextInput>>,
     window: &mut Window,
     cx: &mut App,
 ) -> Option<AnyElement> {
@@ -395,10 +287,16 @@ pub(crate) fn hang(
             Open::close(&state, window, cx);
         })
     };
-    if !focus.is_focused(window) {
+    if !focus.contains_focused(window, cx) {
         log::info!("menu {id:?}: focus left");
         close(window, cx);
         return None;
+    }
+    let typing = field.map(|field| field.read(cx).focus().clone());
+    if let Some(typing) = &typing
+        && focus.is_focused(window)
+    {
+        window.focus(typing);
     }
     let mut levels = state.read(cx).levels.clone();
     settle(menu, &mut levels);
@@ -412,13 +310,47 @@ pub(crate) fn hang(
     let (keyed, key_menu, key_close) = (state.clone(), menu.clone(), close.clone());
     let (lifted, lift_menu, lift_close) = (state.clone(), menu.clone(), close.clone());
     let (out, out_close) = (state.clone(), close.clone());
-    let root = panel(id, menu, state, 0, &close, cx)
+    let spaced = typing.is_none();
+    let confirm = move |key: &str| key == "enter" || (spaced && key == "space");
+    let head = field.map(|field| {
+        let theme = cx.theme();
+        div()
+            .flex()
+            .items_center()
+            .gap_2()
+            .px_2()
+            .pb_1()
+            .mb_1()
+            .border_b_1()
+            .border_color(theme.colors.border)
+            .child(
+                Icon::new(IconName::Search)
+                    .size(IconSize::Sm)
+                    .color(theme.colors.fg_subtle),
+            )
+            .child(div().flex_1().min_w_0().child(field.clone()))
+            .into_any_element()
+    });
+    let (up_menu, up_state, up_close) = (menu.clone(), state.clone(), close.clone());
+    let (down_menu, down_state, down_close) = (menu.clone(), state.clone(), close.clone());
+    let root = draw::panel(id, menu, state, 0, &close, head, cx)
         .track_focus(&focus)
+        .when(!spaced, |root| {
+            root.capture_action(move |_: &Up, window, cx| {
+                cx.stop_propagation();
+                keys(&up_menu, &up_state, "up", &up_close, window, cx);
+            })
+            .capture_action(move |_: &Down, window, cx| {
+                cx.stop_propagation();
+                keys(&down_menu, &down_state, "down", &down_close, window, cx);
+            })
+            .capture_action(|_: &Enter, _, cx| cx.stop_propagation())
+        })
         .on_key_down(move |event, window, cx| {
             let stroke = &event.keystroke;
             let key = stroke.key.as_str();
             if matches!(key, "enter" | "space") {
-                if !stroke.modifiers.modified() {
+                if confirm(key) && !stroke.modifiers.modified() {
                     cx.stop_propagation();
                 }
                 return;
@@ -430,7 +362,7 @@ pub(crate) fn hang(
         .on_key_up(move |event, window, cx| {
             let stroke = &event.keystroke;
             let key = stroke.key.as_str();
-            if matches!(key, "enter" | "space")
+            if confirm(key)
                 && !stroke.modifiers.modified()
                 && keys(&lift_menu, &lifted, key, &lift_close, window, cx)
             {
@@ -439,7 +371,7 @@ pub(crate) fn hang(
         })
         .on_mouse_down_out(move |event, window, cx| {
             let open = out.read(cx);
-            let on_host = open.spot == Some(Spot::Under) && open.anchor.contains(&event.position);
+            let on_host = open.host.contains(&event.position);
             if !on_host
                 && !open
                     .levels
@@ -462,7 +394,7 @@ pub(crate) fn hang(
         (row != Bounds::default()).then(|| {
             deferred(
                 anchored().position(row.top_right()).snap_to_window().child(
-                    panel(id, menu, state, level, &close, cx)
+                    draw::panel(id, menu, state, level, &close, None, cx)
                         .mt_neg_1()
                         .with_animation(
                             (id.clone(), format!("sub-{level}")),

@@ -33,7 +33,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T07b Navigation · Places
 - [x] T07c Navigation · Palettes & tour
 - [x] T08a Menus · Menu & hosts
-- [ ] T08b Menus · Bar, search & pie
+- [x] T08b Menus · Bar, search & pie
 - [ ] T09 Overlays
 - [ ] T10 Feedback
 - [ ] T11a Loading — `tasks/ch11-20.md`
@@ -149,3 +149,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T08a | 1 | FAIL | a marked row the owner removed panicked on Enter, the trigger's second click skipped give_back, Enter and Space reached parents on press, the harness never released keys so scripted picks failed, and the menus copy said key hints run rows |
 | T08a | 2 | FAIL | Ctrl-Enter and Shift-Space reached keys() on press and picked at once |
 | T08a | 3 | PASS | |
+| T08b | 1 | FAIL | a shrinking pie kept a mark past its end, a hub press lost focus, pie confirm keys bubbled and modified releases picked, an open dropdown stayed put when its host moved, clearing the filter kept the old mark, and the ring sat half a slice off its hub |
+| T08b | 2 | FAIL | the pie's opening right click let a root FocusScope take focus before take_focus recorded it |
+| T08b | 3 | PASS | |

@@ -1,10 +1,12 @@
 use gpui::{
     App, Context, FocusHandle, InteractiveElement, IntoElement, KeyUpEvent, Keystroke, Modifiers,
     MouseButton, ParentElement, Render, SharedString, Styled, TestAppContext, VisualTestContext,
-    Window, div, point, px,
+    Window, div, point, prelude::*, px,
 };
 
-use super::{ContextMenu, DropdownMenu, Menu, MenuItem};
+mod more;
+
+use super::{ContextMenu, DropdownMenu, Menu, MenuItem, SearchableMenu};
 use crate::{primitives::FocusScope, theme::Theme};
 
 /// What the rows did, and the state the check and radio rows show.
@@ -15,6 +17,7 @@ struct Desk {
     theme: SharedString,
     view_rows: bool,
     enters_above: usize,
+    shift: bool,
 }
 
 impl Desk {
@@ -74,20 +77,25 @@ impl Render for Desk {
             .child(
                 FocusScope::new(&self.root)
                     .size_full()
+                    .when(self.shift, |scope| scope.child(div().h(px(80.0))))
                     .child(DropdownMenu::new("edit", "Edit", menu.clone()))
-                    .child(ContextMenu::new("area", menu).child(div().w(px(200.0)).h(px(120.0)))),
+                    .child(
+                        ContextMenu::new("area", menu.clone())
+                            .child(div().w(px(200.0)).h(px(120.0))),
+                    )
+                    .child(SearchableMenu::new("find", "Find", menu)),
             )
     }
 }
 
-fn settle(cx: &mut VisualTestContext) {
+pub(super) fn settle(cx: &mut VisualTestContext) {
     cx.run_until_parked();
     cx.update(|window, _| window.refresh());
     cx.run_until_parked();
 }
 
 /// Presses and releases `key`, with a frame in between as on a real keyboard.
-fn press(key: &str, cx: &mut VisualTestContext) {
+pub(super) fn press(key: &str, cx: &mut VisualTestContext) {
     cx.simulate_keystrokes(key);
     settle(cx);
     cx.simulate_event(KeyUpEvent {
@@ -97,7 +105,10 @@ fn press(key: &str, cx: &mut VisualTestContext) {
 }
 
 fn desk(cx: &mut TestAppContext) -> (gpui::Entity<Desk>, &mut VisualTestContext) {
-    cx.update(Theme::init);
+    cx.update(|cx| {
+        Theme::init(cx);
+        crate::forms::bind_keys(cx);
+    });
     let (view, cx) = cx.add_window_view(|_, cx| Desk {
         root: cx.focus_handle(),
         ran: Vec::new(),
@@ -105,6 +116,7 @@ fn desk(cx: &mut TestAppContext) -> (gpui::Entity<Desk>, &mut VisualTestContext)
         theme: "light".into(),
         view_rows: true,
         enters_above: 0,
+        shift: false,
     });
     settle(cx);
     (view, cx)
@@ -262,6 +274,106 @@ fn modified_confirm_keys_do_not_pick(cx: &mut TestAppContext) {
     press("ctrl-enter", cx);
     press("shift-space", cx);
     assert!(ran(&view, cx).is_empty(), "a modified key picked");
+    press("enter", cx);
+    assert_eq!(ran(&view, cx), ["cut"]);
+}
+
+#[gpui::test]
+fn a_second_right_click_moves_the_context_menu(cx: &mut TestAppContext) {
+    let (view, cx) = desk(cx);
+    cx.update(|window, _| window.focus_next());
+    for at in [point(px(150.0), px(120.0)), point(px(20.0), px(40.0))] {
+        cx.simulate_mouse_move(at, None, Modifiers::none());
+        cx.simulate_mouse_down(at, MouseButton::Right, Modifiers::none());
+        cx.simulate_mouse_up(at, MouseButton::Right, Modifiers::none());
+        settle(cx);
+    }
+    press("down", cx);
+    press("enter", cx);
+    assert_eq!(
+        ran(&view, cx),
+        ["cut"],
+        "the menu stayed open at the second click"
+    );
+}
+
+#[gpui::test]
+fn a_left_press_in_the_region_closes_the_context_menu(cx: &mut TestAppContext) {
+    let (view, cx) = desk(cx);
+    let at = point(px(150.0), px(120.0));
+    cx.simulate_mouse_move(at, None, Modifiers::none());
+    cx.simulate_mouse_down(at, MouseButton::Right, Modifiers::none());
+    cx.simulate_mouse_up(at, MouseButton::Right, Modifiers::none());
+    settle(cx);
+    click(20.0, 40.0, cx);
+    press("down", cx);
+    press("enter", cx);
+    assert!(ran(&view, cx).is_empty(), "the left press closed the menu");
+}
+
+fn open_find(cx: &mut VisualTestContext) {
+    cx.update(|window, _| {
+        window.focus_next();
+        window.focus_next();
+    });
+    press("enter", cx);
+}
+
+#[gpui::test]
+fn the_filter_runs_the_best_fit(cx: &mut TestAppContext) {
+    let (view, cx) = desk(cx);
+    open_find(cx);
+    cx.simulate_input("pa");
+    settle(cx);
+    press("enter", cx);
+    assert_eq!(ran(&view, cx), ["paste"]);
+}
+
+#[gpui::test]
+fn space_types_into_the_filter(cx: &mut TestAppContext) {
+    let (view, cx) = desk(cx);
+    open_find(cx);
+    cx.simulate_input("pa");
+    settle(cx);
+    press("space", cx);
+    assert!(ran(&view, cx).is_empty(), "space picked a row");
+    press("enter", cx);
+    assert_eq!(ran(&view, cx), ["paste"]);
+}
+
+#[gpui::test]
+fn arrows_walk_rows_from_the_filter(cx: &mut TestAppContext) {
+    let (view, cx) = desk(cx);
+    open_find(cx);
+    press("down", cx);
+    press("enter", cx);
+    assert_eq!(ran(&view, cx), ["paste"]);
+}
+
+#[gpui::test]
+fn an_open_dropdown_follows_its_host(cx: &mut TestAppContext) {
+    let (view, cx) = desk(cx);
+    click(12.0, 12.0, cx);
+    view.update(cx, |desk, cx| {
+        desk.shift = true;
+        cx.notify();
+    });
+    settle(cx);
+    settle(cx);
+    cx.simulate_mouse_move(point(px(40.0), px(131.0)), None, Modifiers::none());
+    settle(cx);
+    press("enter", cx);
+    assert_eq!(ran(&view, cx), ["cut"], "the panel moved with its button");
+}
+
+#[gpui::test]
+fn clearing_the_filter_marks_the_first_row_again(cx: &mut TestAppContext) {
+    let (view, cx) = desk(cx);
+    open_find(cx);
+    cx.simulate_input("t");
+    settle(cx);
+    press("down", cx);
+    press("backspace", cx);
     press("enter", cx);
     assert_eq!(ran(&view, cx), ["cut"]);
 }

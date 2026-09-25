@@ -13,6 +13,7 @@ use super::{
 };
 use crate::{
     buttons::{Button, ButtonGroup, ButtonVariant, IconButton},
+    forms::TextInput,
     primitives::IconName,
 };
 
@@ -40,6 +41,7 @@ fn host(
     trigger: impl IntoElement,
     menu: &Menu,
     state: &Entity<Open>,
+    field: Option<&Entity<TextInput>>,
     window: &mut Window,
     cx: &mut App,
 ) -> Stateful<Div> {
@@ -48,8 +50,8 @@ fn host(
         .relative()
         .flex_none()
         .child(trigger)
-        .child(measure_host(state.clone()))
-        .children(hang(&id, menu, state, window, cx))
+        .child(measure_host(state.clone(), true))
+        .children(hang(&id, menu, state, field, window, cx))
 }
 
 /// A button that opens a menu under it.
@@ -93,7 +95,7 @@ impl RenderOnce for DropdownMenu {
             .trailing_icon(IconName::ChevronDown)
             .when_some(self.icon, |button, icon| button.icon(icon))
             .on_click(move |event, window, cx| click(event, window, cx));
-        host(self.id, button, &self.menu, &state, window, cx)
+        host(self.id, button, &self.menu, &state, None, window, cx)
     }
 }
 
@@ -121,7 +123,7 @@ impl RenderOnce for OverflowMenu {
             .variant(ButtonVariant::Ghost)
             .tooltip("More")
             .on_click(move |event, window, cx| click(event, window, cx));
-        host(self.id, button, &self.menu, &state, window, cx)
+        host(self.id, button, &self.menu, &state, None, window, cx)
     }
 }
 
@@ -165,10 +167,16 @@ impl RenderOnce for SplitButton {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let state = state(&self.id, window, cx);
         let click = toggle(&state, &self.menu, cx);
+        let (shut, run) = (state.clone(), self.on_click);
         let main = Button::new((self.id.clone(), "main"), self.label)
             .variant(self.variant)
-            .when_some(self.on_click, |button, run| {
-                button.on_click(move |event, window, cx| run(event, window, cx))
+            .on_click(move |event, window, cx| {
+                if shut.read(cx).is_open() {
+                    Open::close(&shut, window, cx);
+                }
+                if let Some(run) = &run {
+                    run(event, window, cx);
+                }
             });
         let more = Button::new((self.id.clone(), "more"), "")
             .variant(self.variant)
@@ -179,6 +187,7 @@ impl RenderOnce for SplitButton {
             ButtonGroup::new().button(main).button(more),
             &self.menu,
             &state,
+            None,
             window,
             cx,
         )
@@ -212,14 +221,92 @@ impl ParentElement for ContextMenu {
 impl RenderOnce for ContextMenu {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let state = state(&self.id, window, cx);
-        let (open, menu) = (state.clone(), self.menu.clone());
+        let (open, shut, menu) = (state.clone(), state.clone(), self.menu.clone());
         div()
             .id(self.id.clone())
-            .on_mouse_down(MouseButton::Right, move |event, _, cx| {
+            .relative()
+            .on_mouse_down(MouseButton::Right, move |event, window, cx| {
+                window.prevent_default();
                 log::info!("context menu: at {:?}", event.position);
                 Open::show(&open, &menu, Spot::At(event.position), false, cx);
             })
+            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                if shut.read(cx).is_open() {
+                    window.prevent_default();
+                    Open::close(&shut, window, cx);
+                }
+            })
             .children(self.children)
-            .children(hang(&self.id, &self.menu, &state, window, cx))
+            .child(measure_host(state.clone(), false))
+            .children(hang(&self.id, &self.menu, &state, None, window, cx))
+    }
+}
+
+/// A button that opens a menu headed by a filter field. Typing narrows the rows, best first, and marks the letters that matched.
+#[derive(IntoElement)]
+pub struct SearchableMenu {
+    id: ElementId,
+    label: SharedString,
+    icon: Option<IconName>,
+    placeholder: SharedString,
+    menu: Menu,
+}
+
+impl SearchableMenu {
+    pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>, menu: Menu) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            icon: None,
+            placeholder: "Filter".into(),
+            menu,
+        }
+    }
+
+    pub fn icon(mut self, icon: IconName) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+
+    pub fn placeholder(mut self, text: impl Into<SharedString>) -> Self {
+        self.placeholder = text.into();
+        self
+    }
+}
+
+impl RenderOnce for SearchableMenu {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = state(&self.id, window, cx);
+        let field = state.read(cx).is_open().then(|| {
+            let placeholder = self.placeholder.clone();
+            window.use_keyed_state((self.id.clone(), "filter"), cx, move |window, cx| {
+                TextInput::new(window, cx).placeholder(placeholder)
+            })
+        });
+        let query = field
+            .as_ref()
+            .map(|field| field.read(cx).text().trim().to_string());
+        let shown = match &query {
+            Some(query) => self.menu.filtered(query),
+            None => self.menu.clone(),
+        };
+        let last = window.use_keyed_state((self.id.clone(), "query"), cx, |_, _| None::<String>);
+        if *last.read(cx) != query {
+            last.update(cx, |last, _| *last = query.clone());
+            if query.is_some() {
+                log::info!(
+                    "searchable menu {:?}: {} rows fit",
+                    self.id,
+                    shown.entries.len()
+                );
+                Open::restart(&state, &shown, cx);
+            }
+        }
+        let click = toggle(&state, &shown, cx);
+        let button = Button::new((self.id.clone(), "button"), self.label)
+            .trailing_icon(IconName::ChevronDown)
+            .when_some(self.icon, |button, icon| button.icon(icon))
+            .on_click(move |event, window, cx| click(event, window, cx));
+        host(self.id, button, &shown, &state, field.as_ref(), window, cx)
     }
 }
