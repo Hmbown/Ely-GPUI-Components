@@ -6,6 +6,7 @@ mod menu;
 mod nav;
 mod overflow;
 mod pages;
+mod palette;
 mod steps;
 mod tabs;
 #[cfg(all(test, feature = "test-support"))]
@@ -20,6 +21,9 @@ pub use menu::NavigationMenu;
 pub use nav::{NavGroup, NavItem};
 pub use overflow::TabOverflowMenu;
 pub use pages::Pagination;
+pub use palette::{
+    Command, CommandPalette, QuickLauncher, QuickOpen, QuickSwitcher, SearchPalette,
+};
 pub use steps::{Steps, Wizard};
 pub use tabs::{TabPlacement, Tabs};
 pub use toc::{Anchor, Sections, TableOfContents};

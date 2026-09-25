@@ -246,7 +246,7 @@ pub fn quick_launcher(cx: &App) -> impl IntoElement + use<> {
         cx,
     )
     .child(Caption::new(
-        "It needs text input and the palette, so it lands with Navigation, chapter 7.",
+        "It is `navigation::QuickLauncher`; the Navigation page, chapter 7, opens one.",
     ))
 }
 

@@ -88,7 +88,7 @@ pub use structure::{
 };
 pub use switch::Switch;
 pub use tags::TagInput;
-pub(crate) use text::{Enter, bind_keys};
+pub(crate) use text::{Down, Enter, Up, bind_keys};
 pub use text::{Highlight, InputEvent, TextInput};
 pub use transfer::TransferList;
 pub use unit::UnitInput;

@@ -228,6 +228,11 @@ impl Theme {
         px_to_rems(480.0)
     }
 
+    /// A palette's card; its list scrolls inside.
+    pub fn palette_size(&self) -> Size<Rems> {
+        size(px_to_rems(600.0), px_to_rems(400.0))
+    }
+
     /// Grab bar on a drawer.
     pub fn grip(&self) -> Size<Rems> {
         size(px_to_rems(36.0), px_to_rems(4.0))

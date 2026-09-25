@@ -31,7 +31,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T06g Forms · Structure
 - [x] T07a Navigation · Tabs & paths
 - [x] T07b Navigation · Places
-- [ ] T07c Navigation · Palettes & tour
+- [x] T07c Navigation · Palettes & tour
 - [ ] T08 Menus
 - [ ] T09 Overlays
 - [ ] T10 Feedback
@@ -143,3 +143,5 @@ Per-component lines live in `tasks/`. Tags there:
 | T07a | 3 | FAIL | AGENTS.md said the test platform gives text no width; it gives each character a fixed advance (fixed after the cap) |
 | T07b | 1 | FAIL | an open navigation menu kept entry and link indexes past lists that shrank, and disabled links still fired by click or Enter |
 | T07b | 2 | PASS | |
+| T07c | 1 | FAIL | SearchPalette let a disabled result run on Enter, and the palette tests compiled without test-support |
+| T07c | 2 | PASS | |

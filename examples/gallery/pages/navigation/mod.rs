@@ -1,3 +1,4 @@
+mod palettes;
 mod paths;
 mod places;
 mod tabs;
@@ -78,6 +79,39 @@ const SCRIPT: &[Step] = &[
     Step::Wait(200),
     Step::Shot("goto"),
     Step::Key("enter"),
+    Step::Click("commands"),
+    Step::Wait(500),
+    Step::Shot("command-palette"),
+    Step::Type("tog"),
+    Step::Wait(300),
+    Step::Shot("command-fuzzy"),
+    Step::Key("escape"),
+    Step::Click("files"),
+    Step::Wait(400),
+    Step::Type("navmenu"),
+    Step::Wait(300),
+    Step::Shot("quick-open"),
+    Step::Key("escape"),
+    Step::Click("switcher"),
+    Step::Wait(500),
+    Step::Shot("quick-switcher"),
+    Step::Key("enter"),
+    Step::Click("search"),
+    Step::Wait(400),
+    Step::Type("the"),
+    Step::Wait(300),
+    Step::Shot("search"),
+    Step::Key("escape"),
+    Step::Click("launcher"),
+    Step::Wait(800),
+    Step::KeyWindow("launcher", "t"),
+    Step::KeyWindow("launcher", "o"),
+    Step::KeyWindow("launcher", "k"),
+    Step::Wait(300),
+    Step::ShotWindow("launcher", "launcher"),
+    Step::KeyWindow("launcher", "escape"),
+    Step::Wait(300),
+    Step::ExpectClosed("launcher"),
     Step::Rest,
 ];
 
@@ -93,5 +127,9 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(places::history(window, cx))
         .child(places::contents(window, cx))
         .child(places::go_to_line(window, cx))
+        .child(palettes::command_palette(window, cx))
+        .child(palettes::quick_open(window, cx))
+        .child(palettes::quick_switcher(window, cx))
+        .child(palettes::search_palette(window, cx))
         .into_any_element()
 }

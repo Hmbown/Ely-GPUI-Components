@@ -57,6 +57,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - A tracked `FocusHandle` is a Tab stop only when built with `.tab_stop(true)`. `tab_index` on the div reaches only handles gpui makes itself. `primitives::tab_stop` keeps one per id.
 - Floating lists go below their anchor, or above when only above has room (`forms::options::float`). gpui's own switch keeps the anchor point, so a flipped list would cover its trigger.
 - A trigger that opens a list goes through `forms::select::listing`: toggle, keys, blur and popup live there, for Select, TabOverflowMenu and Breadcrumb alike.
+- A palette goes through `navigation::palette::Palette`: query field, grouped rows, cursor, keys and focus live there. CommandPalette, QuickOpen, QuickSwitcher, SearchPalette and QuickLauncher only build rows.
 - A marker that slides between items (segment thumb, tab line) measures them with `motion::slide` and eases with `glide`.
 - A picker hands focus to its popup on open and back to its trigger on pick or Escape; it closes once focus leaves both (`forms::date::picker`).
 - Motion for a value change keys its animation on `motion::changes`, so it replays per change and stays still on first paint.
@@ -68,6 +69,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - `ScrollHandle::scroll_to_item` runs in the container's prepaint before its bounds are stored, so a first-frame call misfires. Call it from a child's prepaint once the handle has bounds, then request one frame (`navigation::editor_tabs`). Never poll layout with `request_animation_frame`.
 - The test platform never runs next-frame callbacks, and its text metrics are simplified: each character takes a fixed advance. Tests refresh the window in place of the display link, and click where layout does not hang on text, such as padding and slots.
 - An absolute element with no insets sits where it would flow: after the content in a block, inside the padding in a flex box. A canvas that measures its parent pins itself with `.top_0().left_0()`.
+- Keyed state lives while its element renders in consecutive frames. An overlay rendered only while open starts fresh each time.
 - Long grids scroll in a `uniform_list`. gpui has no nearest scroll, so a key move up scrolls with `Top` and down with `Bottom` (`forms::glyphs`).
 - Masks reshape edits inside `TextInput::set_fit`, which sees the replaced range and the typed text. A diff after the fact cannot tell typed characters from kept ones.
 - Ids inside a reusable component carry its owner's id or `EntityId`, animation ids too. Twin ids share focus, click and animation state.
