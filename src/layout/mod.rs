@@ -6,7 +6,7 @@ mod page;
 mod panes;
 mod scroll;
 mod scroll_aids;
-mod seeded;
+pub(crate) mod seeded;
 mod sheet;
 mod sidebar;
 mod split;

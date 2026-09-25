@@ -4,6 +4,7 @@ mod check;
 mod checked;
 mod chips;
 mod combobox;
+mod date;
 mod expression;
 mod group;
 mod hotkey;
@@ -40,6 +41,11 @@ pub use check::{CheckState, Checkbox, CheckboxGroup};
 pub use checked::{EmailInput, UrlInput};
 pub use chips::ChoiceChips;
 pub use combobox::Combobox;
+pub use date::{
+    Calendar, CronEditor, CronRule, DatePicker, DateRangePicker, DateTimePicker, DurationPicker,
+    MonthPicker, QuarterPicker, RelativeDatePicker, RelativeRange, TimePicker, TimezoneSelect,
+    WeekPicker, YearPicker,
+};
 pub use expression::{ExpressionInput, evaluate, expression_highlights};
 pub use group::{InputAddon, InputGroup};
 pub use hotkey::HotkeyInput;

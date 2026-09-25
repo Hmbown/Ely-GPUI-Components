@@ -1,4 +1,5 @@
 mod choices;
+mod dates;
 
 use gpui::{
     AppContext as _, Context, Entity, EntityInputHandler, IntoElement, KeyUpEvent, Keystroke,

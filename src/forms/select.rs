@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, Bounds, ElementId, Entity, InteractiveElement, IntoElement, KeyDownEvent, MouseButton,
-    ParentElement, Pixels, RenderOnce, ScrollHandle, SharedString, Styled, Window, canvas, div,
-    prelude::*,
+    App, Bounds, Div, ElementId, Entity, FocusHandle, InteractiveElement, IntoElement,
+    KeyDownEvent, MouseButton, ParentElement, Pixels, RenderOnce, ScrollHandle, SharedString,
+    Stateful, Styled, Window, canvas, div, prelude::*,
 };
 
 use super::{
@@ -63,6 +63,66 @@ pub(crate) fn moved(event: &KeyDownEvent, rows: &[Choice], at: usize) -> Option<
         "end" => Some(step(rows, 0, -1)),
         _ => None,
     }
+}
+
+/// The bordered box of a field that opens something: a select, a picker.
+pub(crate) fn field_button(
+    id: impl Into<ElementId>,
+    focus: &FocusHandle,
+    size: ControlSize,
+    disabled: bool,
+    window: &Window,
+    cx: &App,
+) -> Stateful<Div> {
+    let theme = cx.theme();
+    let colors = &theme.colors;
+    div()
+        .id(id)
+        .track_focus(focus)
+        .relative()
+        .flex()
+        .items_center()
+        .gap_2()
+        .w_full()
+        .h(theme.control_height(size))
+        .px(theme.control_padding(size))
+        .rounded(theme.radius(Radius::Md))
+        .border_1()
+        .border_color(if focus.is_focused(window) {
+            colors.focus
+        } else {
+            colors.border_strong
+        })
+        .bg(if disabled {
+            colors.sunken
+        } else {
+            colors.surface
+        })
+        .text_size(theme.text_size(text_size(size)))
+        .when(!disabled, |field| field.cursor_pointer())
+}
+
+/// A field's value, or its placeholder in a quieter tone; long text ends in an ellipsis.
+pub(crate) fn field_text(
+    text: Option<SharedString>,
+    placeholder: SharedString,
+    disabled: bool,
+    cx: &App,
+) -> Div {
+    let colors = &cx.theme().colors;
+    let color = match (&text, disabled) {
+        (_, true) => colors.fg_disabled,
+        (Some(_), false) => colors.fg,
+        (None, false) => colors.fg_subtle,
+    };
+    div()
+        .flex_1()
+        .min_w_0()
+        .overflow_hidden()
+        .text_ellipsis()
+        .whitespace_nowrap()
+        .text_color(color)
+        .child(text.unwrap_or(placeholder))
 }
 
 /// A button that opens a list and shows the one chosen.
@@ -187,97 +247,73 @@ impl RenderOnce for Select {
         );
         let enter = pick.clone();
         let chosen: Vec<SharedString> = shown.iter().map(|choice| choice.value.clone()).collect();
-        div()
-            .id(self.id.clone())
-            .track_focus(&focus)
-            .relative()
-            .flex()
-            .items_center()
-            .gap_2()
-            .w_full()
-            .h(theme.control_height(self.size))
-            .px(theme.control_padding(self.size))
-            .rounded(theme.radius(Radius::Md))
-            .border_1()
-            .border_color(if focused {
-                colors.focus
-            } else {
-                colors.border_strong
-            })
-            .bg(if self.disabled {
-                colors.sunken
-            } else {
-                colors.surface
-            })
-            .text_size(theme.text_size(text_size(self.size)))
-            .when(!self.disabled, |trigger| {
-                trigger
-                    .cursor_pointer()
-                    .on_mouse_down(MouseButton::Left, move |_, _, cx| {
-                        Picker::show(&toggle, !open, start, cx)
-                    })
-                    .on_key_down(move |event, window, cx| {
-                        let at = keys.read(cx).highlighted;
-                        let key = event.keystroke.key.as_str();
-                        if !open {
-                            if matches!(key, "down" | "up" | "enter" | "space") {
-                                cx.stop_propagation();
-                                Picker::show(&keys, true, start, cx);
-                            }
-                            return;
+        field_button(
+            self.id.clone(),
+            &focus,
+            self.size,
+            self.disabled,
+            window,
+            cx,
+        )
+        .when(!self.disabled, |trigger| {
+            trigger
+                .on_mouse_down(MouseButton::Left, move |_, _, cx| {
+                    Picker::show(&toggle, !open, start, cx)
+                })
+                .on_key_down(move |event, window, cx| {
+                    let at = keys.read(cx).highlighted;
+                    let key = event.keystroke.key.as_str();
+                    if !open {
+                        if matches!(key, "down" | "up" | "enter" | "space") {
+                            cx.stop_propagation();
+                            Picker::show(&keys, true, start, cx);
                         }
-                        if let Some(to) = moved(event, &rows, at) {
-                            cx.stop_propagation();
-                            Picker::show(&keys, true, to, cx);
-                        } else if matches!(key, "enter" | "space") {
-                            cx.stop_propagation();
-                            enter(at, window, cx);
-                        } else if key == "escape" {
-                            cx.stop_propagation();
-                            Picker::show(&keys, false, at, cx);
-                        }
-                    })
-            })
-            .when_some(shown.and_then(|choice| choice.icon), |trigger, icon| {
-                trigger.child(Icon::new(icon).size(IconSize::Sm).color(colors.fg_muted))
-            })
-            .child(
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .whitespace_nowrap()
-                    .text_color(match (shown, self.disabled) {
-                        (_, true) => colors.fg_disabled,
-                        (Some(_), false) => colors.fg,
-                        (None, false) => colors.fg_subtle,
-                    })
-                    .child(shown.map_or(self.placeholder, |choice| choice.label.clone())),
-            )
-            .child(
-                Icon::new(IconName::ChevronsUpDown)
-                    .size(IconSize::Xs)
-                    .color(colors.fg_subtle),
-            )
-            .child(measure_anchor(picker))
-            .when(open, |trigger| {
-                trigger.child(
-                    Popup {
-                        id: (self.id, "list").into(),
-                        anchor,
-                        rows: &choices,
-                        highlighted: Some(highlighted),
-                        checked: Some(&chosen),
-                        pick,
-                        dismiss: Some(Rc::new(move |_, cx| {
-                            let at = close.read(cx).highlighted;
-                            Picker::show(&close, false, at, cx)
-                        })),
-                        scroll: Some(&scroll),
+                        return;
                     }
-                    .render(window, cx),
-                )
-            })
+                    if let Some(to) = moved(event, &rows, at) {
+                        cx.stop_propagation();
+                        Picker::show(&keys, true, to, cx);
+                    } else if matches!(key, "enter" | "space") {
+                        cx.stop_propagation();
+                        enter(at, window, cx);
+                    } else if key == "escape" {
+                        cx.stop_propagation();
+                        Picker::show(&keys, false, at, cx);
+                    }
+                })
+        })
+        .when_some(shown.and_then(|choice| choice.icon), |trigger, icon| {
+            trigger.child(Icon::new(icon).size(IconSize::Sm).color(colors.fg_muted))
+        })
+        .child(field_text(
+            shown.map(|choice| choice.label.clone()),
+            self.placeholder,
+            self.disabled,
+            cx,
+        ))
+        .child(
+            Icon::new(IconName::ChevronsUpDown)
+                .size(IconSize::Xs)
+                .color(colors.fg_subtle),
+        )
+        .child(measure_anchor(picker))
+        .when(open, |trigger| {
+            trigger.child(
+                Popup {
+                    id: (self.id, "list").into(),
+                    anchor,
+                    rows: &choices,
+                    highlighted: Some(highlighted),
+                    checked: Some(&chosen),
+                    pick,
+                    dismiss: Some(Rc::new(move |_, cx| {
+                        let at = close.read(cx).highlighted;
+                        Picker::show(&close, false, at, cx)
+                    })),
+                    scroll: Some(&scroll),
+                }
+                .render(window, cx),
+            )
+        })
     }
 }

@@ -1,4 +1,5 @@
 mod choices;
+mod dates;
 mod formats;
 mod numbers;
 mod pickers;
@@ -180,6 +181,41 @@ const SCRIPT: &[Step] = &[
     Step::UpAt("stepper", 76.0, 16.0),
     Step::Wait(300),
     Step::Shot("values"),
+    Step::DownAt("calendar", 150.0, 150.0),
+    Step::UpAt("calendar", 150.0, 150.0),
+    Step::Key("right"),
+    Step::Key("pagedown"),
+    Step::Wait(400),
+    Step::Shot("calendar"),
+    Step::Click("date-picker"),
+    Step::Wait(300),
+    Step::Shot("date-open"),
+    Step::Key("right"),
+    Step::Key("enter"),
+    Step::Wait(300),
+    Step::Click("range-picker"),
+    Step::Wait(300),
+    Step::Key("enter"),
+    Step::Key("right"),
+    Step::Key("right"),
+    Step::Key("right"),
+    Step::Wait(200),
+    Step::Shot("range-open"),
+    Step::Key("enter"),
+    Step::Wait(300),
+    Step::Click("time-picker"),
+    Step::Wait(300),
+    Step::Shot("time-open"),
+    Step::Key("escape"),
+    Step::Click("month-picker"),
+    Step::Wait(300),
+    Step::Shot("month-open"),
+    Step::Key("escape"),
+    Step::Click("cron"),
+    Step::Key("secondary-a"),
+    Step::Type("*/15 9-17 * * 1-5"),
+    Step::Wait(200),
+    Step::Shot("cron"),
     Step::Rest,
 ];
 
@@ -218,5 +254,10 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(values::rating(window, cx))
         .child(values::sliders(window, cx))
         .child(values::dials(window, cx))
+        .child(dates::calendar(window, cx))
+        .child(dates::pickers(window, cx))
+        .child(dates::periods(window, cx))
+        .child(dates::more(window, cx))
+        .child(dates::cron(window, cx))
         .into_any_element()
 }

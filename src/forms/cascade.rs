@@ -9,12 +9,12 @@ use gpui::{
 use super::{
     Choice,
     check::tab_stop,
-    input::text_size,
     options::{OnValues, float, option_row, surface},
+    select::{field_button, field_text},
 };
 use crate::{
     primitives::{Icon, IconName},
-    theme::{ActiveTheme, ControlSize, IconSize, Radius},
+    theme::{ActiveTheme, ControlSize, IconSize},
 };
 
 /// A node of a cascade: a value, its label, and the nodes under it.
@@ -279,26 +279,7 @@ impl RenderOnce for Cascader {
                 cx,
             )
         });
-        div()
-            .id(self.id)
-            .track_focus(&focus)
-            .relative()
-            .flex()
-            .items_center()
-            .gap_2()
-            .w_full()
-            .h(theme.control_height(self.size))
-            .px(theme.control_padding(self.size))
-            .rounded(theme.radius(Radius::Md))
-            .border_1()
-            .border_color(if focused {
-                colors.focus
-            } else {
-                colors.border_strong
-            })
-            .bg(colors.surface)
-            .text_size(theme.text_size(text_size(self.size)))
-            .cursor_pointer()
+        field_button(self.id, &focus, self.size, false, window, cx)
             .on_click(move |event, _, cx| {
                 if matches!(event, ClickEvent::Mouse(_)) {
                     show(&click, !open, start.clone(), cx)
@@ -339,24 +320,12 @@ impl RenderOnce for Cascader {
                 cx.stop_propagation();
                 show(&keys, true, trail, cx);
             })
-            .child(
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .overflow_hidden()
-                    .text_ellipsis()
-                    .whitespace_nowrap()
-                    .text_color(if shown.is_empty() {
-                        colors.fg_subtle
-                    } else {
-                        colors.fg
-                    })
-                    .child(if shown.is_empty() {
-                        self.placeholder
-                    } else {
-                        SharedString::from(shown.join(" / "))
-                    }),
-            )
+            .child(field_text(
+                (!shown.is_empty()).then(|| SharedString::from(shown.join(" / "))),
+                self.placeholder,
+                false,
+                cx,
+            ))
             .child(
                 Icon::new(IconName::ChevronsUpDown)
                     .size(IconSize::Xs)

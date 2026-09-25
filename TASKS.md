@@ -24,7 +24,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T05 Buttons & Actions
 - [x] T06a Forms · Text
 - [x] T06b Forms · Selection
-- [ ] T06c Forms · Date & Time
+- [x] T06c Forms · Date & Time
 - [ ] T06d Forms · Color
 - [ ] T06e Forms · Files
 - [ ] T06f Forms · Other
@@ -125,3 +125,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T06b | 1 | FAIL | kept highlight and cascade trail went out of bounds; keyboard click reclosed MultiSelect and Cascader; disabled rows committed by keyboard; Combobox hid its owner's value; a disabled chosen radio left no Tab stop; a disabled Rating took arrows |
 | T06b | 2 | FAIL | a free Combobox cleared the text it mounted with |
 | T06b | 3 | PASS | |
+| T06c | 1 | FAIL | range preview reseeded the month; disabled pickers still committed; month buttons left the cursor; hour column scrolled before layout; `*/1` day fields were not wildcards; next(0) ran on; clock fell back to UTC; zone offsets went stale; "never runs" overclaimed |
+| T06c | 2 | FAIL | the description of an unstarred full day field ignored the OR rule |
+| T06c | 3 | PASS | |
