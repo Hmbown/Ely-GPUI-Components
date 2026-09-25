@@ -6,6 +6,8 @@ use gpui::{
     VisualTestContext, Window, div, point, px,
 };
 
+mod guides;
+
 use super::{AlertDialog, ConfirmDialog, Dialog, HoverCard, Popover, PromptDialog};
 use crate::{
     buttons::Button,
@@ -130,13 +132,13 @@ impl Render for Stage {
     }
 }
 
-fn settle(cx: &mut VisualTestContext) {
+pub(super) fn settle(cx: &mut VisualTestContext) {
     cx.run_until_parked();
     cx.update(|window, _| window.refresh());
     cx.run_until_parked();
 }
 
-fn press(key: &str, cx: &mut VisualTestContext) {
+pub(super) fn press(key: &str, cx: &mut VisualTestContext) {
     cx.simulate_keystrokes(key);
     settle(cx);
     cx.simulate_event(KeyUpEvent {
@@ -145,7 +147,7 @@ fn press(key: &str, cx: &mut VisualTestContext) {
     settle(cx);
 }
 
-fn click(x: f32, y: f32, cx: &mut VisualTestContext) {
+pub(super) fn click(x: f32, y: f32, cx: &mut VisualTestContext) {
     let at = point(px(x), px(y));
     cx.simulate_mouse_move(at, None, Modifiers::none());
     cx.simulate_click(at, Modifiers::none());

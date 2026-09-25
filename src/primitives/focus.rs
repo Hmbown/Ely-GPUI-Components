@@ -1,6 +1,6 @@
 use gpui::{
     AnyElement, App, Div, ElementId, Entity, FocusHandle, InteractiveElement, IntoElement,
-    ParentElement, RenderOnce, StyleRefinement, Styled, Window, actions, div,
+    ParentElement, RenderOnce, StyleRefinement, Styled, Subscription, Window, actions, div,
 };
 
 use crate::theme::ActiveTheme;
@@ -100,18 +100,27 @@ pub(crate) struct Takeover {
     pub focus: FocusHandle,
     previous: Option<FocusHandle>,
     taken: bool,
+    returned: bool,
+    _lost: Subscription,
 }
 
-/// Keyed focus for an overlay; focused on its first render.
+/// Keyed focus for an overlay; focused on its first render, and again whenever the focused element leaves the tree.
 pub(crate) fn take_focus(
     key: impl Into<gpui::ElementId>,
     window: &mut Window,
     cx: &mut App,
 ) -> Entity<Takeover> {
-    let state = window.use_keyed_state(key, cx, |_, cx| Takeover {
+    let state = window.use_keyed_state(key, cx, |window, cx| Takeover {
         focus: cx.focus_handle(),
         previous: None,
         taken: false,
+        returned: false,
+        _lost: cx.on_focus_lost(window, |takeover: &mut Takeover, window, _| {
+            if !takeover.returned {
+                log::info!("focus: its element left the tree; the overlay takes it back");
+                window.focus(&takeover.focus);
+            }
+        }),
     });
     if !state.read(cx).taken {
         let previous = window.focused(cx);
@@ -125,8 +134,12 @@ pub(crate) fn take_focus(
 }
 
 /// Returns focus to whatever held it before the overlay opened.
-pub(crate) fn give_back(state: &Entity<Takeover>, window: &mut Window, cx: &App) {
-    match state.read(cx).previous.clone() {
+pub(crate) fn give_back(state: &Entity<Takeover>, window: &mut Window, cx: &mut App) {
+    let previous = state.update(cx, |takeover, _| {
+        takeover.returned = true;
+        takeover.previous.clone()
+    });
+    match previous {
         Some(previous) => {
             window.focus(&previous);
             log::info!("focus: handed back after an overlay");

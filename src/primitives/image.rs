@@ -13,7 +13,7 @@ use crate::{
 
 const PULSE: Duration = Duration::from_millis(1600);
 
-/// Themed `img()`; a `Cover` crop keeps square corners.
+/// Themed `img()` that fills the box it is given; a `Cover` crop keeps square corners.
 #[derive(IntoElement)]
 pub struct Image {
     id: ElementId,
@@ -82,6 +82,8 @@ impl RenderOnce for Image {
         };
         let mut picture = img(source)
             .id(self.id)
+            .absolute()
+            .inset_0()
             .size_full()
             .object_fit(self.fit)
             .with_loading(move || {
@@ -100,6 +102,6 @@ impl RenderOnce for Image {
             })
             .with_fallback(move || mark(IconName::ImageOff).into_any_element());
         picture.style().corner_radii = radii;
-        self.base.overflow_hidden().child(picture)
+        self.base.relative().overflow_hidden().child(picture)
     }
 }

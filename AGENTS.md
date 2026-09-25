@@ -45,7 +45,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - A component that takes a starting value from its owner keeps it in `layout::seeded`: a new value from the owner replaces local drags.
 - The capture harness finds gpui windows by handle through `raw-window-handle`. AppKit popups, which gpui does not own, come from the window list by process and level.
 - Posted events cannot move a macOS window, so window drags are not scripted. `drag_region` follows Zed's title bar.
-- An overlay takes focus with `primitives::take_focus` and returns it with `give_back` on every close path.
+- An overlay takes focus with `primitives::take_focus` and returns it with `give_back` on every close path. While open, it takes focus back whenever the focused element leaves the tree (gpui's `on_focus_lost`).
 - A state change made outside render calls `cx.notify()`, or nothing redraws.
 - The macOS share picker draws its content in another process; a capture shows only its frame.
 - NSColorSampler runs in another process too. The harness cannot pick or cancel with it; `read_srgb` is tested on a constructed `NSColor` instead.
@@ -66,7 +66,8 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - `primitives::Severity` names info, success, warning and danger with their colors and icons, for alerts and feedback alike.
 - A marker that slides between items (segment thumb, tab line) measures them with `motion::slide` and eases with `glide`.
 - A picker hands focus to its popup on open and back to its trigger on pick or Escape; it closes once focus leaves both (`forms::date::picker`).
-- Motion for a value change keys its animation on `motion::changes`, so it replays per change and stays still on first paint.
+- Motion for a value change keys its animation on `motion::changes`, so it replays per change and stays still on first paint. Key only the part that moves: a keyed ancestor gives every descendant a new id, and focused buttons lose focus.
+- A spotlight or tour takes its target's box from `primitives::Measure`; the lit box glides between targets.
 - Thumbs stay inside their component's box: the track is padded by half a thumb (`Slider`, `ColorPicker`, `GradientEditor`).
 - gpui's `Hsla::opacity` scales alpha; `alpha` sets it.
 - A rounded box does not clip its children. Each layer inside takes the radius itself; `checker` takes one.
@@ -80,6 +81,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - Masks reshape edits inside `TextInput::set_fit`, which sees the replaced range and the typed text. A diff after the fact cannot tell typed characters from kept ones.
 - Ids inside a reusable component carry its owner's id or `EntityId`, animation ids too. Twin ids share focus, click and animation state.
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.
+- gpui's `img` takes its picture's pixel size for any `Auto` side, and its aspect ratio beats percent heights in flow. `Image` pins it absolute at full size, so an `Image` needs a sized box.
 - `img()` keeps loading state only with an id. Content masks are rectangles, so rounded corners survive only when the image fills its box without cropping.
 
 ## Decisions

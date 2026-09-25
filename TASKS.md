@@ -35,7 +35,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T08a Menus · Menu & hosts
 - [x] T08b Menus · Bar, search & pie
 - [x] T09a Overlays · Popovers & dialogs
-- [ ] T09b Overlays · Guides & floats
+- [x] T09b Overlays · Guides & floats
 - [ ] T10 Feedback
 - [ ] T11a Loading — `tasks/ch11-20.md`
 - [ ] T11b Motion
@@ -156,3 +156,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T09a | 1 | FAIL | dialog buttons closed through the owner and skipped give_back, popover and hover panels let presses through, and the popover guessed its height |
 | T09a | 2 | FAIL | the prompt's Enter release ran from anywhere in the dialog, so Enter on Cancel submitted and on Submit sent twice |
 | T09a | 3 | PASS | |
+| T09b | 1 | FAIL | the lightbox photo was cropped, the toolbar kept last frame's anchor, Escape missed a spotlight whose target held focus, a disabled Next dropped focus, and a dead arrow's press closed the lightbox |
+| T09b | 2 | FAIL | Enter on a focused Back that returned the tour to its first step removed the button and lost focus, so the arrows stopped |
+| T09b | 3 | FAIL | Left from a focused Back also removed it and lost focus; take_focus now takes focus back whenever the focused element leaves the tree (fixed after the cap) |

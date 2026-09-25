@@ -233,6 +233,11 @@ impl Theme {
         (px_to_rems(84.0), px_to_rems(40.0))
     }
 
+    /// Room between a box and what floats by it: a spotlight's ring, a selection's toolbar.
+    pub fn float_gap(&self) -> Rems {
+        px_to_rems(6.0)
+    }
+
     /// Width of a dialog's card.
     pub fn dialog_width(&self) -> Rems {
         px_to_rems(440.0)
