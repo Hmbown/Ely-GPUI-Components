@@ -17,7 +17,7 @@ Per-component lines live in `tasks/`. Tags there:
 ## Items
 
 - [x] T00 Foundation: package, theme, motion, assets, Icon, Button, gallery shell, docs
-- [ ] T01 Primitives — `tasks/ch01-10.md`
+- [x] T01 Primitives — `tasks/ch01-10.md`
 - [ ] T02 Typography
 - [ ] T03 Layout
 - [ ] T04 Window & Shell
@@ -105,3 +105,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T00 | 1 | FAIL | capture swallowed errors; root not focused; raw px sizes; gallery copy; tag conflict |
 | T00 | 2 | FAIL | AGENTS.md called `border_1` a rem helper |
 | T00 | 3 | PASS | |
+| T01 | 1 | FAIL | img loading needs an id; radii lost; focus loop cap; tooltip geometry literals |
+| T01 | 2 | FAIL | Cover painted outside the box once the clip was removed |
+| T01 | 3 | FAIL | two-line doc comment; fixed after the cap, verified by scan, no fourth review |

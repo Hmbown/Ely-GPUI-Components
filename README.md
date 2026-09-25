@@ -43,3 +43,4 @@ cargo run --example gallery -- --capture shots   # macOS: PNG of every page, lig
 ## License
 
 MIT or Apache-2.0, at your option. Lucide icons: ISC. Inter and JetBrains Mono: SIL Open Font License 1.1.
+The gallery photos in `examples/gallery/assets` were generated for this project with gpt-image-2.

@@ -96,6 +96,8 @@ mixable!(
         info_subtle: Hsla,
         backdrop: Hsla,
         shadow: Hsla,
+        tooltip_bg: Hsla,
+        tooltip_fg: Hsla,
         chart: [Hsla; 8],
         ansi: [Hsla; 16],
         syntax: Syntax,
@@ -141,6 +143,8 @@ impl Palette {
             info_subtle: c(0xebf4ff),
             backdrop: rgba(0x18161352).into(),
             shadow: c(0x181613),
+            tooltip_bg: c(0x181613),
+            tooltip_fg: c(0xfcfaf7),
             chart: c8([
                 0x5182c1, 0x009589, 0xaa732b, 0xb8636b, 0x8572bb, 0x539156, 0xb66946, 0x138db1,
             ]),
@@ -203,6 +207,8 @@ impl Palette {
             info_subtle: c(0x19273a),
             backdrop: rgba(0x00000080).into(),
             shadow: c(0x000000),
+            tooltip_bg: c(0x373533),
+            tooltip_fg: c(0xf3f1f0),
             chart: c8([
                 0x79a7e2, 0x4eb9ad, 0xcd995c, 0xdc8a90, 0xa998dd, 0x7cb57d, 0xd9906f, 0x56b2d4,
             ]),

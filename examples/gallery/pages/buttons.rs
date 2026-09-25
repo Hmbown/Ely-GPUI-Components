@@ -14,6 +14,7 @@ pub const PAGE: Page = Page {
     title: "Buttons & Actions",
     summary: "Seven variants, three sizes, one focus ring.",
     render,
+    script: &[],
 };
 
 const VARIANTS: [(ButtonVariant, &str); 7] = [

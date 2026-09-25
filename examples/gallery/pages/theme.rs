@@ -18,6 +18,7 @@ pub const PAGE: Page = Page {
     title: "Theme",
     summary: "Tokens every component reads. Light and dark share one grammar.",
     render,
+    script: &[],
 };
 
 fn render(_: &mut Window, cx: &mut App) -> AnyElement {

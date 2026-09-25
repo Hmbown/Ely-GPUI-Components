@@ -1,15 +1,15 @@
 use ely_gpui_component::{
     buttons::{ButtonVariant, IconButton},
-    primitives::IconName,
+    primitives::{FocusScope, IconName},
     theme::{ActiveTheme, ControlSize, Mode, Radius, TextSize, Theme},
 };
 use gpui::{
-    Context, FocusHandle, FontWeight, InteractiveElement, IntoElement, ParentElement, Pixels,
-    Render, ScrollHandle, SharedString, StatefulInteractiveElement, Styled, Subscription, Window,
-    div, point, prelude::*, px,
+    Bounds, Context, FocusHandle, FontWeight, InteractiveElement, IntoElement, ParentElement,
+    Pixels, Render, ScrollHandle, SharedString, StatefulInteractiveElement, Styled, Subscription,
+    Window, div, point, prelude::*, px,
 };
 
-use crate::{FocusNext, FocusPrev, pages};
+use crate::pages;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Choice {
@@ -57,6 +57,21 @@ impl Gallery {
             self.scroll.bounds().size.height,
             self.scroll.max_offset().height,
         )
+    }
+
+    /// Scrolls until `target` sits inside the page. True if it moved.
+    pub fn reveal(&mut self, target: Bounds<Pixels>, cx: &mut Context<Self>) -> bool {
+        let (view, margin) = (self.scroll.bounds(), px(96.0));
+        let shift = if target.top() < view.top() + margin {
+            target.top() - view.top() - margin
+        } else if target.bottom() > view.bottom() - margin {
+            target.bottom() - view.bottom() + margin
+        } else {
+            return false;
+        };
+        let y = (-self.scroll.offset().y + shift).clamp(px(0.0), self.scroll.max_offset().height);
+        self.scroll_to(y, cx);
+        true
     }
 
     pub fn scroll_to(&mut self, y: Pixels, cx: &mut Context<Self>) {
@@ -183,11 +198,7 @@ impl Render for Gallery {
         let theme = cx.theme();
         let colors = &theme.colors;
 
-        div()
-            .id("gallery")
-            .track_focus(&self.focus)
-            .on_action(|_: &FocusNext, window, _| window.focus_next())
-            .on_action(|_: &FocusPrev, window, _| window.focus_prev())
+        FocusScope::new(&self.focus)
             .size_full()
             .flex()
             .bg(colors.bg)

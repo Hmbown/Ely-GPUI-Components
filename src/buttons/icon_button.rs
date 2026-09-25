@@ -4,7 +4,7 @@ use gpui::{
 
 use super::button::{ButtonVariant, ClickHandler, label_size, tone};
 use crate::{
-    primitives::{Icon, IconName},
+    primitives::{FocusRing, Icon, IconName},
     theme::{ActiveTheme, ControlSize, Radius},
 };
 
@@ -71,7 +71,8 @@ impl RenderOnce for IconButton {
             .size(side)
             .rounded(theme.radius(Radius::Md))
             .bg(tone.bg)
-            .when_some(tone.border, |el, border| el.border_1().border_color(border))
+            .border_1()
+            .border_color(tone.border)
             .child(Icon::new(self.icon).size(icon_size).color(tone.fg))
             .map(|el| {
                 if self.disabled {
@@ -81,7 +82,7 @@ impl RenderOnce for IconButton {
                     .tab_index(0)
                     .hover(|style| style.bg(tone.hover))
                     .active(|style| style.bg(tone.pressed))
-                    .focus(|style| style.shadow(theme.focus_ring()))
+                    .focus_ring(cx)
                     .on_mouse_down(MouseButton::Left, |_, window, _| window.prevent_default())
                     .when_some(self.on_click, |el, handler| el.on_click(handler))
             })

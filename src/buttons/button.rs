@@ -4,7 +4,7 @@ use gpui::{
 };
 
 use crate::{
-    primitives::{Icon, IconName},
+    primitives::{FocusRing, Icon, IconName},
     theme::{ActiveTheme, ControlSize, IconSize, Mix, Palette, Radius, TextSize},
 };
 
@@ -27,7 +27,7 @@ pub(crate) struct Tone {
     pub hover: Hsla,
     pub pressed: Hsla,
     pub fg: Hsla,
-    pub border: Option<Hsla>,
+    pub border: Hsla,
 }
 
 pub(crate) fn tone(variant: ButtonVariant, colors: &Palette) -> Tone {
@@ -38,49 +38,49 @@ pub(crate) fn tone(variant: ButtonVariant, colors: &Palette) -> Tone {
             hover: colors.accent_hover,
             pressed: colors.accent_hover.mix(&colors.on_accent, 0.12),
             fg: colors.on_accent,
-            border: None,
+            border: clear,
         },
         ButtonVariant::Secondary => Tone {
             bg: colors.surface,
             hover: colors.hover,
             pressed: colors.active,
             fg: colors.fg,
-            border: Some(colors.border),
+            border: colors.border,
         },
         ButtonVariant::Outline => Tone {
             bg: clear,
             hover: colors.hover,
             pressed: colors.active,
             fg: colors.fg,
-            border: Some(colors.border_strong),
+            border: colors.border_strong,
         },
         ButtonVariant::Ghost => Tone {
             bg: clear,
             hover: colors.hover,
             pressed: colors.active,
             fg: colors.fg,
-            border: None,
+            border: clear,
         },
         ButtonVariant::Subtle => Tone {
             bg: colors.hover,
             hover: colors.active,
             pressed: colors.active.mix(&colors.border_strong, 0.5),
             fg: colors.fg,
-            border: None,
+            border: clear,
         },
         ButtonVariant::Danger => Tone {
             bg: colors.danger,
             hover: colors.danger.mix(&colors.fg, 0.14),
             pressed: colors.danger.mix(&colors.fg, 0.24),
             fg: colors.on_accent,
-            border: None,
+            border: clear,
         },
         ButtonVariant::Link => Tone {
             bg: clear,
             hover: clear,
             pressed: clear,
             fg: colors.link,
-            border: None,
+            border: clear,
         },
     }
 }
@@ -186,7 +186,8 @@ impl RenderOnce for Button {
             .font_weight(FontWeight::MEDIUM)
             .text_color(tone.fg)
             .bg(tone.bg)
-            .when_some(tone.border, |el, border| el.border_1().border_color(border))
+            .border_1()
+            .border_color(tone.border)
             .when(self.full_width, |el| el.w_full())
             .when_some(self.icon, |el, name| el.child(icon(name)))
             .child(self.label)
@@ -202,7 +203,7 @@ impl RenderOnce for Button {
                         if link { style.underline() } else { style }
                     })
                     .active(|style| style.bg(tone.pressed))
-                    .focus(|style| style.shadow(theme.focus_ring()))
+                    .focus_ring(cx)
                     .on_mouse_down(MouseButton::Left, |_, window, _| window.prevent_default())
                     .when_some(self.on_click, |el, handler| el.on_click(handler))
             })

@@ -1,5 +1,7 @@
 mod capture;
 mod pages;
+mod probe;
+mod script;
 mod shell;
 mod ui;
 
@@ -12,7 +14,7 @@ use gpui::{
     actions, point, px, size,
 };
 
-actions!(gallery, [Quit, FocusNext, FocusPrev]);
+actions!(gallery, [Quit]);
 
 struct Args {
     page: usize,
@@ -47,11 +49,7 @@ fn main() -> Result<()> {
         .with_assets(Assets)
         .run(move |cx: &mut App| {
             ely_gpui_component::init(cx);
-            cx.bind_keys([
-                KeyBinding::new("cmd-q", Quit, None),
-                KeyBinding::new("tab", FocusNext, None),
-                KeyBinding::new("shift-tab", FocusPrev, None),
-            ]);
+            cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
             cx.on_action(|_: &Quit, cx| cx.quit());
             let bounds = Bounds::centered(None, size(px(1280.0), px(820.0)), cx);
             let options = WindowOptions {

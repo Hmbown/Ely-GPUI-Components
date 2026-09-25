@@ -1519,6 +1519,7 @@ name = "ely-gpui-component"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cocoa 0.26.0",
  "core-foundation 0.10.0",
  "core-graphics 0.24.0",
  "env_logger",
@@ -1526,6 +1527,7 @@ dependencies = [
  "image",
  "log",
  "rust-embed",
+ "smallvec",
 ]
 
 [[package]]

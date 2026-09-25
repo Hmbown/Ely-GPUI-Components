@@ -8,7 +8,7 @@ use ely_gpui_component::theme::Theme;
 use gpui::{App, AsyncApp, WindowHandle, px};
 
 use crate::{
-    pages,
+    pages, script,
     shell::{Choice, Gallery},
 };
 
@@ -36,6 +36,7 @@ async fn shoot_all(window: WindowHandle<Gallery>, dir: &Path, cx: &mut AsyncApp)
                 gallery.select(ix, cx);
                 gallery.choose(choice, window, cx);
             })?;
+            script::park(window, cx)?;
             cx.background_executor().timer(SETTLE).await;
             let (viewport, max) = window.update(cx, |gallery, _, _| gallery.scroll_extent())?;
             if viewport <= px(0.0) {
@@ -58,23 +59,27 @@ async fn shoot_all(window: WindowHandle<Gallery>, dir: &Path, cx: &mut AsyncApp)
                 window.update(cx, |gallery, _, cx| gallery.scroll_to(offset, cx))?;
                 cx.background_executor().timer(SCROLL_SETTLE).await;
             }
+            if !page.script.is_empty() {
+                window.update(cx, |gallery, _, cx| gallery.select(ix, cx))?;
+                cx.background_executor().timer(SETTLE).await;
+                let shot = |step: &str| dir.join(format!("{}-{step}-{name}.png", page.slug));
+                script::play(window, page.script, shot, cx).await?;
+            }
         }
     }
     Ok(())
 }
 
+/// This process's on-screen window, as CoreGraphics numbers it.
 #[cfg(target_os = "macos")]
-fn snapshot(path: &Path) -> Result<()> {
+pub fn window_number() -> Result<u32> {
     use core_foundation::{
         base::{CFType, TCFType},
         dictionary::CFDictionary,
         number::CFNumber,
         string::CFString,
     };
-    use core_graphics::{
-        geometry::{CGPoint, CGRect, CGSize},
-        window,
-    };
+    use core_graphics::window;
 
     let number = |dict: &CFDictionary<CFString, CFType>, key: &'static str| {
         dict.find(CFString::from_static_string(key))
@@ -93,10 +98,20 @@ fn snapshot(path: &Path) -> Result<()> {
         .find(|dict| number(dict, "kCGWindowOwnerPID") == Some(pid))
         .and_then(|dict| number(&dict, "kCGWindowNumber"))
         .context("gallery window not on screen")?;
+    u32::try_from(id).context("window number out of range")
+}
+
+#[cfg(target_os = "macos")]
+pub fn snapshot(path: &Path) -> Result<()> {
+    use core_graphics::{
+        geometry::{CGPoint, CGRect, CGSize},
+        window,
+    };
+
     let image = window::create_image(
         CGRect::new(&CGPoint::new(0.0, 0.0), &CGSize::new(0.0, 0.0)),
         window::kCGWindowListOptionIncludingWindow,
-        id as u32,
+        window_number()?,
         window::kCGWindowImageBoundsIgnoreFraming | window::kCGWindowImageBestResolution,
     )
     .context("window capture returned nothing")?;
@@ -127,6 +142,6 @@ fn snapshot(path: &Path) -> Result<()> {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn snapshot(_: &Path) -> Result<()> {
+pub fn snapshot(_: &Path) -> Result<()> {
     bail!("capture needs macOS window APIs")
 }

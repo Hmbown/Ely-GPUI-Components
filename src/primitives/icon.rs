@@ -18,6 +18,13 @@ macro_rules! icons {
                     $(IconName::$variant => concat!("icons/", $file, ".svg"),)*
                 }
             }
+
+            /// Lucide name, such as `chevron-down`.
+            pub fn name(self) -> &'static str {
+                match self {
+                    $(IconName::$variant => $file,)*
+                }
+            }
         }
     };
 }
@@ -124,6 +131,7 @@ icons! {
     Hourglass => "hourglass",
     House => "house",
     Image => "image",
+    ImageOff => "image-off",
     Inbox => "inbox",
     Info => "info",
     Italic => "italic",

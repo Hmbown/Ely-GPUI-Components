@@ -51,3 +51,26 @@ pub fn specimen(caption: impl Into<SharedString>, body: impl IntoElement, cx: &A
         .child(body)
         .child(label(caption, cx))
 }
+
+/// Monospace hint naming the call.
+pub fn code(text: impl Into<SharedString>, cx: &App) -> impl IntoElement {
+    let theme = cx.theme();
+    div()
+        .font_family(theme.mono_family.clone())
+        .text_size(theme.text_size(TextSize::Xs))
+        .text_color(theme.colors.fg_muted)
+        .child(text.into())
+}
+
+/// Honest note for an entry gpui cannot support.
+pub fn blocked(text: impl Into<SharedString>, cx: &App) -> impl IntoElement {
+    let theme = cx.theme();
+    div()
+        .flex()
+        .items_center()
+        .gap_2()
+        .text_size(theme.text_size(TextSize::Sm))
+        .text_color(theme.colors.warning)
+        .child(div().size_1p5().rounded_full().bg(theme.colors.warning))
+        .child(text.into())
+}

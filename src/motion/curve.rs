@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use gpui::App;
+use gpui::{App, Pixels, px};
 
 use crate::theme::ActiveTheme;
 
@@ -8,6 +8,9 @@ pub const FAST: Duration = Duration::from_millis(120);
 pub const BASE: Duration = Duration::from_millis(200);
 pub const SLOW: Duration = Duration::from_millis(320);
 pub const THEME: Duration = Duration::from_millis(280);
+
+/// Travel of small entrances.
+pub const NUDGE: Pixels = px(4.0);
 
 const DAMPING: f32 = 0.75;
 const OMEGA: f32 = 6.91 / DAMPING;

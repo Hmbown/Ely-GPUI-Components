@@ -35,7 +35,11 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - `motion::duration()` honors reduced motion. Springs overshoot: use them inside animators, never as gpui easings, because gpui asserts eased values stay in `0..=1`.
 - `svg()` paints only with its own `text_color`. `Icon` always sets one.
 - Buttons stay out of focus on click (`prevent_default` on mouse down). Tab still reaches them.
+- The focus ring is a 1px focus-colored border (`FocusRing`). gpui paints shadows under the element, so a shadow ring floods transparent elements. Focusable elements keep a 1px border, transparent at rest.
+- `ely_gpui_component::init` binds Tab and Shift-Tab to `FocusNext` and `FocusPrev`. Wrap the root in `FocusScope` and focus its handle.
+- gpui's `Window::dispatch_event` returns a private type, so the gallery scripts mouse input by posting `NSEvent`s to its own queue.
 - `hover()` needs an element id.
+- `img()` keeps loading state only with an id. Content masks are rectangles, so rounded corners survive only when the image fills its box without cropping.
 
 ## Decisions
 

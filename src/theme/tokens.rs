@@ -101,6 +101,15 @@ impl Theme {
         px_to_rems(base * self.font_scale)
     }
 
+    /// Gap between the pointer and a tooltip.
+    pub fn cursor_offset(&self) -> Rems {
+        px_to_rems(18.0)
+    }
+
+    pub fn tooltip_max_width(&self) -> Rems {
+        px_to_rems(256.0)
+    }
+
     pub fn text_size(&self, size: TextSize) -> Rems {
         let base = match size {
             TextSize::Xs => 11.0,
@@ -139,15 +148,6 @@ impl Theme {
             .iter()
             .map(|&(y, blur, alpha)| shadow(self.colors.shadow.alpha(alpha), y, blur))
             .collect()
-    }
-
-    pub fn focus_ring(&self) -> Vec<BoxShadow> {
-        vec![BoxShadow {
-            color: self.colors.focus.alpha(0.45),
-            offset: point(px(0.0), px(0.0)),
-            blur_radius: px(0.0),
-            spread_radius: px(2.0),
-        }]
     }
 }
 
