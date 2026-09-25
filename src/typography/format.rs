@@ -50,9 +50,9 @@ pub fn group_digits(digits: &str, group: char) -> String {
     out
 }
 
-/// ISO 4217 code to symbol and minor units. Unknown codes print as a prefix.
-pub fn currency(amount: f64, code: &str) -> String {
-    let (symbol, decimals, spaced) = match code {
+/// ISO 4217 code to symbol, minor units, and whether a space follows.
+pub fn currency_parts(code: &str) -> (&str, usize, bool) {
+    match code {
         "USD" => ("$", 2, false),
         "EUR" => ("€", 2, false),
         "GBP" => ("£", 2, false),
@@ -61,7 +61,12 @@ pub fn currency(amount: f64, code: &str) -> String {
         "KRW" => ("₩", 0, false),
         "INR" => ("₹", 2, false),
         _ => (code, 2, true),
-    };
+    }
+}
+
+/// Unknown codes print as a prefix.
+pub fn currency(amount: f64, code: &str) -> String {
+    let (symbol, decimals, spaced) = currency_parts(code);
     let body = number(amount.abs(), decimals, Separators::EN);
     let negative = amount < 0.0 && body.chars().any(|ch| ch.is_ascii_digit() && ch != '0');
     let sign = if negative {

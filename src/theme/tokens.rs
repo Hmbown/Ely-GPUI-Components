@@ -153,6 +153,15 @@ impl Theme {
         point(px(14.0), px(13.0))
     }
 
+    /// Underline under composing text.
+    pub fn underline_thickness(&self) -> Pixels {
+        px(1.0)
+    }
+
+    pub fn caret_width(&self) -> Rems {
+        px_to_rems(1.5)
+    }
+
     /// Diameter of a floating action button.
     pub fn fab_size(&self) -> Rems {
         px_to_rems(56.0)

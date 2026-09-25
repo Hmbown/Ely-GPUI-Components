@@ -98,7 +98,7 @@ impl RenderOnce for QuickActions {
         assert!(count > 0, "quick actions {:?} hold no action", self.id);
         let state = window.use_keyed_state(self.id.clone(), cx, |_, cx| Pick {
             selected: 0,
-            focus: cx.focus_handle(),
+            focus: cx.focus_handle().tab_stop(true),
         });
         let (selected, focus) = {
             let pick = state.read(cx);
@@ -188,7 +188,6 @@ impl RenderOnce for QuickActions {
             .border_1()
             .border_color(colors.border)
             .bg(colors.surface)
-            .tab_index(0)
             .focus_ring(cx)
             .on_key_down(move |event, window, cx| {
                 let current = keys.read(cx).selected.min(count - 1);

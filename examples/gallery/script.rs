@@ -24,6 +24,8 @@ pub enum Step {
     DragTo(&'static str, f32, f32),
     UpAt(&'static str, f32, f32),
     Key(&'static str),
+    /// Types text into whatever holds focus, one key at a time.
+    Type(&'static str),
     Wait(u64),
     Shot(&'static str),
     /// Photographs a window a demo opened, by its key.
@@ -39,6 +41,8 @@ pub enum Step {
     ShotPopup(&'static str),
     /// Posts a key to AppKit itself; only `escape` is known.
     NativeKey(&'static str),
+    /// Cancels the open file panel, whose content runs out of process.
+    CancelPanel,
 }
 
 const FRAME: Duration = Duration::from_millis(120);
@@ -125,9 +129,24 @@ pub async fn play(
             Step::Key(stroke) => {
                 let stroke =
                     Keystroke::parse(stroke).with_context(|| format!("bad keystroke {stroke}"))?;
-                window.update(cx, |_, window, cx| {
-                    window.dispatch_keystroke(stroke, cx);
-                })?;
+                press(window.into(), stroke, cx)?;
+            }
+            Step::Type(text) => {
+                for ch in text.chars() {
+                    let key = match ch {
+                        ' ' => "space".to_string(),
+                        ch if ch.is_ascii_uppercase() => {
+                            format!("shift-{}", ch.to_ascii_lowercase())
+                        }
+                        ch => ch.to_string(),
+                    };
+                    let stroke =
+                        Keystroke::parse(&key).with_context(|| format!("bad key {key}"))?;
+                    press(window.into(), stroke, cx)?;
+                    cx.background_executor()
+                        .timer(Duration::from_millis(16))
+                        .await;
+                }
             }
             Step::Wait(ms) => {
                 cx.background_executor()
@@ -148,9 +167,7 @@ pub async fn play(
             Step::KeyWindow(key, stroke) => {
                 let stroke =
                     Keystroke::parse(stroke).with_context(|| format!("bad keystroke {stroke}"))?;
-                opened(key, cx)?.update(cx, |_, window, cx| {
-                    window.dispatch_keystroke(stroke, cx);
-                })?;
+                press(opened(key, cx)?, stroke, cx)?;
             }
             Step::CloseNative(key) => {
                 let number = opened(key, cx)?.update(cx, |_, window, _| number(window))??;
@@ -166,6 +183,7 @@ pub async fn play(
                 let number = window.update(cx, |_, window, _| number(window))??;
                 post_escape(number)?;
             }
+            Step::CancelPanel => cancel_panel()?,
             Step::ExpectClosed(key) => {
                 let handle = opened(key, cx)?;
                 let open = cx.update(|cx| cx.windows().contains(&handle))?;
@@ -182,6 +200,13 @@ pub async fn play(
         cx.background_executor().timer(FRAME).await;
     }
     Ok(())
+}
+
+/// Types a keystroke without holding the root view, so the window can redraw.
+fn press(window: gpui::AnyWindowHandle, stroke: Keystroke, cx: &mut AsyncApp) -> Result<()> {
+    window.update(cx, |_, window, cx| {
+        window.dispatch_keystroke(stroke, cx);
+    })
 }
 
 fn send(
@@ -261,6 +286,28 @@ fn post_escape(number: u32) -> Result<()> {
 #[cfg(not(target_os = "macos"))]
 fn post_escape(_: u32) -> Result<()> {
     anyhow::bail!("native keys need macOS")
+}
+
+#[cfg(target_os = "macos")]
+fn cancel_panel() -> Result<()> {
+    use cocoa::{
+        appkit::NSApp,
+        base::{BOOL, NO, id, nil},
+    };
+    use objc::{class, msg_send, sel, sel_impl};
+    unsafe {
+        let key: id = msg_send![NSApp(), keyWindow];
+        anyhow::ensure!(key != nil, "no key window to cancel");
+        let panel: BOOL = msg_send![key, isKindOfClass: class!(NSSavePanel)];
+        anyhow::ensure!(panel != NO, "the key window is not a file panel");
+        let _: () = msg_send![key, cancel: nil];
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn cancel_panel() -> Result<()> {
+    anyhow::bail!("file panels need macOS")
 }
 
 /// Runs `performClose:` on a window, which asks before closing.

@@ -1,0 +1,496 @@
+mod actions;
+mod edit;
+mod element;
+mod ime;
+
+use std::{ops::Range, rc::Rc, time::Duration};
+
+use gpui::{
+    App, Bounds, Context, EventEmitter, FocusHandle, Focusable, Hsla, Pixels, Point, SharedString,
+    Subscription, Task, Window, WrappedLine,
+};
+
+pub(crate) use actions::{Backspace, Down, Enter, Up, bind_keys};
+use edit::{History, Snapshot};
+
+use crate::theme::ActiveTheme;
+
+/// What a text input tells its owner.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InputEvent {
+    Changed,
+    /// Enter in one line, or the submit key in several.
+    Submit,
+    Focus,
+    Blur,
+}
+
+/// Colors a span of the text: foreground, and an optional wash behind it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Highlight {
+    pub color: Hsla,
+    pub background: Option<Hsla>,
+}
+
+type Highlighter = Rc<dyn Fn(&str, &App) -> Vec<(Range<usize>, Highlight)>>;
+type Filter = Rc<dyn Fn(char) -> bool>;
+pub(crate) type Fit = Rc<dyn Fn(&str, Range<usize>, &str) -> (String, usize)>;
+
+/// The last shaped text: one entry per hard line, with its display offset.
+pub(crate) struct Layout {
+    pub lines: Vec<(usize, WrappedLine)>,
+    pub bounds: Bounds<Pixels>,
+    pub line_height: Pixels,
+    /// The lines show the placeholder, not content.
+    pub placeholder: bool,
+}
+
+const BULLET: char = '•';
+const BLINK: Duration = Duration::from_millis(530);
+
+/// Editable text: one line or many, with selection, undo, IME and clipboard.
+pub struct TextInput {
+    focus: FocusHandle,
+    text: String,
+    placeholder: SharedString,
+    selection: Range<usize>,
+    reversed: bool,
+    marked: Option<Range<usize>>,
+    composing: Option<Snapshot>,
+    rows: Option<(usize, usize)>,
+    masked: bool,
+    filter: Option<Filter>,
+    fit: Option<Fit>,
+    max_len: Option<usize>,
+    highlighter: Option<Highlighter>,
+    disabled: bool,
+    history: History,
+    pub(crate) layout: Option<Layout>,
+    pub(crate) scroll: Point<Pixels>,
+    selecting: bool,
+    caret_on: bool,
+    blink_epoch: u64,
+    _blink: Option<Task<()>>,
+    _subscriptions: Vec<Subscription>,
+}
+
+impl EventEmitter<InputEvent> for TextInput {}
+
+impl Focusable for TextInput {
+    fn focus_handle(&self, _: &App) -> FocusHandle {
+        self.focus.clone()
+    }
+}
+
+impl TextInput {
+    pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let focus = cx.focus_handle().tab_stop(true);
+        let subscriptions = vec![
+            cx.on_focus(&focus, window, |input, _, cx| {
+                input.restart_blink(cx);
+                cx.emit(InputEvent::Focus);
+            }),
+            cx.on_blur(&focus, window, |input, _, cx| {
+                input.selecting = false;
+                input._blink = None;
+                cx.emit(InputEvent::Blur);
+                cx.notify();
+            }),
+        ];
+        Self {
+            focus,
+            text: String::new(),
+            placeholder: SharedString::default(),
+            selection: 0..0,
+            reversed: false,
+            marked: None,
+            composing: None,
+            rows: None,
+            masked: false,
+            filter: None,
+            fit: None,
+            max_len: None,
+            highlighter: None,
+            disabled: false,
+            history: History::default(),
+            layout: None,
+            scroll: Point::default(),
+            selecting: false,
+            caret_on: true,
+            blink_epoch: 0,
+            _blink: None,
+            _subscriptions: subscriptions,
+        }
+    }
+
+    /// Several lines: grows from `min` rows to `max`, then scrolls.
+    pub fn multi_line(mut self, min: usize, max: usize) -> Self {
+        assert!(0 < min && min <= max, "text rows {min}..={max} are empty");
+        self.rows = Some((min, max));
+        self
+    }
+
+    pub fn placeholder(mut self, text: impl Into<SharedString>) -> Self {
+        self.placeholder = text.into();
+        self
+    }
+
+    /// Shows bullets instead of the text, and keeps it off the clipboard.
+    pub fn masked(mut self) -> Self {
+        self.masked = true;
+        self
+    }
+
+    /// Drops typed or pasted characters `allow` rejects.
+    pub fn filter(mut self, allow: impl Fn(char) -> bool + 'static) -> Self {
+        self.filter = Some(Rc::new(allow));
+        self
+    }
+
+    /// Longest text, in characters.
+    pub fn max_len(mut self, len: usize) -> Self {
+        self.max_len = Some(len);
+        self
+    }
+
+    /// Colors spans of the text as it changes.
+    pub fn highlighter(
+        mut self,
+        highlight: impl Fn(&str, &App) -> Vec<(Range<usize>, Highlight)> + 'static,
+    ) -> Self {
+        self.highlighter = Some(Rc::new(highlight));
+        self
+    }
+
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.text.is_empty()
+    }
+
+    pub fn is_masked(&self) -> bool {
+        self.masked
+    }
+
+    pub fn is_multi_line(&self) -> bool {
+        self.rows.is_some()
+    }
+
+    pub fn is_disabled(&self) -> bool {
+        self.disabled
+    }
+
+    pub fn rows(&self) -> Option<(usize, usize)> {
+        self.rows
+    }
+
+    pub fn placeholder_text(&self) -> &SharedString {
+        &self.placeholder
+    }
+
+    pub fn selection(&self) -> Range<usize> {
+        self.selection.clone()
+    }
+
+    pub fn cursor(&self) -> usize {
+        if self.reversed {
+            self.selection.start
+        } else {
+            self.selection.end
+        }
+    }
+
+    pub fn set_placeholder(&mut self, text: impl Into<SharedString>, cx: &mut Context<Self>) {
+        self.placeholder = text.into();
+        cx.notify();
+    }
+
+    pub fn set_masked(&mut self, masked: bool, cx: &mut Context<Self>) {
+        self.masked = masked;
+        cx.notify();
+    }
+
+    pub fn set_disabled(&mut self, disabled: bool, cx: &mut Context<Self>) {
+        self.disabled = disabled;
+        self.focus = self.focus.clone().tab_stop(!disabled);
+        cx.notify();
+    }
+
+    /// Replaces all text and puts the caret at its end. Not an undo step.
+    pub fn set_text(&mut self, text: impl Into<String>, cx: &mut Context<Self>) {
+        let text = self.admit(&text.into(), 0);
+        let text = match &self.fit {
+            Some(fit) => fit(&self.text, 0..self.text.len(), &text).0,
+            None => text,
+        };
+        self.selection = text.len()..text.len();
+        self.text = text;
+        self.marked = None;
+        self.composing = None;
+        cx.emit(InputEvent::Changed);
+        cx.notify();
+    }
+
+    /// Reshapes every edit, as a mask does: text, replaced range and typed text in; text and caret out.
+    pub(crate) fn set_fit(&mut self, fit: Fit) {
+        self.fit = Some(fit);
+    }
+
+    /// Replaces the selection, as typing would. An undo step.
+    pub fn insert(&mut self, text: &str, cx: &mut Context<Self>) {
+        self.replace(self.selection.clone(), text, false, cx);
+    }
+
+    pub fn select(&mut self, range: Range<usize>, cx: &mut Context<Self>) {
+        assert!(
+            range.start <= range.end && range.end <= self.text.len(),
+            "selection {range:?} is outside {} bytes",
+            self.text.len()
+        );
+        self.selection = range;
+        self.reversed = false;
+        self.restart_blink(cx);
+    }
+
+    /// The caret's box in window coordinates, once laid out.
+    pub fn caret_bounds(&self) -> Option<Bounds<Pixels>> {
+        self.bounds_for(self.cursor())
+    }
+
+    /// An offset's box in the window, from the last layout; later offsets clamp to its end.
+    pub fn bounds_for(&self, offset: usize) -> Option<Bounds<Pixels>> {
+        let layout = self.layout.as_ref()?;
+        let laid = layout
+            .lines
+            .last()
+            .map_or(0, |(start, line)| start + line.len());
+        let at = self.position_for(self.display_offset(offset).min(laid))?;
+        Some(Bounds::new(
+            layout.bounds.origin + at - self.scroll,
+            gpui::size(Pixels::ZERO, layout.line_height),
+        ))
+    }
+
+    /// Keeps what `filter` and `max_len` allow of `incoming`.
+    fn admit(&self, incoming: &str, keep: usize) -> String {
+        let allowed: String = incoming
+            .chars()
+            .filter(|ch| self.filter.as_ref().is_none_or(|allow| allow(*ch)))
+            .collect();
+        match self.max_len {
+            Some(max) => allowed.chars().take(max.saturating_sub(keep)).collect(),
+            None => allowed,
+        }
+    }
+
+    pub(crate) fn replace(
+        &mut self,
+        range: Range<usize>,
+        incoming: &str,
+        typing: bool,
+        cx: &mut Context<Self>,
+    ) {
+        if self.disabled {
+            return;
+        }
+        let incoming = if self.rows.is_none() {
+            incoming.replace(['\n', '\r'], " ")
+        } else {
+            incoming.replace("\r\n", "\n")
+        };
+        let kept = self.text.chars().count() - self.text[range.clone()].chars().count();
+        let incoming = self.admit(&incoming, kept);
+        if incoming.is_empty() && range.is_empty() {
+            return;
+        }
+        let composed = self.composing.take();
+        let before = composed.clone().unwrap_or_else(|| self.snapshot());
+        let caret = match &self.fit {
+            Some(fit) => {
+                let (base, range) = match &composed {
+                    Some(start) => (start.text.as_str(), start.selection.clone()),
+                    None => (self.text.as_str(), range),
+                };
+                let (text, caret) = fit(base, range, &incoming);
+                self.text = text;
+                caret
+            }
+            None => {
+                self.text.replace_range(range.clone(), &incoming);
+                range.start + incoming.len()
+            }
+        };
+        self.selection = caret..caret;
+        self.reversed = false;
+        self.marked = None;
+        self.commit(before, typing, cx);
+        self.restart_blink(cx);
+    }
+
+    /// Makes `before` one undo step, if the text moved on from it.
+    fn commit(&mut self, before: Snapshot, typing: bool, cx: &mut Context<Self>) {
+        if before.text != self.text {
+            self.history.record(before, typing);
+            cx.emit(InputEvent::Changed);
+        }
+    }
+
+    fn snapshot(&self) -> Snapshot {
+        Snapshot {
+            text: self.text.clone(),
+            selection: self.selection.clone(),
+        }
+    }
+
+    pub(crate) fn restore(&mut self, snapshot: Snapshot, cx: &mut Context<Self>) {
+        self.text = snapshot.text;
+        self.selection = snapshot.selection;
+        self.reversed = false;
+        self.marked = None;
+        self.composing = None;
+        cx.emit(InputEvent::Changed);
+        self.restart_blink(cx);
+    }
+
+    pub(crate) fn move_to(&mut self, offset: usize, cx: &mut Context<Self>) {
+        self.selection = offset..offset;
+        self.reversed = false;
+        self.restart_blink(cx);
+    }
+
+    pub(crate) fn select_to(&mut self, offset: usize, cx: &mut Context<Self>) {
+        if self.reversed {
+            self.selection.start = offset;
+        } else {
+            self.selection.end = offset;
+        }
+        if self.selection.end < self.selection.start {
+            self.reversed = !self.reversed;
+            self.selection = self.selection.end..self.selection.start;
+        }
+        self.restart_blink(cx);
+    }
+
+    /// Shows the caret now and restarts its blink.
+    fn restart_blink(&mut self, cx: &mut Context<Self>) {
+        self.caret_on = true;
+        self.blink_epoch += 1;
+        let epoch = self.blink_epoch;
+        let still = cx.theme().reduced_motion;
+        self._blink = (!still).then(|| {
+            cx.spawn(async move |input, cx| {
+                loop {
+                    cx.background_executor().timer(BLINK).await;
+                    let alive = input.update(cx, |input, cx| {
+                        if input.blink_epoch == epoch {
+                            input.caret_on = !input.caret_on;
+                            cx.notify();
+                        }
+                    });
+                    if alive.is_err() {
+                        return;
+                    }
+                }
+            })
+        });
+        cx.notify();
+    }
+
+    /// What the element shows: bullets when masked.
+    pub(crate) fn display_text(&self) -> String {
+        if self.masked {
+            BULLET.to_string().repeat(self.grapheme_count())
+        } else {
+            self.text.clone()
+        }
+    }
+
+    fn grapheme_count(&self) -> usize {
+        unicode_segmentation::UnicodeSegmentation::graphemes(self.text.as_str(), true).count()
+    }
+
+    pub(crate) fn display_offset(&self, offset: usize) -> usize {
+        if self.masked {
+            edit::masked_offset(&self.text, offset, BULLET)
+        } else {
+            offset
+        }
+    }
+
+    pub(crate) fn content_offset(&self, display: usize) -> usize {
+        if self.masked {
+            edit::unmasked_offset(&self.text, display, BULLET)
+        } else {
+            display
+        }
+    }
+
+    /// Top-left of a display offset, relative to the text's origin.
+    pub(crate) fn position_for(&self, display: usize) -> Option<Point<Pixels>> {
+        let layout = self.layout.as_ref()?;
+        if layout.placeholder {
+            return Some(Point::default());
+        }
+        let mut top = Pixels::ZERO;
+        for (start, line) in &layout.lines {
+            if display <= start + line.len() {
+                let at = line.position_for_index(display - start, layout.line_height)?;
+                return Some(gpui::point(at.x, at.y + top));
+            }
+            top += line.size(layout.line_height).height;
+        }
+        None
+    }
+
+    /// The content offset nearest a window position.
+    pub(crate) fn offset_for_point(&self, point: Point<Pixels>) -> usize {
+        let Some(layout) = self.layout.as_ref() else {
+            return 0;
+        };
+        if layout.placeholder {
+            return 0;
+        }
+        let local = point - layout.bounds.origin + self.scroll;
+        if local.y < Pixels::ZERO {
+            return 0;
+        }
+        let mut top = Pixels::ZERO;
+        for (start, line) in &layout.lines {
+            let height = line.size(layout.line_height).height;
+            if local.y < top + height {
+                let inside = gpui::point(local.x.max(Pixels::ZERO), local.y - top);
+                let index = match line.closest_index_for_position(inside, layout.line_height) {
+                    Ok(index) | Err(index) => index,
+                };
+                return self.content_offset(start + index.min(line.len()));
+            }
+            top += height;
+        }
+        self.text.len()
+    }
+
+    pub(crate) fn highlights(&self, cx: &App) -> Vec<(Range<usize>, Highlight)> {
+        match (&self.highlighter, self.masked) {
+            (Some(highlight), false) => highlight(&self.text, cx),
+            _ => Vec::new(),
+        }
+    }
+
+    pub(crate) fn marked(&self) -> Option<Range<usize>> {
+        self.marked.clone()
+    }
+
+    pub(crate) fn selecting(&self) -> bool {
+        self.selecting
+    }
+
+    pub(crate) fn caret_on(&self) -> bool {
+        self.caret_on
+    }
+
+    pub(crate) fn focus(&self) -> &FocusHandle {
+        &self.focus
+    }
+}

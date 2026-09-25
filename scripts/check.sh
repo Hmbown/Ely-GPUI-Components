@@ -2,8 +2,8 @@
 # Pre-review gate: build rules plus house rules.
 set -eu
 cargo fmt --check
-cargo clippy --all-targets -- -D warnings
-cargo test --lib --quiet
+cargo clippy --all-targets --features test-support -- -D warnings
+cargo test --lib --features test-support --quiet
 fail=0
 files=$(git ls-files -co --exclude-standard '*.rs')
 multi=$(awk 'FNR==1{prev=0} /^[[:space:]]*\/\// {if(prev) print FILENAME":"FNR; prev=1; next} {prev=0}' $files)

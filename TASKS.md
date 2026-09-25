@@ -22,7 +22,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T03 Layout
 - [x] T04 Window & Shell
 - [x] T05 Buttons & Actions
-- [ ] T06a Forms · Text
+- [x] T06a Forms · Text
 - [ ] T06b Forms · Selection
 - [ ] T06c Forms · Date & Time
 - [ ] T06d Forms · Color
@@ -119,3 +119,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T05 | 1 | FAIL | hold task kept its state alive; a third click wedged the done state; border_1 undid the group seam |
 | T05 | 2 | FAIL | AGENTS.md said no window is found by scanning; popups are |
 | T05 | 3 | PASS | |
+| T06a | 1 | FAIL | twin ids in clear and eye buttons; text fields not Tab stops; IME undo; stepping from a stale value; mask literals re-read as input; undo while disabled; Down past the last line; clamp before rounding; stuck mention dismissal; NaN swallowed by min and max |
+| T06a | 2 | FAIL | float error in rounded bounds; composition commit skipped filter and length; a typed leading literal was eaten; PIN select-all collapsed; stepper state read the old value |
+| T06a | 3 | FAIL | a mask diff misread a select-all replacement; grid tolerance too wide for large numbers; fixed after the cap by fitting masks inside `TextInput` with the exact edit, and a float-error tolerance; verified by tests and capture, no fourth review |

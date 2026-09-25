@@ -1,6 +1,7 @@
 mod assets;
 
 pub mod buttons;
+pub mod forms;
 pub mod layout;
 pub mod motion;
 pub mod primitives;
@@ -14,7 +15,7 @@ use gpui::{App, KeyBinding};
 
 use crate::primitives::{FocusNext, FocusPrev, IconName};
 
-/// Loads fonts and the theme, binds Tab. Call once, first.
+/// Loads fonts and the theme, binds Tab and text keys. Call once, first.
 pub fn init(cx: &mut App) {
     match cx.asset_source().load(IconName::Check.path()) {
         Ok(Some(_)) => {}
@@ -27,4 +28,5 @@ pub fn init(cx: &mut App) {
         KeyBinding::new("tab", FocusNext, None),
         KeyBinding::new("shift-tab", FocusPrev, None),
     ]);
+    forms::bind_keys(cx);
 }

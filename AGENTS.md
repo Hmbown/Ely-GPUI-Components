@@ -14,7 +14,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 
 - `cargo run --example gallery` opens the gallery. `-- --page <slug>` starts on a page.
 - `cargo run --example gallery -- --capture <dir>` writes PNGs of every page, light and dark, top to bottom, then each page's scripted states, including windows the demos open. macOS only.
-- `cargo test --lib`, `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`.
+- `cargo test --lib --features test-support`, `cargo clippy --all-targets --features test-support -- -D warnings`, `cargo fmt --check`. `scripts/check.sh` runs them with the house rules.
 - `rm -rf target/debug/incremental` after each task item keeps the disk lean.
 - `scripts/icons.sh <lucide-name>...` adds icons. Then add a line to `IconName` in `src/primitives/icon.rs`.
 
@@ -47,6 +47,14 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - An overlay takes focus with `primitives::take_focus` and returns it with `give_back` on every close path.
 - A state change made outside render calls `cx.notify()`, or nothing redraws.
 - The macOS share picker draws its content in another process; a capture shows only its frame.
+- Every text field is a `forms::TextInput` entity. Its keys live under the `ElyInput` context, bound in `init`. Wrappers take Up, Down, Enter and Backspace first with `capture_action`.
+- `TextInput::bounds_for` reads the last layout. Text changed this frame clamps to the laid-out end until the next paint.
+- The harness types with `dispatch_keystroke` through `AnyWindowHandle`, which leaves the root view free to redraw.
+- The macOS open panel runs out of process too. Escape does not reach it; the harness sends it `cancel:`.
+- gpui's `test-support` swaps its executor: `block` fails on a real dispatcher. It stays behind this crate's `test-support` feature, never on for the gallery.
+- A tracked `FocusHandle` is a Tab stop only when built with `.tab_stop(true)`. `tab_index` on the div reaches only handles gpui makes itself.
+- Masks reshape edits inside `TextInput::set_fit`, which sees the replaced range and the typed text. A diff after the fact cannot tell typed characters from kept ones.
+- Ids inside a reusable component carry its owner's id or `EntityId`. Twin ids share focus and click state.
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.
 - `img()` keeps loading state only with an id. Content masks are rectangles, so rounded corners survive only when the image fills its box without cropping.
 
