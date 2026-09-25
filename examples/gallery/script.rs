@@ -20,6 +20,8 @@ pub enum Step {
     ClickEnd(&'static str),
     /// Presses at an offset from the probe's top-left corner.
     DownAt(&'static str, f32, f32),
+    /// Right-clicks at an offset from the probe's top-left corner.
+    RightAt(&'static str, f32, f32),
     /// Drags from the last point to an offset, in small steps.
     DragTo(&'static str, f32, f32),
     UpAt(&'static str, f32, f32),
@@ -54,6 +56,8 @@ enum Mouse {
     Down,
     Drag,
     Up,
+    RightDown,
+    RightUp,
 }
 
 /// Parks the pointer on empty sidebar space.
@@ -106,6 +110,12 @@ pub async fn play(
                 last = target_bounds(window, key, cx).await?.origin + point(px(x), px(y));
                 send(window, Mouse::Move, last, cx)?;
                 send(window, Mouse::Down, last, cx)?;
+            }
+            Step::RightAt(key, x, y) => {
+                let at = target_bounds(window, key, cx).await?.origin + point(px(x), px(y));
+                send(window, Mouse::Move, at, cx)?;
+                send(window, Mouse::RightDown, at, cx)?;
+                send(window, Mouse::RightUp, at, cx)?;
             }
             Step::DragTo(key, x, y) => {
                 let goal = target_bounds(window, key, cx).await?.origin + point(px(x), px(y));
@@ -181,7 +191,7 @@ pub async fn play(
             Step::NativeKey(key) => {
                 anyhow::ensure!(key == "escape", "native key {key} is not known");
                 let number = window.update(cx, |_, window, _| number(window))??;
-                post_escape(number)?;
+                post_key(number, true, "\u{1b}", 53)?;
             }
             Step::CancelPanel => cancel_panel()?,
             Step::ExpectClosed(key) => {
@@ -202,11 +212,22 @@ pub async fn play(
     Ok(())
 }
 
-/// Types a keystroke without holding the root view, so the window can redraw.
+/// Presses a key without holding the root view; Enter and Space also release through AppKit, since components pick on release.
 fn press(window: gpui::AnyWindowHandle, stroke: Keystroke, cx: &mut AsyncApp) -> Result<()> {
-    window.update(cx, |_, window, cx| {
+    let release = match stroke.key.as_str() {
+        _ if stroke.modifiers.modified() => None,
+        "enter" => Some(("\r", 36)),
+        "space" => Some((" ", 49)),
+        _ => None,
+    };
+    let number = window.update(cx, |_, window, cx| {
         window.dispatch_keystroke(stroke, cx);
-    })
+        number(window)
+    })??;
+    match release {
+        Some((text, code)) => post_key(number, false, text, code),
+        None => Ok(()),
+    }
 }
 
 fn send(
@@ -234,6 +255,8 @@ fn post(kind: Mouse, x: f64, y: f64, number: u32) -> Result<()> {
         Mouse::Down => NSEventType::NSLeftMouseDown,
         Mouse::Drag => NSEventType::NSLeftMouseDragged,
         Mouse::Up => NSEventType::NSLeftMouseUp,
+        Mouse::RightDown => NSEventType::NSRightMouseDown,
+        Mouse::RightUp => NSEventType::NSRightMouseUp,
     };
     unsafe {
         let event = <id as NSEvent>::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure_(
@@ -249,33 +272,59 @@ fn post(kind: Mouse, x: f64, y: f64, number: u32) -> Result<()> {
             1.0,
         );
         anyhow::ensure!(event != nil, "AppKit refused a synthetic mouse event");
+        let right = matches!(
+            kind,
+            NSEventType::NSRightMouseDown | NSEventType::NSRightMouseUp
+        );
+        let event = if right { right_button(event) } else { event };
+        anyhow::ensure!(event != nil, "AppKit refused a right-button event");
         NSApp().postEvent_atStart_(event, NO);
     }
     Ok(())
 }
 
-/// Queues an Escape key press on this app, for AppKit popovers.
+/// A built event reports button zero, and gpui reads the number, so a right click sets it.
 #[cfg(target_os = "macos")]
-fn post_escape(number: u32) -> Result<()> {
+unsafe fn right_button(event: cocoa::base::id) -> cocoa::base::id {
+    use objc::{class, msg_send, sel, sel_impl};
+    unsafe extern "C" {
+        fn CGEventSetIntegerValueField(event: *mut std::ffi::c_void, field: u32, value: i64);
+    }
+    const BUTTON_NUMBER: u32 = 3;
+    unsafe {
+        let cg: *mut std::ffi::c_void = msg_send![event, CGEvent];
+        CGEventSetIntegerValueField(cg, BUTTON_NUMBER, 1);
+        msg_send![class!(NSEvent), eventWithCGEvent: cg]
+    }
+}
+
+/// Queues a real key event on a window of this app; AppKit popovers take Escape this way.
+#[cfg(target_os = "macos")]
+fn post_key(number: u32, down: bool, text: &str, code: u16) -> Result<()> {
     use cocoa::{
         appkit::{NSApp, NSApplication, NSEvent, NSEventModifierFlags, NSEventType},
         base::{NO, id, nil},
         foundation::{NSPoint, NSString},
     };
+    let kind = if down {
+        NSEventType::NSKeyDown
+    } else {
+        NSEventType::NSKeyUp
+    };
     unsafe {
-        let escape = NSString::alloc(nil).init_str("\u{1b}");
+        let text = NSString::alloc(nil).init_str(text);
         let event = <id as NSEvent>::keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode_(
             nil,
-            NSEventType::NSKeyDown,
+            kind,
             NSPoint::new(0.0, 0.0),
             NSEventModifierFlags::empty(),
             0.0,
             i64::from(number),
             nil,
-            escape,
-            escape,
+            text,
+            text,
             NO,
-            53,
+            code,
         );
         anyhow::ensure!(event != nil, "AppKit refused a synthetic key event");
         NSApp().postEvent_atStart_(event, NO);
@@ -284,7 +333,7 @@ fn post_escape(number: u32) -> Result<()> {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn post_escape(_: u32) -> Result<()> {
+fn post_key(_: u32, _: bool, _: &str, _: u16) -> Result<()> {
     anyhow::bail!("native keys need macOS")
 }
 

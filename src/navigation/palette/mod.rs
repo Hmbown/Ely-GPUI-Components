@@ -327,9 +327,11 @@ impl Palette {
                 cx.stop_propagation();
                 down(1, cx);
             })
-            .capture_action(move |_: &Enter, window, cx| {
-                cx.stop_propagation();
-                if count > 0 {
+            .capture_action(|_: &Enter, _, cx| cx.stop_propagation())
+            .on_key_up(move |event, window, cx| {
+                let stroke = &event.keystroke;
+                if stroke.key == "enter" && !stroke.modifiers.modified() && count > 0 {
+                    cx.stop_propagation();
                     enter(chosen.read(cx).at.min(count - 1), window, cx);
                 }
             })

@@ -225,7 +225,7 @@ impl RenderOnce for Button {
             .bg(tone.bg)
             .when(self.full_width, |el| el.w_full())
             .when_some(self.icon, |el, name| el.child(icon(name)))
-            .child(self.label)
+            .when(!self.label.is_empty(), |el| el.child(self.label))
             .when_some(self.trailing_icon, |el, name| el.child(icon(name)))
             .when_some(hint, |el, hint| {
                 el.child(

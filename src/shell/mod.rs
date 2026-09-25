@@ -8,6 +8,8 @@ mod native;
 mod status;
 mod switcher;
 mod tabs;
+#[cfg(all(test, feature = "test-support"))]
+mod tests;
 mod update;
 mod windows;
 

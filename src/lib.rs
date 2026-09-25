@@ -3,6 +3,7 @@ mod assets;
 pub mod buttons;
 pub mod forms;
 pub mod layout;
+pub mod menus;
 pub mod motion;
 pub mod navigation;
 pub mod primitives;

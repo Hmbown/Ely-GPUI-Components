@@ -32,7 +32,8 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T07a Navigation · Tabs & paths
 - [x] T07b Navigation · Places
 - [x] T07c Navigation · Palettes & tour
-- [ ] T08 Menus
+- [x] T08a Menus · Menu & hosts
+- [ ] T08b Menus · Bar, search & pie
 - [ ] T09 Overlays
 - [ ] T10 Feedback
 - [ ] T11a Loading — `tasks/ch11-20.md`
@@ -145,3 +146,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T07b | 2 | PASS | |
 | T07c | 1 | FAIL | SearchPalette let a disabled result run on Enter, and the palette tests compiled without test-support |
 | T07c | 2 | PASS | |
+| T08a | 1 | FAIL | a marked row the owner removed panicked on Enter, the trigger's second click skipped give_back, Enter and Space reached parents on press, the harness never released keys so scripted picks failed, and the menus copy said key hints run rows |
+| T08a | 2 | FAIL | Ctrl-Enter and Shift-Space reached keys() on press and picked at once |
+| T08a | 3 | PASS | |

@@ -1,0 +1,225 @@
+use std::rc::Rc;
+
+use gpui::{
+    AnyElement, App, ClickEvent, Div, ElementId, Entity, InteractiveElement, IntoElement,
+    MouseButton, ParentElement, RenderOnce, SharedString, Stateful, Styled, Window, div,
+    prelude::*,
+};
+use smallvec::SmallVec;
+
+use super::{
+    menu::{Open, Spot, hang, measure_host},
+    model::Menu,
+};
+use crate::{
+    buttons::{Button, ButtonGroup, ButtonVariant, IconButton},
+    primitives::IconName,
+};
+
+type Click = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
+
+fn state(id: &ElementId, window: &mut Window, cx: &mut App) -> Entity<Open> {
+    window.use_keyed_state((id.clone(), "menu"), cx, |_, _| Open::default())
+}
+
+/// Toggles the menu under the host; a keyboard press marks its first row.
+fn toggle(state: &Entity<Open>, menu: &Menu, cx: &App) -> Click {
+    let (state, menu, open) = (state.clone(), menu.clone(), state.read(cx).is_open());
+    Rc::new(move |event, window, cx| {
+        if open {
+            Open::close(&state, window, cx);
+        } else {
+            Open::show(&state, &menu, Spot::Under, event.is_keyboard(), cx);
+        }
+    })
+}
+
+/// A trigger, the canvas that measures it, and its menu while open.
+fn host(
+    id: ElementId,
+    trigger: impl IntoElement,
+    menu: &Menu,
+    state: &Entity<Open>,
+    window: &mut Window,
+    cx: &mut App,
+) -> Stateful<Div> {
+    div()
+        .id(id.clone())
+        .relative()
+        .flex_none()
+        .child(trigger)
+        .child(measure_host(state.clone()))
+        .children(hang(&id, menu, state, window, cx))
+}
+
+/// A button that opens a menu under it.
+#[derive(IntoElement)]
+pub struct DropdownMenu {
+    id: ElementId,
+    label: SharedString,
+    icon: Option<IconName>,
+    variant: ButtonVariant,
+    menu: Menu,
+}
+
+impl DropdownMenu {
+    pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>, menu: Menu) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            icon: None,
+            variant: ButtonVariant::Secondary,
+            menu,
+        }
+    }
+
+    pub fn icon(mut self, icon: IconName) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+
+    pub fn variant(mut self, variant: ButtonVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+}
+
+impl RenderOnce for DropdownMenu {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = state(&self.id, window, cx);
+        let click = toggle(&state, &self.menu, cx);
+        let button = Button::new((self.id.clone(), "button"), self.label)
+            .variant(self.variant)
+            .trailing_icon(IconName::ChevronDown)
+            .when_some(self.icon, |button, icon| button.icon(icon))
+            .on_click(move |event, window, cx| click(event, window, cx));
+        host(self.id, button, &self.menu, &state, window, cx)
+    }
+}
+
+/// An icon button that opens a menu of what did not fit.
+#[derive(IntoElement)]
+pub struct OverflowMenu {
+    id: ElementId,
+    menu: Menu,
+}
+
+impl OverflowMenu {
+    pub fn new(id: impl Into<ElementId>, menu: Menu) -> Self {
+        Self {
+            id: id.into(),
+            menu,
+        }
+    }
+}
+
+impl RenderOnce for OverflowMenu {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = state(&self.id, window, cx);
+        let click = toggle(&state, &self.menu, cx);
+        let button = IconButton::new((self.id.clone(), "button"), IconName::Ellipsis)
+            .variant(ButtonVariant::Ghost)
+            .tooltip("More")
+            .on_click(move |event, window, cx| click(event, window, cx));
+        host(self.id, button, &self.menu, &state, window, cx)
+    }
+}
+
+/// A button's main action, and related ones in a menu under its arrow.
+#[derive(IntoElement)]
+pub struct SplitButton {
+    id: ElementId,
+    label: SharedString,
+    variant: ButtonVariant,
+    menu: Menu,
+    on_click: Option<Click>,
+}
+
+impl SplitButton {
+    pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>, menu: Menu) -> Self {
+        Self {
+            id: id.into(),
+            label: label.into(),
+            variant: ButtonVariant::Secondary,
+            menu,
+            on_click: None,
+        }
+    }
+
+    pub fn variant(mut self, variant: ButtonVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    /// The main action.
+    pub fn on_click(
+        mut self,
+        handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_click = Some(Rc::new(handler));
+        self
+    }
+}
+
+impl RenderOnce for SplitButton {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = state(&self.id, window, cx);
+        let click = toggle(&state, &self.menu, cx);
+        let main = Button::new((self.id.clone(), "main"), self.label)
+            .variant(self.variant)
+            .when_some(self.on_click, |button, run| {
+                button.on_click(move |event, window, cx| run(event, window, cx))
+            });
+        let more = Button::new((self.id.clone(), "more"), "")
+            .variant(self.variant)
+            .icon(IconName::ChevronDown)
+            .on_click(move |event, window, cx| click(event, window, cx));
+        host(
+            self.id,
+            ButtonGroup::new().button(main).button(more),
+            &self.menu,
+            &state,
+            window,
+            cx,
+        )
+    }
+}
+
+/// Its children, and a menu that opens at the pointer on a right click.
+#[derive(IntoElement)]
+pub struct ContextMenu {
+    id: ElementId,
+    menu: Menu,
+    children: SmallVec<[AnyElement; 2]>,
+}
+
+impl ContextMenu {
+    pub fn new(id: impl Into<ElementId>, menu: Menu) -> Self {
+        Self {
+            id: id.into(),
+            menu,
+            children: SmallVec::new(),
+        }
+    }
+}
+
+impl ParentElement for ContextMenu {
+    fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
+        self.children.extend(elements);
+    }
+}
+
+impl RenderOnce for ContextMenu {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = state(&self.id, window, cx);
+        let (open, menu) = (state.clone(), self.menu.clone());
+        div()
+            .id(self.id.clone())
+            .on_mouse_down(MouseButton::Right, move |event, _, cx| {
+                log::info!("context menu: at {:?}", event.position);
+                Open::show(&open, &menu, Spot::At(event.position), false, cx);
+            })
+            .children(self.children)
+            .children(hang(&self.id, &self.menu, &state, window, cx))
+    }
+}

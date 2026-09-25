@@ -58,6 +58,8 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - Floating lists go below their anchor, or above when only above has room (`forms::options::float`). gpui's own switch keeps the anchor point, so a flipped list would cover its trigger.
 - A trigger that opens a list goes through `forms::select::listing`: toggle, keys, blur and popup live there, for Select, TabOverflowMenu and Breadcrumb alike.
 - A palette goes through `navigation::palette::Palette`: query field, grouped rows, cursor, keys and focus live there. CommandPalette, QuickOpen, QuickSwitcher, SearchPalette and QuickLauncher only build rows.
+- A menu goes through `menus::menu`: rows, submenus, keys, focus and presses outside live there, for DropdownMenu, OverflowMenu, SplitButton and ContextMenu.
+- gpui clicks a focused element when Enter or Space is released. An overlay that hands focus back picks on release too; a pick on press returns focus first, and the release clicks the opener again.
 - A marker that slides between items (segment thumb, tab line) measures them with `motion::slide` and eases with `glide`.
 - A picker hands focus to its popup on open and back to its trigger on pick or Escape; it closes once focus leaves both (`forms::date::picker`).
 - Motion for a value change keys its animation on `motion::changes`, so it replays per change and stays still on first paint.

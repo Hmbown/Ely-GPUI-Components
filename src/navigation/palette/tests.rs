@@ -1,12 +1,13 @@
 use std::ops::Range;
 
 use gpui::{
-    Context, FocusHandle, InteractiveElement, IntoElement, KeyBinding, ParentElement, Render,
-    SharedString, TestAppContext, VisualTestContext, Window, div, prelude::*,
+    Context, FocusHandle, IntoElement, KeyBinding, KeyUpEvent, Keystroke, ParentElement, Render,
+    SharedString, TestAppContext, VisualTestContext, Window, prelude::*,
 };
 
 use super::{Command, CommandPalette, Fit, QuickOpen, QuickSwitcher, SearchPalette, fuzzy};
 use crate::{
+    buttons::Button,
     forms::Choice,
     primitives::{FocusNext, FocusScope},
     theme::Theme,
@@ -24,6 +25,16 @@ fn settle(cx: &mut VisualTestContext) {
     cx.run_until_parked();
     cx.update(|window, _| window.refresh());
     cx.run_until_parked();
+}
+
+/// Presses and releases `key`, with a frame in between as on a real keyboard.
+fn press(key: &str, cx: &mut VisualTestContext) {
+    cx.simulate_keystrokes(key);
+    settle(cx);
+    cx.simulate_event(KeyUpEvent {
+        keystroke: Keystroke::parse(key).expect("a key"),
+    });
+    settle(cx);
 }
 
 #[test]
@@ -54,7 +65,6 @@ fn fuzzy_finds_letters_in_order_and_ranks_word_starts() {
 /// Opens one palette at a time and records what it handed back.
 struct Host {
     root: FocusHandle,
-    outside: FocusHandle,
     open: bool,
     got: Option<SharedString>,
     kind: Kind,
@@ -83,7 +93,7 @@ fn results(query: &str) -> Vec<(SharedString, Vec<Choice>)> {
 
 impl Render for Host {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let (view, close) = (cx.entity(), cx.entity());
+        let (view, close, opener) = (cx.entity(), cx.entity(), cx.entity());
         let close = move |_: &mut Window, cx: &mut gpui::App| {
             close.update(cx, |host, cx| {
                 host.open = false;
@@ -139,7 +149,12 @@ impl Render for Host {
         };
         FocusScope::new(&self.root)
             .size_full()
-            .child(div().id("outside").track_focus(&self.outside))
+            .child(Button::new("opener", "Open").on_click(move |_, _, cx| {
+                opener.update(cx, |host, cx| {
+                    host.open = true;
+                    cx.notify();
+                })
+            }))
             .when(self.open, |host| host.child(palette))
     }
 }
@@ -148,7 +163,6 @@ fn host(kind: Kind, cx: &mut TestAppContext) -> (gpui::Entity<Host>, &mut Visual
     setup(cx);
     let (view, cx) = cx.add_window_view(move |_, cx| Host {
         root: cx.focus_handle(),
-        outside: cx.focus_handle().tab_stop(true),
         open: true,
         got: None,
         kind,
@@ -173,15 +187,16 @@ fn reopen(view: &gpui::Entity<Host>, cx: &mut VisualTestContext) {
 #[gpui::test]
 fn the_command_palette_leads_with_recent_and_runs_the_best_fit(cx: &mut TestAppContext) {
     let (view, cx) = host(Kind::Commands, cx);
-    cx.simulate_keystrokes("enter");
+    press("enter", cx);
     assert_eq!(got(&view, cx), (false, Some("dark".into())));
     reopen(&view, cx);
     cx.simulate_input("zi");
     settle(cx);
-    cx.simulate_keystrokes("enter");
+    press("enter", cx);
     assert_eq!(got(&view, cx), (false, Some("zoom".into())));
     reopen(&view, cx);
-    cx.simulate_keystrokes("up enter");
+    cx.simulate_keystrokes("up");
+    press("enter", cx);
     assert_eq!(got(&view, cx), (false, Some("light".into())));
     reopen(&view, cx);
     cx.simulate_keystrokes("escape");
@@ -193,7 +208,7 @@ fn quick_open_ranks_the_whole_path(cx: &mut TestAppContext) {
     let (view, cx) = host(Kind::Files, cx);
     cx.simulate_input("navmenu");
     settle(cx);
-    cx.simulate_keystrokes("enter");
+    press("enter", cx);
     assert_eq!(
         got(&view, cx),
         (false, Some("src/navigation/menu.rs".into()))
@@ -203,24 +218,26 @@ fn quick_open_ranks_the_whole_path(cx: &mut TestAppContext) {
 #[gpui::test]
 fn the_switcher_opens_on_the_one_before(cx: &mut TestAppContext) {
     let (view, cx) = host(Kind::Switcher, cx);
-    cx.simulate_keystrokes("enter");
+    press("enter", cx);
     assert_eq!(got(&view, cx), (false, Some("before".into())));
     reopen(&view, cx);
     cx.simulate_input("old");
     settle(cx);
-    cx.simulate_keystrokes("enter");
+    press("enter", cx);
     assert_eq!(got(&view, cx), (false, Some("older".into())));
 }
 
 #[gpui::test]
 fn search_walks_the_owners_results(cx: &mut TestAppContext) {
     let (view, cx) = host(Kind::Search, cx);
-    cx.simulate_keystrokes("down enter");
+    cx.simulate_keystrokes("down");
+    press("enter", cx);
     assert_eq!(got(&view, cx), (false, Some("motion".into())));
     reopen(&view, cx);
     cx.simulate_input("theme");
     settle(cx);
-    cx.simulate_keystrokes("down enter");
+    cx.simulate_keystrokes("down");
+    press("enter", cx);
     assert_eq!(got(&view, cx), (false, Some("tokens".into())));
 }
 
@@ -230,7 +247,7 @@ fn tab_stays_inside_an_open_palette(cx: &mut TestAppContext) {
     cx.simulate_keystrokes("tab");
     cx.simulate_input("zi");
     settle(cx);
-    cx.simulate_keystrokes("enter");
+    press("enter", cx);
     assert_eq!(got(&view, cx), (false, Some("zoom".into())));
 }
 
@@ -238,4 +255,17 @@ fn tab_stays_inside_an_open_palette(cx: &mut TestAppContext) {
 #[should_panic(expected = "disabled")]
 fn search_refuses_disabled_results(cx: &mut TestAppContext) {
     host(Kind::Disabled, cx);
+}
+
+#[gpui::test]
+fn enter_picks_on_release_so_the_opener_stays_shut(cx: &mut TestAppContext) {
+    let (view, cx) = host(Kind::Commands, cx);
+    press("escape", cx);
+    cx.update(|window, _| window.focus_next());
+    press("enter", cx);
+    assert_eq!(got(&view, cx), (true, None));
+    cx.simulate_input("zi");
+    settle(cx);
+    press("enter", cx);
+    assert_eq!(got(&view, cx), (false, Some("zoom".into())));
 }

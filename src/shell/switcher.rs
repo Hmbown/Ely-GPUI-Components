@@ -95,8 +95,9 @@ impl RenderOnce for WindowSwitcher {
             })
             .collect();
         let handles: Vec<AnyWindowHandle> = windows.iter().map(|(handle, _)| *handle).collect();
-        let (next, prev, keys) = (state.clone(), state.clone(), state.clone());
-        let (close_keys, close_scrim) = (close.clone(), close);
+        let (next, prev, keys, chosen) =
+            (state.clone(), state.clone(), state.clone(), state.clone());
+        let (close_keys, close_enter, close_scrim) = (close.clone(), close.clone(), close);
         let focus = takeover.read(cx).focus.clone();
         let panel = div()
             .id("window-switcher")
@@ -117,15 +118,20 @@ impl RenderOnce for WindowSwitcher {
                 match event.keystroke.key.as_str() {
                     "down" => step(&keys, 1, count, cx),
                     "up" => step(&keys, -1, count, cx),
-                    "enter" => {
-                        if let Some(handle) = handles.get(keys.read(cx).selected) {
-                            switch_to(*handle, &close_keys, window, cx);
-                        }
-                    }
                     "escape" => close_keys(window, cx),
+                    "enter" if !event.keystroke.modifiers.modified() => {}
                     _ => return,
                 }
                 cx.stop_propagation();
+            })
+            .on_key_up(move |event, window, cx| {
+                let stroke = &event.keystroke;
+                if stroke.key == "enter" && !stroke.modifiers.modified() {
+                    cx.stop_propagation();
+                    if let Some(handle) = handles.get(chosen.read(cx).selected) {
+                        switch_to(*handle, &close_enter, window, cx);
+                    }
+                }
             })
             .children(rows)
             .when(count == 0, |panel| {

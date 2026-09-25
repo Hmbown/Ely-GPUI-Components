@@ -228,6 +228,11 @@ impl Theme {
         px_to_rems(480.0)
     }
 
+    /// Narrowest a menu's panel gets.
+    pub fn menu_width(&self) -> Rems {
+        px_to_rems(200.0)
+    }
+
     /// A palette's card; its list scrolls inside.
     pub fn palette_size(&self) -> Size<Rems> {
         size(px_to_rems(600.0), px_to_rems(400.0))

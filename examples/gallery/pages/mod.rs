@@ -1,6 +1,7 @@
 mod buttons;
 mod forms;
 mod layout;
+mod menus;
 mod navigation;
 mod primitives;
 mod shell;
@@ -29,6 +30,7 @@ pub const ALL: &[Page] = &[
     buttons::PAGE,
     forms::PAGE,
     navigation::PAGE,
+    menus::PAGE,
     theme::PAGE,
 ];
 
