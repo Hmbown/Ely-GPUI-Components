@@ -1,0 +1,314 @@
+use gpui::{App, Hsla, IntoElement, Radians, RenderOnce, Transformation, Window, prelude::*, svg};
+
+use crate::theme::{ActiveTheme, IconSize};
+
+macro_rules! icons {
+    ($($variant:ident => $file:literal,)*) => {
+        /// Lucide icons bundled with Ely.
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+        pub enum IconName {
+            $($variant,)*
+        }
+
+        impl IconName {
+            pub const ALL: &[IconName] = &[$(IconName::$variant,)*];
+
+            pub fn path(self) -> &'static str {
+                match self {
+                    $(IconName::$variant => concat!("icons/", $file, ".svg"),)*
+                }
+            }
+        }
+    };
+}
+
+icons! {
+    Accessibility => "accessibility",
+    Activity => "activity",
+    AlarmClock => "alarm-clock",
+    AlignCenter => "align-center",
+    AlignLeft => "align-left",
+    AlignRight => "align-right",
+    Archive => "archive",
+    ArrowDownLeft => "arrow-down-left",
+    ArrowDownWideNarrow => "arrow-down-wide-narrow",
+    ArrowDown => "arrow-down",
+    ArrowLeft => "arrow-left",
+    ArrowRight => "arrow-right",
+    ArrowUpNarrowWide => "arrow-up-narrow-wide",
+    ArrowUpRight => "arrow-up-right",
+    ArrowUp => "arrow-up",
+    AtSign => "at-sign",
+    Battery => "battery",
+    Bell => "bell",
+    Bold => "bold",
+    BookOpen => "book-open",
+    Bookmark => "bookmark",
+    Bot => "bot",
+    Box => "box",
+    Brush => "brush",
+    Bug => "bug",
+    CalendarDays => "calendar-days",
+    CalendarRange => "calendar-range",
+    Calendar => "calendar",
+    ChartBar => "chart-bar",
+    ChartCandlestick => "chart-candlestick",
+    ChartLine => "chart-line",
+    ChartPie => "chart-pie",
+    CheckCheck => "check-check",
+    Check => "check",
+    ChevronDown => "chevron-down",
+    ChevronLeft => "chevron-left",
+    ChevronRight => "chevron-right",
+    ChevronUp => "chevron-up",
+    ChevronsLeft => "chevrons-left",
+    ChevronsRight => "chevrons-right",
+    ChevronsUpDown => "chevrons-up-down",
+    CircleAlert => "circle-alert",
+    CircleCheck => "circle-check",
+    CircleDot => "circle-dot",
+    CircleHelp => "circle-help",
+    CirclePause => "circle-pause",
+    CircleStop => "circle-stop",
+    CircleX => "circle-x",
+    Circle => "circle",
+    ClipboardCheck => "clipboard-check",
+    Clipboard => "clipboard",
+    Clock => "clock",
+    CloudOff => "cloud-off",
+    Cloud => "cloud",
+    Code => "code",
+    Command => "command",
+    Compass => "compass",
+    Contrast => "contrast",
+    Copy => "copy",
+    Cpu => "cpu",
+    CreditCard => "credit-card",
+    Crop => "crop",
+    Crosshair => "crosshair",
+    Database => "database",
+    DollarSign => "dollar-sign",
+    Dot => "dot",
+    Download => "download",
+    EllipsisVertical => "ellipsis-vertical",
+    Ellipsis => "ellipsis",
+    Eraser => "eraser",
+    ExternalLink => "external-link",
+    EyeOff => "eye-off",
+    Eye => "eye",
+    FilePlus => "file-plus",
+    FileText => "file-text",
+    File => "file",
+    Filter => "filter",
+    Fingerprint => "fingerprint",
+    Flag => "flag",
+    FolderOpen => "folder-open",
+    FolderPlus => "folder-plus",
+    Folder => "folder",
+    Forward => "forward",
+    Frame => "frame",
+    Gauge => "gauge",
+    GitBranch => "git-branch",
+    GitCommitHorizontal => "git-commit-horizontal",
+    GitMerge => "git-merge",
+    GitPullRequest => "git-pull-request",
+    Globe => "globe",
+    GripHorizontal => "grip-horizontal",
+    GripVertical => "grip-vertical",
+    Hand => "hand",
+    HardDrive => "hard-drive",
+    Hash => "hash",
+    Heading => "heading",
+    Heart => "heart",
+    History => "history",
+    Hourglass => "hourglass",
+    House => "house",
+    Image => "image",
+    Inbox => "inbox",
+    Info => "info",
+    Italic => "italic",
+    Kanban => "kanban",
+    Key => "key",
+    Keyboard => "keyboard",
+    Languages => "languages",
+    Layers => "layers",
+    LayoutDashboard => "layout-dashboard",
+    LayoutGrid => "layout-grid",
+    Library => "library",
+    Lightbulb => "lightbulb",
+    Link => "link",
+    ListChecks => "list-checks",
+    ListOrdered => "list-ordered",
+    ListTodo => "list-todo",
+    List => "list",
+    LoaderCircle => "loader-circle",
+    LockOpen => "lock-open",
+    Lock => "lock",
+    LogIn => "log-in",
+    LogOut => "log-out",
+    Mail => "mail",
+    MapPin => "map-pin",
+    Map => "map",
+    Maximize2 => "maximize-2",
+    MemoryStick => "memory-stick",
+    Menu => "menu",
+    MessageSquare => "message-square",
+    MicOff => "mic-off",
+    Mic => "mic",
+    Minimize2 => "minimize-2",
+    Minus => "minus",
+    Monitor => "monitor",
+    Moon => "moon",
+    MousePointer2 => "mouse-pointer-2",
+    Move => "move",
+    Network => "network",
+    NotebookPen => "notebook-pen",
+    Package => "package",
+    Palette => "palette",
+    PanelBottom => "panel-bottom",
+    PanelLeft => "panel-left",
+    PanelRight => "panel-right",
+    Paperclip => "paperclip",
+    Pause => "pause",
+    PenTool => "pen-tool",
+    Pencil => "pencil",
+    PhoneOff => "phone-off",
+    Phone => "phone",
+    PinOff => "pin-off",
+    Pin => "pin",
+    Play => "play",
+    Plus => "plus",
+    Power => "power",
+    Printer => "printer",
+    Puzzle => "puzzle",
+    Quote => "quote",
+    Redo2 => "redo-2",
+    RefreshCw => "refresh-cw",
+    Reply => "reply",
+    Rocket => "rocket",
+    RotateCcw => "rotate-ccw",
+    RotateCw => "rotate-cw",
+    Save => "save",
+    Scissors => "scissors",
+    Search => "search",
+    Send => "send",
+    Server => "server",
+    Settings => "settings",
+    Shapes => "shapes",
+    Share2 => "share-2",
+    Shield => "shield",
+    SkipBack => "skip-back",
+    SkipForward => "skip-forward",
+    SlidersHorizontal => "sliders-horizontal",
+    Smartphone => "smartphone",
+    Smile => "smile",
+    Sparkles => "sparkles",
+    Spline => "spline",
+    SquareCheck => "square-check",
+    Square => "square",
+    Star => "star",
+    StepForward => "step-forward",
+    Strikethrough => "strikethrough",
+    Sun => "sun",
+    Table => "table",
+    Tag => "tag",
+    Target => "target",
+    Terminal => "terminal",
+    ThumbsDown => "thumbs-down",
+    ThumbsUp => "thumbs-up",
+    Timer => "timer",
+    Trash2 => "trash-2",
+    TrendingDown => "trending-down",
+    TrendingUp => "trending-up",
+    TriangleAlert => "triangle-alert",
+    Type => "type",
+    Underline => "underline",
+    Undo2 => "undo-2",
+    Upload => "upload",
+    User => "user",
+    Users => "users",
+    VideoOff => "video-off",
+    Video => "video",
+    Volume2 => "volume-2",
+    VolumeX => "volume-x",
+    Wallet => "wallet",
+    WandSparkles => "wand-sparkles",
+    WifiOff => "wifi-off",
+    Wifi => "wifi",
+    X => "x",
+    Zap => "zap",
+    ZoomIn => "zoom-in",
+    ZoomOut => "zoom-out",
+}
+
+#[derive(IntoElement)]
+pub struct Icon {
+    name: IconName,
+    size: IconSize,
+    color: Option<Hsla>,
+    rotation: Option<Radians>,
+}
+
+impl Icon {
+    pub fn new(name: IconName) -> Self {
+        Self {
+            name,
+            size: IconSize::Md,
+            color: None,
+            rotation: None,
+        }
+    }
+
+    pub fn size(mut self, size: IconSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    /// Defaults to `colors.fg`.
+    pub fn color(mut self, color: impl Into<Hsla>) -> Self {
+        self.color = Some(color.into());
+        self
+    }
+
+    pub fn rotate(mut self, angle: impl Into<Radians>) -> Self {
+        self.rotation = Some(angle.into());
+        self
+    }
+}
+
+impl From<IconName> for Icon {
+    fn from(name: IconName) -> Self {
+        Icon::new(name)
+    }
+}
+
+impl RenderOnce for Icon {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = cx.theme();
+        let color = self.color.unwrap_or(theme.colors.fg);
+        svg()
+            .path(self.name.path())
+            .size(theme.icon_size(self.size))
+            .flex_none()
+            .text_color(color)
+            .when_some(self.rotation, |svg, angle| {
+                svg.with_transformation(Transformation::rotate(angle))
+            })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::IconName;
+
+    #[test]
+    fn every_icon_ships_in_the_bundle() {
+        for icon in IconName::ALL {
+            assert!(
+                crate::Assets::get(icon.path()).is_some(),
+                "{icon:?} missing at {}",
+                icon.path()
+            );
+        }
+    }
+}

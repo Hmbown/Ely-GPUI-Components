@@ -1,0 +1,241 @@
+use ely_gpui_component::{
+    buttons::{ButtonVariant, IconButton},
+    primitives::IconName,
+    theme::{ActiveTheme, ControlSize, Mode, Radius, TextSize, Theme},
+};
+use gpui::{
+    Context, FocusHandle, FontWeight, InteractiveElement, IntoElement, ParentElement, Pixels,
+    Render, ScrollHandle, SharedString, StatefulInteractiveElement, Styled, Subscription, Window,
+    div, point, prelude::*, px,
+};
+
+use crate::{FocusNext, FocusPrev, pages};
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Choice {
+    Light,
+    Dark,
+    System,
+}
+
+pub struct Gallery {
+    page: usize,
+    choice: Choice,
+    focus: FocusHandle,
+    scroll: ScrollHandle,
+    _appearance: Subscription,
+}
+
+impl Gallery {
+    pub fn new(page: usize, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let appearance = cx.observe_window_appearance(window, |gallery, window, cx| {
+            if gallery.choice == Choice::System {
+                Theme::set_mode(window.appearance().into(), cx);
+            }
+        });
+        let focus = cx.focus_handle();
+        window.focus(&focus);
+        Self {
+            page,
+            choice: Choice::Light,
+            focus,
+            scroll: ScrollHandle::new(),
+            _appearance: appearance,
+        }
+    }
+
+    pub fn select(&mut self, page: usize, cx: &mut Context<Self>) {
+        log::info!("gallery: page -> {}", pages::ALL[page].slug);
+        self.page = page;
+        self.scroll.set_offset(point(px(0.0), px(0.0)));
+        cx.notify();
+    }
+
+    /// Viewport height and furthest scroll, in pixels.
+    pub fn scroll_extent(&self) -> (Pixels, Pixels) {
+        (
+            self.scroll.bounds().size.height,
+            self.scroll.max_offset().height,
+        )
+    }
+
+    pub fn scroll_to(&mut self, y: Pixels, cx: &mut Context<Self>) {
+        self.scroll.set_offset(point(px(0.0), -y));
+        cx.notify();
+    }
+
+    pub fn choose(&mut self, choice: Choice, window: &mut Window, cx: &mut Context<Self>) {
+        self.choice = choice;
+        let mode = match choice {
+            Choice::Light => Mode::Light,
+            Choice::Dark => Mode::Dark,
+            Choice::System => window.appearance().into(),
+        };
+        Theme::set_mode(mode, cx);
+        cx.notify();
+    }
+
+    fn sidebar(&self, cx: &mut Context<Self>) -> impl IntoElement + use<> {
+        let theme = cx.theme();
+        let colors = &theme.colors;
+        div()
+            .flex()
+            .flex_col()
+            .flex_none()
+            .w(px(248.0))
+            .h_full()
+            .pt(px(56.0))
+            .px_3()
+            .border_r_1()
+            .border_color(colors.border)
+            .child(
+                div()
+                    .px_3()
+                    .pb_6()
+                    .child(
+                        div()
+                            .text_size(theme.text_size(TextSize::Lg))
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(colors.fg)
+                            .child("Ely"),
+                    )
+                    .child(
+                        div()
+                            .text_size(theme.text_size(TextSize::Sm))
+                            .text_color(colors.fg_subtle)
+                            .child("GPUI Component"),
+                    ),
+            )
+            .child(
+                div()
+                    .id("nav")
+                    .flex()
+                    .flex_col()
+                    .gap_0p5()
+                    .overflow_y_scroll()
+                    .children(pages::ALL.iter().enumerate().map(|(ix, page)| {
+                        let selected = ix == self.page;
+                        div()
+                            .id(page.slug)
+                            .flex()
+                            .items_center()
+                            .gap_3()
+                            .h(px(30.0))
+                            .px_3()
+                            .rounded(theme.radius(Radius::Md))
+                            .cursor_pointer()
+                            .text_size(theme.text_size(TextSize::Base))
+                            .text_color(if selected { colors.fg } else { colors.fg_muted })
+                            .when(selected, |el| el.bg(colors.hover))
+                            .hover(|style| style.bg(colors.hover).text_color(colors.fg))
+                            .child(
+                                div()
+                                    .w(px(18.0))
+                                    .font_family(theme.mono_family.clone())
+                                    .text_size(theme.text_size(TextSize::Xs))
+                                    .text_color(colors.fg_subtle)
+                                    .child(SharedString::from(format!("{:02}", page.number))),
+                            )
+                            .child(page.title)
+                            .on_click(cx.listener(move |gallery, _, _, cx| gallery.select(ix, cx)))
+                    })),
+            )
+    }
+
+    fn switcher(&self, cx: &mut Context<Self>) -> impl IntoElement + use<> {
+        let options = [
+            (Choice::Light, IconName::Sun, "theme-light"),
+            (Choice::Dark, IconName::Moon, "theme-dark"),
+            (Choice::System, IconName::Monitor, "theme-system"),
+        ];
+        let colors = &cx.theme().colors;
+        div()
+            .flex()
+            .gap_0p5()
+            .p_0p5()
+            .rounded(cx.theme().radius(Radius::Lg))
+            .border_1()
+            .border_color(colors.border)
+            .children(options.map(|(choice, icon, id)| {
+                let variant = if choice == self.choice {
+                    ButtonVariant::Subtle
+                } else {
+                    ButtonVariant::Ghost
+                };
+                IconButton::new(id, icon)
+                    .variant(variant)
+                    .size(ControlSize::Sm)
+                    .on_click(
+                        cx.listener(move |gallery, _, window, cx| {
+                            gallery.choose(choice, window, cx)
+                        }),
+                    )
+            }))
+    }
+}
+
+impl Render for Gallery {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let page = &pages::ALL[self.page];
+        let body = (page.render)(window, cx);
+        let sidebar = self.sidebar(cx);
+        let switcher = self.switcher(cx);
+        let theme = cx.theme();
+        let colors = &theme.colors;
+
+        div()
+            .id("gallery")
+            .track_focus(&self.focus)
+            .on_action(|_: &FocusNext, window, _| window.focus_next())
+            .on_action(|_: &FocusPrev, window, _| window.focus_prev())
+            .size_full()
+            .flex()
+            .bg(colors.bg)
+            .text_color(colors.fg)
+            .font_family(theme.font_family.clone())
+            .text_size(theme.text_size(TextSize::Base))
+            .child(sidebar)
+            .child(
+                div()
+                    .id("page")
+                    .flex_1()
+                    .h_full()
+                    .overflow_y_scroll()
+                    .track_scroll(&self.scroll)
+                    .child(
+                        div()
+                            .max_w(px(960.0))
+                            .px(px(56.0))
+                            .pt(px(56.0))
+                            .pb(px(96.0))
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_start()
+                                    .justify_between()
+                                    .gap_6()
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .flex_col()
+                                            .gap_2()
+                                            .child(
+                                                div()
+                                                    .text_size(theme.text_size(TextSize::Xxl))
+                                                    .font_weight(FontWeight::SEMIBOLD)
+                                                    .child(page.title),
+                                            )
+                                            .child(
+                                                div()
+                                                    .text_size(theme.text_size(TextSize::Md))
+                                                    .text_color(colors.fg_muted)
+                                                    .child(page.summary),
+                                            ),
+                                    )
+                                    .child(switcher),
+                            )
+                            .child(body),
+                    ),
+            )
+    }
+}

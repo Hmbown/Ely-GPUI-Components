@@ -1,0 +1,161 @@
+use gpui::{BoxShadow, Hsla, Rems, point, px, rems};
+
+use super::{Mode, Theme};
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Density {
+    Compact,
+    #[default]
+    Standard,
+    Comfortable,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ControlSize {
+    Sm,
+    #[default]
+    Md,
+    Lg,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum IconSize {
+    Xs,
+    Sm,
+    #[default]
+    Md,
+    Lg,
+    Xl,
+    Xxl,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextSize {
+    Xs,
+    Sm,
+    Base,
+    Md,
+    Lg,
+    Xl,
+    Xxl,
+    Display,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Radius {
+    Sm,
+    Md,
+    Lg,
+    Xl,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Elevation {
+    Raised,
+    Floating,
+    Modal,
+}
+
+fn px_to_rems(value: f32) -> Rems {
+    rems(value / 16.0)
+}
+
+impl Theme {
+    pub fn control_height(&self, size: ControlSize) -> Rems {
+        let base = match size {
+            ControlSize::Sm => 24.0,
+            ControlSize::Md => 28.0,
+            ControlSize::Lg => 32.0,
+        };
+        let delta = match self.density {
+            Density::Compact => -4.0,
+            Density::Standard => 0.0,
+            Density::Comfortable => 4.0,
+        };
+        px_to_rems(base + delta)
+    }
+
+    pub fn control_padding(&self, size: ControlSize) -> Rems {
+        let base = match size {
+            ControlSize::Sm => 8.0,
+            ControlSize::Md => 12.0,
+            ControlSize::Lg => 16.0,
+        };
+        let delta = match self.density {
+            Density::Compact => -2.0,
+            Density::Standard => 0.0,
+            Density::Comfortable => 2.0,
+        };
+        px_to_rems(base + delta)
+    }
+
+    pub fn icon_size(&self, size: IconSize) -> Rems {
+        let base = match size {
+            IconSize::Xs => 12.0,
+            IconSize::Sm => 14.0,
+            IconSize::Md => 16.0,
+            IconSize::Lg => 20.0,
+            IconSize::Xl => 24.0,
+            IconSize::Xxl => 32.0,
+        };
+        px_to_rems(base * self.font_scale)
+    }
+
+    pub fn text_size(&self, size: TextSize) -> Rems {
+        let base = match size {
+            TextSize::Xs => 11.0,
+            TextSize::Sm => 12.0,
+            TextSize::Base => 13.0,
+            TextSize::Md => 14.0,
+            TextSize::Lg => 16.0,
+            TextSize::Xl => 20.0,
+            TextSize::Xxl => 24.0,
+            TextSize::Display => 32.0,
+        };
+        px_to_rems(base * self.font_scale)
+    }
+
+    pub fn radius(&self, size: Radius) -> Rems {
+        let base = match size {
+            Radius::Sm => 4.0,
+            Radius::Md => 6.0,
+            Radius::Lg => 8.0,
+            Radius::Xl => 12.0,
+        };
+        px_to_rems(base * self.radius_scale)
+    }
+
+    pub fn elevation(&self, level: Elevation) -> Vec<BoxShadow> {
+        let dark = self.mode == Mode::Dark;
+        let layers: &[(f32, f32, f32)] = match (level, dark) {
+            (Elevation::Raised, false) => &[(1.0, 2.0, 0.06)],
+            (Elevation::Floating, false) => &[(1.0, 2.0, 0.04), (6.0, 16.0, 0.08)],
+            (Elevation::Modal, false) => &[(2.0, 4.0, 0.04), (16.0, 40.0, 0.14)],
+            (Elevation::Raised, true) => &[(1.0, 2.0, 0.4)],
+            (Elevation::Floating, true) => &[(2.0, 4.0, 0.3), (8.0, 24.0, 0.45)],
+            (Elevation::Modal, true) => &[(4.0, 8.0, 0.3), (20.0, 48.0, 0.55)],
+        };
+        layers
+            .iter()
+            .map(|&(y, blur, alpha)| shadow(self.colors.shadow.alpha(alpha), y, blur))
+            .collect()
+    }
+
+    pub fn focus_ring(&self) -> Vec<BoxShadow> {
+        vec![BoxShadow {
+            color: self.colors.focus.alpha(0.45),
+            offset: point(px(0.0), px(0.0)),
+            blur_radius: px(0.0),
+            spread_radius: px(2.0),
+        }]
+    }
+}
+
+fn shadow(color: Hsla, y: f32, blur: f32) -> BoxShadow {
+    BoxShadow {
+        color,
+        offset: point(px(0.0), px(y)),
+        blur_radius: px(blur),
+        spread_radius: px(0.0),
+    }
+}

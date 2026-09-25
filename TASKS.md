@@ -1,0 +1,107 @@
+# Tasks
+
+Progress truth. Work runs top to bottom. No item is skipped.
+Each `T` item ends with a codex review (`gpt-6-astra`, effort `max`, herdr split pane). Three rounds at most.
+
+Per-component lines live in `tasks/`. Tags there:
+
+| Tag | Meaning |
+|-----|---------|
+| `→ path` | Alias or duplicate. One home, at `path`. |
+| `native` | gpui 0.2.2 ships it. The gallery shows the native call. |
+| `host` | Ely draws the UI. The host app supplies the engine data. |
+| `prove` | Needs a crate or platform API not yet proven with gpui 0.2.2. |
+| `blocked` | Cannot be real on gpui 0.2.2. Reason given. |
+| `(Txx)` | Built early in task `Txx` as a dependency. |
+
+## Items
+
+- [x] T00 Foundation: package, theme, motion, assets, Icon, Button, gallery shell, docs
+- [ ] T01 Primitives — `tasks/ch01-10.md`
+- [ ] T02 Typography
+- [ ] T03 Layout
+- [ ] T04 Window & Shell
+- [ ] T05 Buttons & Actions
+- [ ] T06a Forms · Text
+- [ ] T06b Forms · Selection
+- [ ] T06c Forms · Date & Time
+- [ ] T06d Forms · Color
+- [ ] T06e Forms · Files
+- [ ] T06f Forms · Other
+- [ ] T06g Forms · Structure
+- [ ] T07 Navigation
+- [ ] T08 Menus
+- [ ] T09 Overlays
+- [ ] T10 Feedback
+- [ ] T11a Loading — `tasks/ch11-20.md`
+- [ ] T11b Motion
+- [ ] T12 Data Display
+- [ ] T13 Lists & Trees
+- [ ] T14 Tables
+- [ ] T15 Charts
+- [ ] T16a Finance · Market charts
+- [ ] T16b Finance · Technical analysis
+- [ ] T16c Finance · Quotes & book
+- [ ] T16d Finance · Trading
+- [ ] T16e Finance · Markets & assets
+- [ ] T17a Editor · Core
+- [ ] T17b Editor · Intelligence
+- [ ] T17c Editor · Search
+- [ ] T17d Editor · Panels
+- [ ] T17e Editor · Status items
+- [ ] T18 Terminal
+- [ ] T19 Git
+- [ ] T20 Debug
+- [ ] T21a Documents · Editing — `tasks/ch21-30.md`
+- [ ] T21b Documents · Reading
+- [ ] T21c Documents · Knowledge
+- [ ] T22 Collaboration
+- [ ] T23a AI Chat · Messages
+- [ ] T23b AI Chat · Citations
+- [ ] T23c AI Chat · Input
+- [ ] T23d AI Chat · Conversations
+- [ ] T23e AI Chat · Welcome
+- [ ] T24 Agent
+- [ ] T25 Generative
+- [ ] T26 Media
+- [ ] T27 Files
+- [ ] T28 Messaging
+- [ ] T29 Mail
+- [ ] T30 Calendar
+- [ ] T31 Project — `tasks/ch31-43.md`
+- [ ] T32 Canvas & Design
+- [ ] T33 DB & Dev Tools
+- [ ] T34 Dashboard
+- [ ] T35 Settings
+- [ ] T36 Account
+- [ ] T37 Onboarding & Help
+- [ ] T38 Interaction
+- [ ] T39 Theme
+- [ ] T40 i18n & a11y
+- [ ] T41 Maps
+- [ ] T42 Misc
+- [ ] T43 Library Tooling
+- [ ] T44 Capture: every component, light and dark, plus motion clips
+- [ ] T45 Website: `frontend/`, Vite 8, pnpm, light and dark, motion
+- [ ] T46 E2E: Playwright against the built site
+- [ ] T47 Ship: GitHub repo (public), CI, Pages deploy
+- [ ] T48 Acceptance: live URL and MVP checklist
+
+## T00 detail
+
+- [x] git, `.gitignore`, `LICENSE-MIT`, `LICENSE-APACHE`
+- [x] `Cargo.toml`: gpui 0.2.2 with `runtime_shaders`, lints
+- [x] Theme: light and dark palettes, high contrast, tokens, `ActiveTheme`, animated switch
+- [x] Motion: durations, easings, spring
+- [x] Assets: Lucide icons, Inter, JetBrains Mono, `AssetSource`
+- [x] Icon, Button, IconButton
+- [x] Gallery shell: chapter nav, theme toggle, self-capture
+- [x] `AGENTS.md`, `README.md`
+
+## Review log
+
+| Item | Round | Verdict | Notes |
+|------|-------|---------|-------|
+| T00 | 1 | FAIL | capture swallowed errors; root not focused; raw px sizes; gallery copy; tag conflict |
+| T00 | 2 | FAIL | AGENTS.md called `border_1` a rem helper |
+| T00 | 3 | PASS | |

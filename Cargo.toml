@@ -1,0 +1,34 @@
+[package]
+name = "ely-gpui-component"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+description = "A restrained component library for GPUI, in light and dark."
+repository = "https://github.com/ZacharyZhang-NY/Ely-GPUI-Components"
+publish = false
+
+[features]
+default = ["runtime_shaders"]
+runtime_shaders = ["gpui/runtime_shaders"]
+
+[dependencies]
+anyhow = "1"
+gpui = "0.2.2"
+log = "0.4"
+rust-embed = "8.12"
+
+[dev-dependencies]
+env_logger = "0.11"
+
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+core-foundation = "0.10"
+core-graphics = "0.24"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[[example]]
+name = "gallery"
+path = "examples/gallery/main.rs"
