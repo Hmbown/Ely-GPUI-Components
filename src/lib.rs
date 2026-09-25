@@ -4,6 +4,7 @@ pub mod buttons;
 pub mod motion;
 pub mod primitives;
 pub mod theme;
+pub mod typography;
 
 pub use assets::Assets;
 

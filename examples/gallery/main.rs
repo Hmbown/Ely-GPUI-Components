@@ -17,13 +17,13 @@ use gpui::{
 actions!(gallery, [Quit]);
 
 struct Args {
-    page: usize,
+    page: Option<usize>,
     capture: Option<PathBuf>,
 }
 
 fn parse_args() -> Result<Args> {
     let mut args = Args {
-        page: 0,
+        page: None,
         capture: None,
     };
     let mut iter = std::env::args().skip(1);
@@ -33,7 +33,7 @@ fn parse_args() -> Result<Args> {
             .with_context(|| format!("{flag} needs a value"))?;
         match flag.as_str() {
             "--page" => {
-                args.page = pages::find(&value).with_context(|| format!("no page {value}"))?
+                args.page = Some(pages::find(&value).with_context(|| format!("no page {value}"))?)
             }
             "--capture" => args.capture = Some(PathBuf::from(value)),
             other => bail!("unknown flag {other}"),
@@ -64,12 +64,12 @@ fn main() -> Result<()> {
             };
             let window = cx
                 .open_window(options, |window, cx| {
-                    cx.new(|cx| shell::Gallery::new(args.page, window, cx))
+                    cx.new(|cx| shell::Gallery::new(args.page.unwrap_or(0), window, cx))
                 })
                 .expect("gallery window failed to open");
             cx.activate(true);
             if let Some(dir) = args.capture {
-                capture::run(window, dir, cx);
+                capture::run(window, dir, args.page, cx);
             }
         });
     Ok(())

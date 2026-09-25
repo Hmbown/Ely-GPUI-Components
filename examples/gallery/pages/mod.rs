@@ -1,6 +1,7 @@
 mod buttons;
 mod primitives;
 mod theme;
+mod typography;
 
 use gpui::{AnyElement, App, Window};
 
@@ -16,7 +17,12 @@ pub struct Page {
     pub script: &'static [Step],
 }
 
-pub const ALL: &[Page] = &[primitives::PAGE, buttons::PAGE, theme::PAGE];
+pub const ALL: &[Page] = &[
+    primitives::PAGE,
+    typography::PAGE,
+    buttons::PAGE,
+    theme::PAGE,
+];
 
 pub fn find(slug: &str) -> Option<usize> {
     ALL.iter().position(|page| page.slug == slug)

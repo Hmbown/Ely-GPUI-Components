@@ -15,11 +15,11 @@ use crate::{
 const SETTLE: Duration = Duration::from_millis(700);
 const SCROLL_SETTLE: Duration = Duration::from_millis(250);
 
-/// Shoots every page in both modes, top to bottom, then quits. Exits 1 on failure.
-pub fn run(window: WindowHandle<Gallery>, dir: PathBuf, cx: &mut App) {
+/// Shoots one page, or all, in both modes, then quits. Exits 1 on failure.
+pub fn run(window: WindowHandle<Gallery>, dir: PathBuf, only: Option<usize>, cx: &mut App) {
     Theme::update(cx, |theme| theme.reduced_motion = true);
     cx.spawn(async move |cx| {
-        let outcome = shoot_all(window, &dir, cx).await;
+        let outcome = shoot_all(window, &dir, only, cx).await;
         if let Err(error) = outcome.and_then(|()| cx.update(|cx| cx.quit())) {
             log::error!("capture failed: {error:#}");
             std::process::exit(1);
@@ -28,9 +28,18 @@ pub fn run(window: WindowHandle<Gallery>, dir: PathBuf, cx: &mut App) {
     .detach();
 }
 
-async fn shoot_all(window: WindowHandle<Gallery>, dir: &Path, cx: &mut AsyncApp) -> Result<()> {
+async fn shoot_all(
+    window: WindowHandle<Gallery>,
+    dir: &Path,
+    only: Option<usize>,
+    cx: &mut AsyncApp,
+) -> Result<()> {
     std::fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
-    for (ix, page) in pages::ALL.iter().enumerate() {
+    let chosen = pages::ALL
+        .iter()
+        .enumerate()
+        .filter(|(ix, _)| only.is_none_or(|only| only == *ix));
+    for (ix, page) in chosen {
         for (choice, name) in [(Choice::Light, "light"), (Choice::Dark, "dark")] {
             window.update(cx, |gallery, window, cx| {
                 gallery.select(ix, cx);

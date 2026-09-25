@@ -18,7 +18,7 @@ Per-component lines live in `tasks/`. Tags there:
 
 - [x] T00 Foundation: package, theme, motion, assets, Icon, Button, gallery shell, docs
 - [x] T01 Primitives — `tasks/ch01-10.md`
-- [ ] T02 Typography
+- [x] T02 Typography
 - [ ] T03 Layout
 - [ ] T04 Window & Shell
 - [ ] T05 Buttons & Actions
@@ -108,3 +108,5 @@ Per-component lines live in `tasks/`. Tags there:
 | T01 | 1 | FAIL | img loading needs an id; radii lost; focus loop cap; tooltip geometry literals |
 | T01 | 2 | FAIL | Cover painted outside the box once the clip was removed |
 | T01 | 3 | FAIL | two-line doc comment; fixed after the cap, verified by scan, no fourth review |
+| T02 | 1 | FAIL | stale selection; strftime and zone fallbacks; \\text flattening; probes missed targets; ellipsis overflow; u64 precision; caret sizes; LineClamp copy; 500-line wording |
+| T02 | 2 | PASS | |

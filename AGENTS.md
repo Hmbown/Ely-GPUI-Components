@@ -31,7 +31,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - Borders use gpui's fixed-pixel helpers (`border_1` is 1px). Hairlines do not scale.
 - One component, one home. Duplicates point to it.
 - Fail fast. No silent fallbacks. Log state changes with `log`.
-- Files stay under 500 lines. Comments are one short line, and rare.
+- Files stay at or under 500 lines. Comments are one short line, and rare.
 - `motion::duration()` honors reduced motion. Springs overshoot: use them inside animators, never as gpui easings, because gpui asserts eased values stay in `0..=1`.
 - `svg()` paints only with its own `text_color`. `Icon` always sets one.
 - Buttons stay out of focus on click (`prevent_default` on mouse down). Tab still reaches them.
@@ -39,6 +39,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - `ely_gpui_component::init` binds Tab and Shift-Tab to `FocusNext` and `FocusPrev`. Wrap the root in `FocusScope` and focus its handle.
 - gpui's `Window::dispatch_event` returns a private type, so the gallery scripts mouse input by posting `NSEvent`s to its own queue.
 - `hover()` needs an element id.
+- Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.
 - `img()` keeps loading state only with an id. Content masks are rectangles, so rounded corners survive only when the image fills its box without cropping.
 
 ## Decisions

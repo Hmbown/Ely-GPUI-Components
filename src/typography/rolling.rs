@@ -1,0 +1,170 @@
+use gpui::{
+    Animation, AnimationExt, App, ElementId, InteractiveElement, IntoElement, ParentElement,
+    RenderOnce, SharedString, Styled, Window, div,
+};
+
+use super::{
+    format::{self, Separators},
+    text::tabular,
+};
+use crate::{
+    motion,
+    theme::{ActiveTheme, TextSize},
+};
+
+const LEADING: f32 = 1.2;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Tween {
+    Roll,
+    Count,
+}
+
+struct Change {
+    from: f64,
+    to: f64,
+    generation: u64,
+}
+
+/// Number that rolls its digits, or counts, to each new value.
+#[derive(IntoElement)]
+pub struct AnimatedNumber {
+    id: ElementId,
+    value: f64,
+    decimals: usize,
+    tween: Tween,
+    size: TextSize,
+}
+
+impl AnimatedNumber {
+    pub fn new(id: impl Into<ElementId>, value: f64) -> Self {
+        Self {
+            id: id.into(),
+            value,
+            decimals: 0,
+            tween: Tween::Roll,
+            size: TextSize::Xxl,
+        }
+    }
+
+    pub fn decimals(mut self, decimals: usize) -> Self {
+        self.decimals = decimals;
+        self
+    }
+
+    /// Counts through the values instead of rolling digits.
+    pub fn count_up(mut self) -> Self {
+        self.tween = Tween::Count;
+        self
+    }
+
+    pub fn size(mut self, size: TextSize) -> Self {
+        self.size = size;
+        self
+    }
+}
+
+/// Pads the shorter string on the left so digits align by place.
+fn align(from: &str, to: &str) -> (Vec<char>, Vec<char>) {
+    let width = from.chars().count().max(to.chars().count());
+    let pad = |text: &str| {
+        let mut chars = vec![' '; width - text.chars().count()];
+        chars.extend(text.chars());
+        chars
+    };
+    (pad(from), pad(to))
+}
+
+impl RenderOnce for AnimatedNumber {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let value = self.value;
+        let state = window.use_keyed_state(self.id.clone(), cx, |_, _| Change {
+            from: value,
+            to: value,
+            generation: 0,
+        });
+        if state.read(cx).to.to_bits() != value.to_bits() {
+            state.update(cx, |change, _| {
+                change.from = change.to;
+                change.to = value;
+                change.generation += 1;
+            });
+        }
+        let (from, to, generation) = {
+            let change = state.read(cx);
+            (change.from, change.to, change.generation)
+        };
+        let decimals = self.decimals;
+        let text = move |number: f64| format::number(number, decimals, Separators::EN);
+        let duration = motion::duration(motion::SLOW * 2, cx);
+        let theme = cx.theme();
+        let size = theme.text_size(self.size);
+        let line = size.to_pixels(window.rem_size()) * LEADING;
+        let row = tabular(div())
+            .id(self.id)
+            .flex()
+            .h(line)
+            .overflow_hidden()
+            .text_size(size)
+            .line_height(line)
+            .text_color(theme.colors.fg);
+
+        if self.tween == Tween::Count {
+            return row.child(div().with_animation(
+                ("count", generation),
+                Animation::new(duration),
+                move |label, t| {
+                    let eased = f64::from(motion::ease_out_cubic(t));
+                    label.child(text(from + (to - from) * eased))
+                },
+            ));
+        }
+        let (before, after) = align(&text(from), &text(to));
+        row.children(
+            before
+                .into_iter()
+                .zip(after)
+                .enumerate()
+                .map(move |(ix, (old, new))| {
+                    let Some(end) = new.to_digit(10) else {
+                        return div()
+                            .child(SharedString::from(new.to_string()))
+                            .into_any_element();
+                    };
+                    let start = old.to_digit(10).unwrap_or(0);
+                    let stack =
+                        div().flex().flex_col().children((0..10).map(|digit| {
+                            div().h(line).child(SharedString::from(digit.to_string()))
+                        }));
+                    div()
+                        .h(line)
+                        .overflow_hidden()
+                        .child(stack.with_animation(
+                            ("roll", generation * 1_000 + ix as u64),
+                            Animation::new(duration),
+                            move |stack, t| {
+                                let place = motion::lerp(
+                                    start as f32,
+                                    end as f32,
+                                    motion::ease_out_cubic(t),
+                                );
+                                stack.mt(-(line * place))
+                            },
+                        ))
+                        .into_any_element()
+                }),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::align;
+
+    #[test]
+    fn align_pads_by_place() {
+        let (from, to) = align("999", "1,000");
+        assert_eq!(from.iter().collect::<String>(), "  999");
+        assert_eq!(to.iter().collect::<String>(), "1,000");
+    }
+}

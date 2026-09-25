@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use ely_gpui_component::primitives::Measure;
-use gpui::{App, Bounds, Global, IntoElement, ParentElement, Pixels};
+use gpui::{App, Bounds, Div, Global, IntoElement, ParentElement, Pixels, Styled, div};
 
 /// Window bounds of named demo elements, for scripted capture.
 #[derive(Default)]
@@ -16,10 +16,12 @@ impl Probes {
     }
 }
 
-/// Wraps `element` so scripts can find it by `key`.
-pub fn probe(key: &'static str, element: impl IntoElement) -> Measure {
-    Measure::new(key, move |bounds, _, cx| {
-        cx.default_global::<Probes>().0.insert(key, bounds);
-    })
-    .child(element)
+/// Wraps `element`, sized to it, so scripts can find it by `key`.
+pub fn probe(key: &'static str, element: impl IntoElement) -> Div {
+    div().flex().child(
+        Measure::new(key, move |bounds, _, cx| {
+            cx.default_global::<Probes>().0.insert(key, bounds);
+        })
+        .child(element),
+    )
 }

@@ -1,7 +1,7 @@
 use std::{path::PathBuf, time::Duration};
 
 use anyhow::{Context as _, Result};
-use gpui::{AsyncApp, Keystroke, Pixels, Point, WindowHandle, point, px};
+use gpui::{AsyncApp, Bounds, Keystroke, Pixels, Point, WindowHandle, point, px};
 
 use crate::{capture::snapshot, probe::Probes, shell::Gallery};
 
@@ -12,6 +12,8 @@ pub enum Step {
     Down(&'static str),
     Up(&'static str),
     Click(&'static str),
+    /// Clicks just inside the probe's right edge.
+    ClickEnd(&'static str),
     Key(&'static str),
     Wait(u64),
     Shot(&'static str),
@@ -55,6 +57,13 @@ pub async fn play(
             }
             Step::Click(key) => {
                 let at = target(window, key, cx).await?;
+                send(window, Mouse::Move, at, cx)?;
+                send(window, Mouse::Down, at, cx)?;
+                send(window, Mouse::Up, at, cx)?;
+            }
+            Step::ClickEnd(key) => {
+                let bounds = target_bounds(window, key, cx).await?;
+                let at = point(bounds.right() - px(12.0), bounds.center().y);
                 send(window, Mouse::Move, at, cx)?;
                 send(window, Mouse::Down, at, cx)?;
                 send(window, Mouse::Up, at, cx)?;
@@ -135,14 +144,20 @@ async fn target(
     key: &str,
     cx: &mut AsyncApp,
 ) -> Result<Point<Pixels>> {
+    Ok(target_bounds(window, key, cx).await?.center())
+}
+
+async fn target_bounds(
+    window: WindowHandle<Gallery>,
+    key: &str,
+    cx: &mut AsyncApp,
+) -> Result<Bounds<Pixels>> {
     let bounds = cx
         .update(|cx| Probes::get(key, cx))?
         .with_context(|| format!("probe {key} never rendered"))?;
     if window.update(cx, |gallery, _, cx| gallery.reveal(bounds, cx))? {
         cx.background_executor().timer(FRAME).await;
     }
-    let bounds = cx
-        .update(|cx| Probes::get(key, cx))?
-        .with_context(|| format!("probe {key} vanished after scrolling"))?;
-    Ok(bounds.center())
+    cx.update(|cx| Probes::get(key, cx))?
+        .with_context(|| format!("probe {key} vanished after scrolling"))
 }
