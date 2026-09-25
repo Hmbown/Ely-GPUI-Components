@@ -42,8 +42,11 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - `hover()` needs an element id.
 - gpui sends a drag's moves to every listener of its type. Each drag payload carries its owner's `EntityId`, and handlers check it.
 - A component that takes a starting value from its owner keeps it in `layout::seeded`: a new value from the owner replaces local drags.
-- The capture harness finds windows by gpui handle through `raw-window-handle`, never by scanning the process's windows.
+- The capture harness finds gpui windows by handle through `raw-window-handle`. AppKit popups, which gpui does not own, come from the window list by process and level.
 - Posted events cannot move a macOS window, so window drags are not scripted. `drag_region` follows Zed's title bar.
+- An overlay takes focus with `primitives::take_focus` and returns it with `give_back` on every close path.
+- A state change made outside render calls `cx.notify()`, or nothing redraws.
+- The macOS share picker draws its content in another process; a capture shows only its frame.
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.
 - `img()` keeps loading state only with an id. Content masks are rectangles, so rounded corners survive only when the image fills its box without cropping.
 

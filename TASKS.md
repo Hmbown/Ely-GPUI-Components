@@ -21,7 +21,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T02 Typography
 - [x] T03 Layout
 - [x] T04 Window & Shell
-- [ ] T05 Buttons & Actions
+- [x] T05 Buttons & Actions
 - [ ] T06a Forms · Text
 - [ ] T06b Forms · Selection
 - [ ] T06c Forms · Date & Time
@@ -116,3 +116,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T04 | 1 | FAIL | system close skipped TitleBar::on_close; hosted windows had no Tab scope; switcher lost Tab to an ancestor, dropped focus on close, kept a stale index |
 | T04 | 2 | FAIL | a removed on_close kept blocking the system close; switcher keys bubbled past it |
 | T04 | 3 | PASS | |
+| T05 | 1 | FAIL | hold task kept its state alive; a third click wedged the done state; border_1 undid the group seam |
+| T05 | 2 | FAIL | AGENTS.md said no window is found by scanning; popups are |
+| T05 | 3 | PASS | |

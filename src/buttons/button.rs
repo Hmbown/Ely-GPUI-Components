@@ -1,11 +1,12 @@
 use gpui::{
-    App, ClickEvent, ElementId, FontWeight, Hsla, IntoElement, MouseButton, RenderOnce,
+    App, ClickEvent, ElementId, FontWeight, Hsla, IntoElement, Keystroke, MouseButton, RenderOnce,
     SharedString, Window, div, prelude::*, transparent_black,
 };
 
 use crate::{
     primitives::{FocusRing, Icon, IconName},
     theme::{ActiveTheme, ControlSize, IconSize, Mix, Palette, Radius, TextSize},
+    typography::keys::{Platform, keystroke_labels},
 };
 
 pub(crate) type ClickHandler = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
@@ -93,16 +94,33 @@ pub(crate) fn label_size(size: ControlSize) -> (TextSize, IconSize) {
     }
 }
 
+/// Where a button sits inside a `ButtonGroup`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Slot {
+    First,
+    Middle,
+    Last,
+}
+
+/// A keystroke as the platform spells it: `⌘S`, or `Ctrl+S`.
+pub(crate) fn shortcut_text(stroke: &Keystroke) -> String {
+    let platform = Platform::current();
+    let glue = if platform == Platform::Mac { "" } else { "+" };
+    keystroke_labels(stroke, platform).join(glue)
+}
+
 #[derive(IntoElement)]
 pub struct Button {
     id: ElementId,
     label: SharedString,
     icon: Option<IconName>,
     trailing_icon: Option<IconName>,
+    shortcut: Option<Keystroke>,
     variant: ButtonVariant,
     size: ControlSize,
     disabled: bool,
     full_width: bool,
+    pub(crate) slot: Option<Slot>,
     on_click: Option<ClickHandler>,
 }
 
@@ -113,10 +131,12 @@ impl Button {
             label: label.into(),
             icon: None,
             trailing_icon: None,
+            shortcut: None,
             variant: ButtonVariant::default(),
             size: ControlSize::default(),
             disabled: false,
             full_width: false,
+            slot: None,
             on_click: None,
         }
     }
@@ -142,6 +162,14 @@ impl Button {
 
     pub fn trailing_icon(mut self, icon: IconName) -> Self {
         self.trailing_icon = Some(icon);
+        self
+    }
+
+    /// Shows the keystroke that also runs it, e.g. `"cmd-s"`. Panics on a bad keystroke.
+    pub fn shortcut(mut self, keystroke: &str) -> Self {
+        let parsed = Keystroke::parse(keystroke)
+            .unwrap_or_else(|error| panic!("button shortcut {keystroke:?}: {error}"));
+        self.shortcut = Some(parsed);
         self
     }
 
@@ -171,6 +199,8 @@ impl RenderOnce for Button {
         let (text, icon_size) = label_size(self.size);
         let link = self.variant == ButtonVariant::Link;
         let icon = |name| Icon::new(name).size(icon_size).color(tone.fg);
+        let radius = theme.radius(Radius::Md);
+        let hint = self.shortcut.as_ref().map(shortcut_text);
 
         div()
             .id(self.id)
@@ -181,17 +211,31 @@ impl RenderOnce for Button {
             .gap_1p5()
             .h(theme.control_height(self.size))
             .when(!link, |el| el.px(theme.control_padding(self.size)))
-            .rounded(theme.radius(Radius::Md))
+            .border_1()
+            .border_color(tone.border)
+            .map(|el| match self.slot {
+                None => el.rounded(radius),
+                Some(Slot::First) => el.rounded_l(radius),
+                Some(Slot::Middle) => el.border_l_0(),
+                Some(Slot::Last) => el.rounded_r(radius).border_l_0(),
+            })
             .text_size(theme.text_size(text))
             .font_weight(FontWeight::MEDIUM)
             .text_color(tone.fg)
             .bg(tone.bg)
-            .border_1()
-            .border_color(tone.border)
             .when(self.full_width, |el| el.w_full())
             .when_some(self.icon, |el, name| el.child(icon(name)))
             .child(self.label)
             .when_some(self.trailing_icon, |el, name| el.child(icon(name)))
+            .when_some(hint, |el, hint| {
+                el.child(
+                    div()
+                        .pl_1()
+                        .font_weight(FontWeight::NORMAL)
+                        .text_color(tone.fg.opacity(0.55))
+                        .child(hint),
+                )
+            })
             .map(|el| {
                 if self.disabled {
                     return el.opacity(0.45).cursor_not_allowed();

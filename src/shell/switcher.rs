@@ -1,24 +1,22 @@
 use std::rc::Rc;
 
 use gpui::{
-    Animation, AnimationExt, AnyWindowHandle, App, ElementId, Entity, FocusHandle,
-    InteractiveElement, IntoElement, ParentElement, RenderOnce, StatefulInteractiveElement, Styled,
-    Window, div, prelude::*,
+    Animation, AnimationExt, AnyWindowHandle, App, ElementId, Entity, InteractiveElement,
+    IntoElement, ParentElement, RenderOnce, StatefulInteractiveElement, Styled, Window, div,
+    prelude::*,
 };
 
 use super::WindowManager;
 use crate::{
     motion,
-    primitives::{Backdrop, FocusNext, FocusPrev, Icon, IconName, Place},
+    primitives::{Backdrop, FocusNext, FocusPrev, Icon, IconName, Place, give_back, take_focus},
     theme::{ActiveTheme, ControlSize, Elevation, IconSize, Radius, TextSize},
     typography::Caption,
 };
 
+#[derive(Default)]
 struct Switch {
     selected: usize,
-    focus: FocusHandle,
-    opened: bool,
-    previous: Option<FocusHandle>,
 }
 
 type Close = Rc<dyn Fn(&mut Window, &mut App)>;
@@ -56,34 +54,16 @@ impl RenderOnce for WindowSwitcher {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let windows = WindowManager::windows(cx);
         let count = windows.len();
-        let state = window.use_keyed_state(self.id.clone(), cx, |_, cx| Switch {
-            selected: 0,
-            focus: cx.focus_handle(),
-            opened: false,
-            previous: None,
-        });
-        if !state.read(cx).opened {
-            let previous = window.focused(cx);
-            window.focus(&state.read(cx).focus.clone());
-            state.update(cx, |switch, _| {
-                switch.opened = true;
-                switch.previous = previous;
-            });
-        }
+        let state = window.use_keyed_state(self.id.clone(), cx, |_, _| Switch::default());
+        let takeover = take_focus(self.id.clone(), window, cx);
         if count > 0 && state.read(cx).selected >= count {
             state.update(cx, |switch, _| switch.selected = count - 1);
         }
         let selected = state.read(cx).selected;
         let close: Close = {
-            let (state, on_close) = (state.clone(), self.on_close);
+            let (takeover, on_close) = (takeover.clone(), self.on_close);
             Rc::new(move |window, cx| {
-                match state.read(cx).previous.clone() {
-                    Some(previous) => {
-                        window.focus(&previous);
-                        log::info!("window switcher: closed, focus handed back");
-                    }
-                    None => log::info!("window switcher: closed, nothing was focused before"),
-                }
+                give_back(&takeover, window, cx);
                 on_close(window, cx)
             })
         };
@@ -117,7 +97,7 @@ impl RenderOnce for WindowSwitcher {
         let handles: Vec<AnyWindowHandle> = windows.iter().map(|(handle, _)| *handle).collect();
         let (next, prev, keys) = (state.clone(), state.clone(), state.clone());
         let (close_keys, close_scrim) = (close.clone(), close);
-        let focus = state.read(cx).focus.clone();
+        let focus = takeover.read(cx).focus.clone();
         let panel = div()
             .id("window-switcher")
             .track_focus(&focus)

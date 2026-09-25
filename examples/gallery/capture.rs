@@ -100,6 +100,45 @@ pub fn number(window: &Window) -> Result<u32> {
     u32::try_from(number).context("window number out of range")
 }
 
+/// This process's frontmost window above the normal level: a popover or menu.
+#[cfg(target_os = "macos")]
+pub fn popup_number() -> Result<u32> {
+    use core_foundation::{
+        base::{CFType, TCFType},
+        dictionary::CFDictionary,
+        number::CFNumber,
+        string::CFString,
+    };
+    use core_graphics::window;
+
+    let read = |dict: &CFDictionary<CFString, CFType>, key: &'static str| {
+        dict.find(CFString::from_static_string(key))
+            .and_then(|value| value.downcast::<CFNumber>())
+            .and_then(|value| value.to_i64())
+    };
+    let pid = i64::from(std::process::id());
+    let list = window::copy_window_info(
+        window::kCGWindowListOptionOnScreenOnly,
+        window::kCGNullWindowID,
+    )
+    .context("window list unavailable")?;
+    let id = list
+        .iter()
+        .map(|item| unsafe { CFDictionary::<CFString, CFType>::wrap_under_get_rule(*item as _) })
+        .find(|dict| {
+            read(dict, "kCGWindowOwnerPID") == Some(pid)
+                && read(dict, "kCGWindowLayer").is_some_and(|layer| layer > 0)
+        })
+        .and_then(|dict| read(&dict, "kCGWindowNumber"))
+        .context("no popup window of this process is on screen")?;
+    u32::try_from(id).context("window number out of range")
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn popup_number() -> Result<u32> {
+    bail!("capture needs macOS window APIs")
+}
+
 #[cfg(not(target_os = "macos"))]
 pub fn number(_: &Window) -> Result<u32> {
     bail!("capture needs macOS window APIs")

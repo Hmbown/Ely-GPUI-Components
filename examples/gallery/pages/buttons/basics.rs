@@ -1,21 +1,11 @@
 use ely_gpui_component::{
-    buttons::{Button, ButtonVariant, IconButton},
+    buttons::{Button, ButtonGroup, ButtonVariant, IconButton},
     primitives::IconName,
     theme::ControlSize,
 };
-use gpui::{AnyElement, App, ElementId, IntoElement, ParentElement, Styled, Window, div};
+use gpui::{AnyElement, App, ElementId, IntoElement, ParentElement, Styled, div};
 
-use super::Page;
-use crate::ui::{row, section, specimen, specimens};
-
-pub const PAGE: Page = Page {
-    number: 5,
-    slug: "buttons",
-    title: "Buttons & Actions",
-    summary: "Seven variants, three sizes, one focus ring.",
-    render,
-    script: &[],
-};
+use crate::ui::{code, row, section, specimen, specimens};
 
 const VARIANTS: [(ButtonVariant, &str); 7] = [
     (ButtonVariant::Primary, "Primary"),
@@ -27,7 +17,7 @@ const VARIANTS: [(ButtonVariant, &str); 7] = [
     (ButtonVariant::Link, "Link"),
 ];
 
-fn render(_: &mut Window, cx: &mut App) -> AnyElement {
+pub fn basics(cx: &App) -> AnyElement {
     let sizes = [
         (ControlSize::Sm, "Small"),
         (ControlSize::Md, "Medium"),
@@ -127,6 +117,48 @@ fn render(_: &mut Window, cx: &mut App) -> AnyElement {
                     )
                 }),
             )),
+        )
+        .child(
+            section(
+                "ShortcutHint",
+                "The keystroke rides along, quiet, in the platform's spelling.",
+                cx,
+            )
+            .child(
+                row()
+                    .child(Button::new("hint-save", "Save").shortcut("cmd-s"))
+                    .child(
+                        Button::new("hint-find", "Find")
+                            .variant(ButtonVariant::Ghost)
+                            .icon(IconName::Search)
+                            .shortcut("cmd-shift-f"),
+                    ),
+            )
+            .child(code("Button::new(id, label).shortcut(\"cmd-s\")", cx)),
+        )
+        .child(
+            section("ButtonGroup", "Buttons joined edge to edge.", cx).child(
+                row()
+                    .child(
+                        ButtonGroup::new()
+                            .button(Button::new("group-day", "Day"))
+                            .button(Button::new("group-week", "Week"))
+                            .button(Button::new("group-month", "Month")),
+                    )
+                    .child(
+                        ButtonGroup::new()
+                            .button(
+                                Button::new("group-prev", "Previous")
+                                    .variant(ButtonVariant::Outline)
+                                    .icon(IconName::ChevronLeft),
+                            )
+                            .button(
+                                Button::new("group-next", "Next")
+                                    .variant(ButtonVariant::Outline)
+                                    .trailing_icon(IconName::ChevronRight),
+                            ),
+                    ),
+            ),
         )
         .into_any_element()
 }

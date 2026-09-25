@@ -11,6 +11,7 @@ mod tooltip;
 pub use backdrop::{Backdrop, Place};
 pub use divider::Divider;
 pub use focus::{FocusNext, FocusPrev, FocusRing, FocusScope};
+pub(crate) use focus::{give_back, take_focus};
 pub use ghost::DragGhost;
 pub use icon::{Icon, IconName};
 pub use image::Image;

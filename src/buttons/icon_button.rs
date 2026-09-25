@@ -1,10 +1,11 @@
 use gpui::{
-    App, ClickEvent, ElementId, IntoElement, MouseButton, RenderOnce, Window, div, prelude::*,
+    App, ClickEvent, ElementId, IntoElement, MouseButton, RenderOnce, SharedString, Window, div,
+    prelude::*,
 };
 
 use super::button::{ButtonVariant, ClickHandler, label_size, tone};
 use crate::{
-    primitives::{FocusRing, Icon, IconName},
+    primitives::{FocusRing, Icon, IconName, Tooltip},
     theme::{ActiveTheme, ControlSize, Radius},
 };
 
@@ -16,6 +17,7 @@ pub struct IconButton {
     variant: ButtonVariant,
     size: ControlSize,
     disabled: bool,
+    tooltip: Option<SharedString>,
     on_click: Option<ClickHandler>,
 }
 
@@ -27,6 +29,7 @@ impl IconButton {
             variant: ButtonVariant::Ghost,
             size: ControlSize::default(),
             disabled: false,
+            tooltip: None,
             on_click: None,
         }
     }
@@ -43,6 +46,12 @@ impl IconButton {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Names what the icon does, on hover.
+    pub fn tooltip(mut self, text: impl Into<SharedString>) -> Self {
+        self.tooltip = Some(text.into());
         self
     }
 
@@ -74,6 +83,7 @@ impl RenderOnce for IconButton {
             .border_1()
             .border_color(tone.border)
             .child(Icon::new(self.icon).size(icon_size).color(tone.fg))
+            .when_some(self.tooltip, |el, text| el.tooltip(Tooltip::text(text)))
             .map(|el| {
                 if self.disabled {
                     return el.opacity(0.45).cursor_not_allowed();

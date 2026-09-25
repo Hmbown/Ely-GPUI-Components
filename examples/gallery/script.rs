@@ -4,7 +4,7 @@ use anyhow::{Context as _, Result};
 use gpui::{AsyncApp, Bounds, Keystroke, Pixels, Point, WindowHandle, point, px};
 
 use crate::{
-    capture::{number, snapshot},
+    capture::{number, popup_number, snapshot},
     probe::{Opened, Probes},
     shell::Gallery,
 };
@@ -35,6 +35,10 @@ pub enum Step {
     CloseNative(&'static str),
     /// Fails unless the window is gone.
     ExpectClosed(&'static str),
+    /// Photographs this app's frontmost popup, such as the share picker.
+    ShotPopup(&'static str),
+    /// Posts a key to AppKit itself; only `escape` is known.
+    NativeKey(&'static str),
 }
 
 const FRAME: Duration = Duration::from_millis(120);
@@ -152,6 +156,16 @@ pub async fn play(
                 let number = opened(key, cx)?.update(cx, |_, window, _| number(window))??;
                 perform_close(number)?;
             }
+            Step::ShotPopup(name) => {
+                let file = path(name);
+                snapshot(popup_number()?, &file)?;
+                log::info!("script: wrote {}", file.display());
+            }
+            Step::NativeKey(key) => {
+                anyhow::ensure!(key == "escape", "native key {key} is not known");
+                let number = window.update(cx, |_, window, _| number(window))??;
+                post_escape(number)?;
+            }
             Step::ExpectClosed(key) => {
                 let handle = opened(key, cx)?;
                 let open = cx.update(|cx| cx.windows().contains(&handle))?;
@@ -213,6 +227,40 @@ fn post(kind: Mouse, x: f64, y: f64, number: u32) -> Result<()> {
         NSApp().postEvent_atStart_(event, NO);
     }
     Ok(())
+}
+
+/// Queues an Escape key press on this app, for AppKit popovers.
+#[cfg(target_os = "macos")]
+fn post_escape(number: u32) -> Result<()> {
+    use cocoa::{
+        appkit::{NSApp, NSApplication, NSEvent, NSEventModifierFlags, NSEventType},
+        base::{NO, id, nil},
+        foundation::{NSPoint, NSString},
+    };
+    unsafe {
+        let escape = NSString::alloc(nil).init_str("\u{1b}");
+        let event = <id as NSEvent>::keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode_(
+            nil,
+            NSEventType::NSKeyDown,
+            NSPoint::new(0.0, 0.0),
+            NSEventModifierFlags::empty(),
+            0.0,
+            i64::from(number),
+            nil,
+            escape,
+            escape,
+            NO,
+            53,
+        );
+        anyhow::ensure!(event != nil, "AppKit refused a synthetic key event");
+        NSApp().postEvent_atStart_(event, NO);
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn post_escape(_: u32) -> Result<()> {
+    anyhow::bail!("native keys need macOS")
 }
 
 /// Runs `performClose:` on a window, which asks before closing.

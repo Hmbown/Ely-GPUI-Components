@@ -1,6 +1,6 @@
 use gpui::{
-    AnyElement, App, Div, FocusHandle, InteractiveElement, IntoElement, ParentElement, RenderOnce,
-    StyleRefinement, Styled, Window, actions, div,
+    AnyElement, App, Div, Entity, FocusHandle, InteractiveElement, IntoElement, ParentElement,
+    RenderOnce, StyleRefinement, Styled, Window, actions, div,
 };
 
 use crate::theme::ActiveTheme;
@@ -92,5 +92,45 @@ fn step(scope: &FocusHandle, trap: bool, forward: bool, window: &mut Window, cx:
     log::warn!("focus scope: trap holds no tab stop; focus stays");
     if let Some(origin) = origin {
         window.focus(&origin);
+    }
+}
+
+/// Focus an overlay holds while open, and what it held before.
+pub(crate) struct Takeover {
+    pub focus: FocusHandle,
+    previous: Option<FocusHandle>,
+    taken: bool,
+}
+
+/// Keyed focus for an overlay; focused on its first render.
+pub(crate) fn take_focus(
+    key: impl Into<gpui::ElementId>,
+    window: &mut Window,
+    cx: &mut App,
+) -> Entity<Takeover> {
+    let state = window.use_keyed_state(key, cx, |_, cx| Takeover {
+        focus: cx.focus_handle(),
+        previous: None,
+        taken: false,
+    });
+    if !state.read(cx).taken {
+        let previous = window.focused(cx);
+        window.focus(&state.read(cx).focus.clone());
+        state.update(cx, |takeover, _| {
+            takeover.previous = previous;
+            takeover.taken = true;
+        });
+    }
+    state
+}
+
+/// Returns focus to whatever held it before the overlay opened.
+pub(crate) fn give_back(state: &Entity<Takeover>, window: &mut Window, cx: &App) {
+    match state.read(cx).previous.clone() {
+        Some(previous) => {
+            window.focus(&previous);
+            log::info!("focus: handed back after an overlay");
+        }
+        None => log::info!("focus: overlay closed, nothing was focused before"),
     }
 }
