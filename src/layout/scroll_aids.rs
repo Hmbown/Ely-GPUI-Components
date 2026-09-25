@@ -177,11 +177,12 @@ impl RenderOnce for StickyHeader {
                     .child((self.header)(window, cx))
                     .child(
                         canvas(
-                            move |bounds, _, cx| {
+                            move |bounds, window, cx| {
                                 if header_state.read(cx).header != bounds.size.height {
                                     header_state.update(cx, |at, cx| {
                                         at.header = bounds.size.height;
                                         cx.notify();
+                                        window.request_animation_frame();
                                     });
                                 }
                             },
@@ -196,7 +197,7 @@ impl RenderOnce for StickyHeader {
             .children(self.body)
             .child(
                 canvas(
-                    move |bounds, _, cx| {
+                    move |bounds, window, cx| {
                         let content_top = handle.bounds().top() + handle.offset().y;
                         let (top, height) = (bounds.top() - content_top, bounds.size.height);
                         let at = *section_state.read(cx);
@@ -205,6 +206,7 @@ impl RenderOnce for StickyHeader {
                                 at.top = top;
                                 at.height = height;
                                 cx.notify();
+                                window.request_animation_frame();
                             });
                         }
                     },

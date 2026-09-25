@@ -8,7 +8,7 @@ use gpui::{
 type BoundsHandler = Rc<dyn Fn(Bounds<Pixels>, &mut Window, &mut App)>;
 type VisibilityHandler = Rc<dyn Fn(bool, &mut Window, &mut App)>;
 
-/// A div that reports its bounds whenever they change.
+/// A div that reports its bounds whenever they change, then draws once more so what the report changed shows.
 #[derive(IntoElement)]
 pub struct Measure {
     id: ElementId,
@@ -51,6 +51,7 @@ impl RenderOnce for Measure {
                     if *last.read(cx) != Some(bounds) {
                         last.update(cx, |seen, _| *seen = Some(bounds));
                         on_measure(bounds, window, cx);
+                        window.request_animation_frame();
                     }
                 },
                 |_, _, _, _| {},
@@ -63,7 +64,7 @@ impl RenderOnce for Measure {
     }
 }
 
-/// A div that reports when it enters or leaves the visible area.
+/// A div that reports when it enters or leaves the visible area, then draws once more so what the report changed shows.
 #[derive(IntoElement)]
 pub struct IntersectionObserver {
     id: ElementId,
@@ -107,6 +108,7 @@ impl RenderOnce for IntersectionObserver {
                     if *last.read(cx) != Some(visible) {
                         last.update(cx, |seen, _| *seen = Some(visible));
                         on_change(visible, window, cx);
+                        window.request_animation_frame();
                     }
                 },
                 |_, _, _, _| {},

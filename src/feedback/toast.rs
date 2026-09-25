@@ -341,11 +341,12 @@ fn card(
         .child(card)
         .child(
             canvas(
-                move |bounds, _, cx| {
+                move |bounds, window, cx| {
                     if *height.read(cx) != bounds.size.height {
                         height.update(cx, |height, cx| {
                             *height = bounds.size.height;
                             cx.notify();
+                            window.request_animation_frame();
                         });
                     }
                 },

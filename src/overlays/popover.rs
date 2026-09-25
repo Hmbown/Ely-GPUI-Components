@@ -97,11 +97,12 @@ impl RenderOnce for Popover {
             .child(trigger)
             .child(
                 canvas(
-                    move |bounds, _, cx| {
+                    move |bounds, window, cx| {
                         if measure.read(cx).host != bounds {
                             measure.update(cx, |pop, cx| {
                                 pop.host = bounds;
                                 cx.notify();
+                                window.request_animation_frame();
                             });
                         }
                     },
@@ -150,11 +151,12 @@ impl RenderOnce for Popover {
             )
             .child(
                 canvas(
-                    move |bounds, _, cx| {
+                    move |bounds, window, cx| {
                         if tall.read(cx).height != bounds.size.height {
                             tall.update(cx, |pop, cx| {
                                 pop.height = bounds.size.height;
                                 cx.notify();
+                                window.request_animation_frame();
                             });
                         }
                     },

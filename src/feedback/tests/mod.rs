@@ -5,6 +5,7 @@ use gpui::{
     Modifiers, ParentElement, Render, Styled, TestAppContext, VisualTestContext, Window, point, px,
 };
 
+mod loading;
 mod states;
 
 use super::{Alert, Notification, NotificationCenter, Toast, ToastViewport, Toaster};

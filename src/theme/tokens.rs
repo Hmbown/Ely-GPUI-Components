@@ -171,6 +171,11 @@ impl Theme {
         px_to_rems(2.0)
     }
 
+    /// A progress ring's width, room for a percent inside.
+    pub fn progress_ring(&self) -> Rems {
+        px_to_rems(48.0)
+    }
+
     pub fn about_window(&self) -> Size<Pixels> {
         size(px(360.0), px(400.0))
     }

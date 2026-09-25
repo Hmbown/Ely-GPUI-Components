@@ -46,11 +46,12 @@ impl ParentElement for Collapsible {
 
 fn measured(state: Entity<Fold>) -> impl IntoElement {
     canvas(
-        move |bounds, _, cx| {
+        move |bounds, window, cx| {
             if state.read(cx).height != bounds.size.height {
                 state.update(cx, |fold, cx| {
                     fold.height = bounds.size.height;
                     cx.notify();
+                    window.request_animation_frame();
                 });
             }
         },

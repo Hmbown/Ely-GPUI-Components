@@ -39,8 +39,9 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T10a Feedback · Messages
 - [x] T10b Feedback · States
 - [x] T11a Loading · Spinners & skeletons — `tasks/ch11-20.md`
-- [ ] T11b Loading · Progress & states
-- [ ] T11c Motion
+- [x] T11b Loading · Progress & states
+- [ ] T11c Motion · Presence & order
+- [ ] T11d Motion · Effects
 - [ ] T12 Data Display
 - [ ] T13 Lists & Trees
 - [ ] T14 Tables
@@ -170,3 +171,5 @@ Per-component lines live in `tasks/`. Tags there:
 | T11a | 1 | FAIL | the shimmer band crossed the container's rounded corners, and the skeleton card's picture height was a literal |
 | T11a | 2 | FAIL | a rounded_full shimmer used the raw 9999px radius, so the band's path left the box |
 | T11a | 3 | PASS | |
+| T11b | 1 | FAIL | the sweeping bar grew in a tall flex column, the overlay's veil ignored rounded corners, the fail demo could not start a load, and two UploadList docs said more than the rows show |
+| T11b | 2 | PASS | |

@@ -223,11 +223,12 @@ impl RenderOnce for Lightbox {
                                     .child(picture)
                                     .child(
                                         canvas(
-                                            move |bounds, _, cx| {
+                                            move |bounds, window, cx| {
                                                 if area.read(cx) != &bounds.size {
                                                     area.update(cx, |area, cx| {
                                                         *area = bounds.size;
                                                         cx.notify();
+                                                        window.request_animation_frame();
                                                     });
                                                 }
                                             },

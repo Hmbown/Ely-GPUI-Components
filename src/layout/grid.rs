@@ -22,11 +22,12 @@ fn shortest(heights: &[Pixels]) -> usize {
 
 fn measure_width(state: gpui::Entity<Pixels>) -> impl IntoElement {
     canvas(
-        move |bounds, _, cx| {
+        move |bounds, window, cx| {
             if *state.read(cx) != bounds.size.width {
                 state.update(cx, |width, cx| {
                     *width = bounds.size.width;
                     cx.notify();
+                    window.request_animation_frame();
                 });
             }
         },
@@ -135,11 +136,12 @@ impl RenderOnce for Masonry {
                     .child(child)
                     .child(
                         canvas(
-                            move |bounds, _, cx| {
+                            move |bounds, window, cx| {
                                 if state.read(cx)[ix] != bounds.size.height {
                                     state.update(cx, |heights, cx| {
                                         heights[ix] = bounds.size.height;
                                         cx.notify();
+                                        window.request_animation_frame();
                                     });
                                 }
                             },

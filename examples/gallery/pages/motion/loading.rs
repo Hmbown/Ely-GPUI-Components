@@ -20,7 +20,7 @@ use crate::{
 };
 
 /// Sets `state` to `value` after `wait`, as a slow server would answer.
-fn later<T: 'static>(state: &Entity<T>, value: T, wait: Duration, cx: &mut App) {
+pub fn later<T: 'static>(state: &Entity<T>, value: T, wait: Duration, cx: &mut App) {
     let state = state.clone();
     cx.spawn(async move |cx| {
         cx.background_executor().timer(wait).await;

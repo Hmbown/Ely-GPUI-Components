@@ -87,12 +87,13 @@ pub(crate) fn slide(
 /// Records item `ix`'s span; place it as an absolute child that fills the item.
 pub(crate) fn measure_item(state: Entity<Slide>, ix: usize, axis: Axis) -> impl IntoElement {
     canvas(
-        move |bounds: Bounds<Pixels>, _, cx| {
+        move |bounds: Bounds<Pixels>, window, cx| {
             let span = Some(axis.span(bounds, state.read(cx).origin));
             if state.read(cx).spans.get(ix) != Some(&span) {
                 state.update(cx, |slide, cx| {
                     slide.spans[ix] = span;
                     cx.notify();
+                    window.request_animation_frame();
                 });
             }
         },
@@ -107,12 +108,13 @@ pub(crate) fn measure_item(state: Entity<Slide>, ix: usize, axis: Axis) -> impl 
 /// Records where the container starts; place it as an absolute child that fills it.
 pub(crate) fn measure_origin(state: Entity<Slide>, axis: Axis) -> impl IntoElement {
     canvas(
-        move |bounds: Bounds<Pixels>, _, cx| {
+        move |bounds: Bounds<Pixels>, window, cx| {
             let start = axis.start(bounds);
             if state.read(cx).origin != start {
                 state.update(cx, |slide, cx| {
                     slide.origin = start;
                     cx.notify();
+                    window.request_animation_frame();
                 });
             }
         },

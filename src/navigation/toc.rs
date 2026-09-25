@@ -69,7 +69,7 @@ impl RenderOnce for Anchor {
         let (sections, value) = (self.sections, self.value);
         div().relative().children(self.children).child(
             canvas(
-                move |bounds, _, cx| {
+                move |bounds, window, cx| {
                     if sections.read(cx).spot(&value) == Some(bounds) {
                         return;
                     }
@@ -79,6 +79,7 @@ impl RenderOnce for Anchor {
                             None => sections.spots.push((value.clone(), bounds)),
                         }
                         cx.notify();
+                        window.request_animation_frame();
                     });
                 },
                 |_, _, _, _| {},

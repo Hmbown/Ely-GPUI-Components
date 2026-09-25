@@ -174,11 +174,12 @@ fn light(
         .child(card)
         .child(
             canvas(
-                move |bounds, _, cx| {
+                move |bounds, window, cx| {
                     if measure.read(cx).card != bounds.size.height {
                         measure.update(cx, |lit, cx| {
                             lit.card = bounds.size.height;
                             cx.notify();
+                            window.request_animation_frame();
                         });
                     }
                 },

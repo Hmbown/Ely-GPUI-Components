@@ -84,11 +84,12 @@ impl RenderOnce for HoverCard {
             })
             .child(
                 canvas(
-                    move |bounds, _, cx| {
+                    move |bounds, window, cx| {
                         if measure.read(cx).host != bounds {
                             measure.update(cx, |hover, cx| {
                                 hover.host = bounds;
                                 cx.notify();
+                                window.request_animation_frame();
                             });
                         }
                     },
@@ -114,11 +115,12 @@ impl RenderOnce for HoverCard {
             .child((self.content)(window, cx))
             .child(
                 canvas(
-                    move |bounds, _, cx| {
+                    move |bounds, window, cx| {
                         if tall.read(cx).height != bounds.size.height {
                             tall.update(cx, |hover, cx| {
                                 hover.height = bounds.size.height;
                                 cx.notify();
+                                window.request_animation_frame();
                             });
                         }
                     },

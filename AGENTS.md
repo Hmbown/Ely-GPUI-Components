@@ -49,7 +49,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - The capture harness finds gpui windows by handle through `raw-window-handle`. AppKit popups, which gpui does not own, come from the window list by process and level.
 - Posted events cannot move a macOS window, so window drags are not scripted. `drag_region` follows Zed's title bar.
 - An overlay takes focus with `primitives::take_focus` and returns it with `give_back` on every close path. While open, it takes focus back whenever the focused element leaves the tree (gpui's `on_focus_lost`).
-- A state change made outside render calls `cx.notify()`, or nothing redraws.
+- A state change made outside render calls `cx.notify()`, or nothing redraws. A notify made while drawing, as in a canvas's prepaint, marks the view but schedules no frame (gpui's `invalidate_view`), so it also calls `window.request_animation_frame()`.
 - The macOS share picker draws its content in another process; a capture shows only its frame.
 - NSColorSampler runs in another process too. The harness cannot pick or cancel with it; `read_srgb` is tested on a constructed `NSColor` instead.
 - Every text field is a `forms::TextInput` entity. Its keys live under the `ElyInput` context, bound in `init`. Wrappers take Up, Down, Enter and Backspace first with `capture_action`.

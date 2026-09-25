@@ -3,6 +3,7 @@ mod colors;
 mod dates;
 mod other;
 mod structure;
+mod upload;
 
 use gpui::{
     AppContext as _, Context, Entity, EntityInputHandler, IntoElement, KeyUpEvent, Keystroke,

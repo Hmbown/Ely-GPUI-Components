@@ -240,9 +240,10 @@ pub(super) fn measure(
     write: impl Fn(&mut Open, Bounds<Pixels>) -> bool + 'static,
 ) -> impl IntoElement {
     canvas(
-        move |bounds, _, cx| {
+        move |bounds, window, cx| {
             if state.update(cx, |open, _| write(open, bounds)) {
                 state.update(cx, |_, cx| cx.notify());
+                window.request_animation_frame();
             }
         },
         |_, _, _, _| {},

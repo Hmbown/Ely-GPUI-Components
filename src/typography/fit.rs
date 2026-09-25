@@ -147,6 +147,7 @@ impl RenderOnce for EllipsisTooltip {
                             cut.update(cx, |cut, cx| {
                                 *cut = overflow;
                                 cx.notify();
+                                window.request_animation_frame();
                             });
                         }
                     },

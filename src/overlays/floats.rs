@@ -53,13 +53,14 @@ impl RenderOnce for FloatingToolbar {
             .id(self.id.clone())
             .child(canvas(
                 |_, _, _| {},
-                move |_, _, _, cx| {
+                move |_, _, window, cx| {
                     let now = field.read(cx).bounds_for(from);
                     if now != start {
                         log::debug!("floating toolbar: the selection moved to {now:?}");
                         seen.update(cx, |seen, cx| {
                             *seen = now;
                             cx.notify();
+                            window.request_animation_frame();
                         });
                     }
                 },

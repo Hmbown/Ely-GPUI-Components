@@ -1,12 +1,12 @@
 use gpui::{
-    Animation, AnimationExt, AnyElement, App, AppContext, Bounds, IntoElement, ParentElement,
-    RenderOnce, SharedString, Styled, Window, WindowBounds, WindowHandle, WindowOptions, div,
-    prelude::*, relative,
+    Animation, AnimationExt, App, AppContext, Bounds, IntoElement, ParentElement, RenderOnce,
+    SharedString, Styled, Window, WindowBounds, WindowHandle, WindowOptions, div, prelude::*,
+    relative,
 };
 
 use super::{Hosted, open_hosted};
 use crate::{
-    motion,
+    motion::{self, ProgressBar},
     primitives::{Icon, IconName},
     theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
     typography::{Caption, CopyableText, ExternalLink, Paragraph, Title},
@@ -30,50 +30,6 @@ fn mark(name: &SharedString, icon: Option<IconName>, cx: &App) -> impl IntoEleme
             Some(icon) => tile.child(Icon::new(icon).size(IconSize::Xxl)),
             None => tile.child(initial),
         })
-}
-
-/// A thin track: `Some` fills to the value, `None` sweeps.
-pub(super) fn progress_track(value: Option<f32>, cx: &App) -> AnyElement {
-    let theme = cx.theme();
-    let colors = &theme.colors;
-    let fill = div()
-        .absolute()
-        .top_0()
-        .h_full()
-        .rounded_full()
-        .bg(colors.fg);
-    let track = div()
-        .relative()
-        .w_full()
-        .h(theme.progress_thickness())
-        .rounded_full()
-        .overflow_hidden()
-        .bg(colors.border);
-    match value {
-        Some(value) => {
-            assert!(
-                (0.0..=1.0).contains(&value),
-                "progress {value} is not 0..=1"
-            );
-            track
-                .child(fill.left_0().w(relative(value)))
-                .into_any_element()
-        }
-        None if theme.reduced_motion => track
-            .child(fill.left(relative(0.35)).w(relative(0.3)))
-            .into_any_element(),
-        None => track
-            .child(
-                fill.w(relative(0.3)).with_animation(
-                    "progress-sweep",
-                    Animation::new(motion::duration(motion::SLOW, cx) * 4)
-                        .repeat()
-                        .with_easing(motion::ease_in_out_cubic),
-                    |bar, t| bar.left(relative(-0.3 + 1.3 * t)),
-                ),
-            )
-            .into_any_element(),
-    }
 }
 
 /// Name, version, credits: the About window's content.
@@ -243,7 +199,10 @@ impl RenderOnce for SplashScreen {
         let theme = cx.theme();
         let colors = &theme.colors;
         let enter = motion::duration(motion::SLOW, cx);
-        let track = progress_track(self.progress, cx);
+        let track = match self.progress {
+            Some(value) => ProgressBar::new("splash-progress", value).into_any_element(),
+            None => ProgressBar::indeterminate("splash-progress").into_any_element(),
+        };
         div()
             .size_full()
             .flex()

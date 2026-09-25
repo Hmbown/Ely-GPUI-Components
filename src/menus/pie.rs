@@ -218,12 +218,13 @@ impl RenderOnce for PieMenu {
             .children(bubbles)
             .child(
                 canvas(
-                    move |bounds: Bounds<Pixels>, _, cx| {
+                    move |bounds: Bounds<Pixels>, window, cx| {
                         let center = bounds.center();
                         if measure.read(cx).center != center {
                             measure.update(cx, |pie, cx| {
                                 pie.center = center;
                                 cx.notify();
+                                window.request_animation_frame();
                             });
                         }
                     },

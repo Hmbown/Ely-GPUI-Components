@@ -5,10 +5,11 @@ use gpui::{
     Window, WindowHandle, div, prelude::*,
 };
 
-use super::{Hosted, dialogs::progress_track, open_hosted};
+use super::{Hosted, open_hosted};
 use crate::{
     buttons::{Button, ButtonVariant, IconButton},
     layout::ScrollArea,
+    motion::ProgressBar,
     primitives::{Icon, IconName},
     theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
     typography::{Caption, Label, Title},
@@ -33,9 +34,11 @@ struct Actions {
     later: Option<Action>,
 }
 
-fn progress_line(state: UpdateState, cx: &App) -> Option<AnyElement> {
+fn progress_line(state: UpdateState) -> Option<AnyElement> {
     match state {
-        UpdateState::Downloading(value) => Some(progress_track(Some(value), cx)),
+        UpdateState::Downloading(value) => {
+            Some(ProgressBar::new("update-progress", value).into_any_element())
+        }
         _ => None,
     }
 }
@@ -159,7 +162,7 @@ impl RenderOnce for UpdateBanner {
                         .on_click(move |_, window, cx| dismiss(window, cx)),
                 )
             })
-            .when_some(progress_line(self.state, cx), |banner, line| {
+            .when_some(progress_line(self.state), |banner, line| {
                 banner.child(div().absolute().left_0().right_0().bottom_0().child(line))
             })
     }
@@ -258,9 +261,7 @@ impl RenderOnce for UpdateDialog {
                         ),
                     ),
             )
-            .when_some(progress_line(self.state, cx), |dialog, line| {
-                dialog.child(line)
-            })
+            .when_some(progress_line(self.state), |dialog, line| dialog.child(line))
             .child(div().flex().justify_end().gap_2().children(buttons(
                 self.state,
                 &self.actions,
