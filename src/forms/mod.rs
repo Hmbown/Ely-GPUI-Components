@@ -1,3 +1,4 @@
+mod avatar;
 mod card;
 mod cascade;
 mod catalogs;
@@ -43,6 +44,7 @@ mod transfer;
 mod unit;
 mod upload;
 
+pub use avatar::AvatarUpload;
 pub use card::{CheckboxCard, RadioCard};
 pub use cascade::{Cascade, Cascader};
 pub use catalogs::FontPicker;

@@ -36,7 +36,7 @@ pub(crate) fn dropped(paths: &[PathBuf], multiple: bool) -> Result<Vec<PathBuf>,
 }
 
 /// A drop target while files hover: focus-tinted when it takes them, danger-tinted when not.
-fn hovering(style: StyleRefinement, takes: bool, cx: &App) -> StyleRefinement {
+pub(super) fn hovering(style: StyleRefinement, takes: bool, cx: &App) -> StyleRefinement {
     let colors = &cx.theme().colors;
     if takes {
         style.border_color(colors.focus).bg(colors.selection)

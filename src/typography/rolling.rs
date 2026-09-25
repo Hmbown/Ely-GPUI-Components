@@ -1,5 +1,5 @@
 use gpui::{
-    Animation, AnimationExt, App, ElementId, InteractiveElement, IntoElement, ParentElement,
+    Animation, AnimationExt, App, ElementId, Hsla, InteractiveElement, IntoElement, ParentElement,
     RenderOnce, SharedString, Styled, Window, div,
 };
 
@@ -33,6 +33,7 @@ pub struct AnimatedNumber {
     value: f64,
     decimals: usize,
     pad: usize,
+    color: Option<Hsla>,
     tween: Tween,
     size: TextSize,
 }
@@ -44,6 +45,7 @@ impl AnimatedNumber {
             value,
             decimals: 0,
             pad: 0,
+            color: None,
             tween: Tween::Roll,
             size: TextSize::Xxl,
         }
@@ -57,6 +59,12 @@ impl AnimatedNumber {
     /// Zero-pads to `width` characters, as a clock shows minutes.
     pub fn pad(mut self, width: usize) -> Self {
         self.pad = width;
+        self
+    }
+
+    /// Defaults to the text color.
+    pub fn color(mut self, color: Hsla) -> Self {
+        self.color = Some(color);
         self
     }
 
@@ -124,7 +132,7 @@ impl RenderOnce for AnimatedNumber {
             .overflow_hidden()
             .text_size(size)
             .line_height(line)
-            .text_color(theme.colors.fg);
+            .text_color(self.color.unwrap_or(theme.colors.fg));
 
         if self.tween == Tween::Count {
             return row.child(div().with_animation(

@@ -18,6 +18,17 @@ pub enum ControlSize {
     Lg,
 }
 
+/// How large an avatar is.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum AvatarSize {
+    Xs,
+    Sm,
+    #[default]
+    Md,
+    Lg,
+    Xl,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum IconSize {
     Xs,
@@ -95,6 +106,16 @@ impl Theme {
             Density::Comfortable => 2.0,
         };
         px_to_rems(base + delta)
+    }
+
+    pub fn avatar_size(&self, size: AvatarSize) -> Rems {
+        px_to_rems(match size {
+            AvatarSize::Xs => 20.0,
+            AvatarSize::Sm => 24.0,
+            AvatarSize::Md => 32.0,
+            AvatarSize::Lg => 40.0,
+            AvatarSize::Xl => 56.0,
+        })
     }
 
     pub fn icon_size(&self, size: IconSize) -> Rems {

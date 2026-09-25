@@ -42,7 +42,9 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T11b Loading · Progress & states
 - [x] T11c Motion · Presence & order
 - [x] T11d Motion · Effects
-- [ ] T12 Data Display
+- [ ] T12a Data Display · People & numbers
+- [ ] T12b Data Display · Records
+- [ ] T12c Data Display · Media & measures
 - [ ] T13 Lists & Trees
 - [ ] T14 Tables
 - [ ] T15 Charts
@@ -179,3 +181,4 @@ Per-component lines live in `tasks/`. Tags there:
 | T11d | 1 | FAIL | the ripple drew inverted columns in a cut corner, motes crossed rounded corners, a narrow marquee jumped, confetti burst on a falling count, and the Lottie note misread velato |
 | T11d | 2 | FAIL | Marquee's doc still said its content is drawn twice |
 | T11d | 3 | PASS | |
+| T12a | 1 | — | pending: codex answered 401 on every request; committed unreviewed, reviewed from its commit once codex logs in |

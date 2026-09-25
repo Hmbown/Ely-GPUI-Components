@@ -89,6 +89,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - Text wraps at the width its box had when measured. A cross-axis `max_w` comes too late, and a flex column counts wrapped text as one line. Put prose in a plain block inside a flex row with `flex_1().max_w(..)` (`feedback::states`).
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.
 - gpui's `img` takes its picture's pixel size for any `Auto` side, and its aspect ratio beats percent heights in flow. `Image` pins it absolute at full size, so an `Image` needs a sized box.
+- Badges, tags and avatars live in `data_display`; forms and shell draw theirs from there, and `data_display` imports neither. Avatars take square pictures.
 - `img()` keeps loading state only with an id. Content masks are rectangles, so rounded corners survive only when the image fills its box without cropping.
 
 ## Decisions

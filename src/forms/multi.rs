@@ -10,9 +10,9 @@ use super::{
     listbox::chosen,
     options::{OnValues, Pick, Popup, step},
     select::{Picker, measure_anchor, moved},
-    tags::chip,
 };
 use crate::{
+    data_display::Tag,
     primitives::{Icon, IconName, tab_stop},
     theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
 };
@@ -125,14 +125,13 @@ impl RenderOnce for MultiSelect {
             .map(|(ix, choice)| {
                 let (choices, selected, commit) =
                     (choices.clone(), selected.clone(), commit.clone());
-                chip(
-                    ("chip-remove", ix).into(),
+                Tag::new(
+                    (self.id.clone(), format!("chip-{ix}")),
                     choice.label.clone(),
-                    Rc::new(move |window, cx| {
-                        commit(&chosen(&choices, &selected, ix, true), window, cx)
-                    }),
-                    cx,
                 )
+                .on_remove(move |window, cx| {
+                    commit(&chosen(&choices, &selected, ix, true), window, cx)
+                })
             })
             .collect();
         let (click, keys, rows, close) = (

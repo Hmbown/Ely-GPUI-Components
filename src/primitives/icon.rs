@@ -62,6 +62,7 @@ icons! {
     CalendarDays => "calendar-days",
     CalendarRange => "calendar-range",
     Calendar => "calendar",
+    Camera => "camera",
     ChartBar => "chart-bar",
     ChartCandlestick => "chart-candlestick",
     ChartLine => "chart-line",

@@ -6,9 +6,10 @@ use gpui::{
 };
 
 use crate::{
+    data_display::CountBadge,
     motion,
     primitives::{Icon, IconName, Tooltip},
-    theme::{ActiveTheme, IconSize, TextSize},
+    theme::{ActiveTheme, IconSize},
 };
 
 /// One destination on an activity bar.
@@ -150,19 +151,10 @@ impl RenderOnce for ActivityBar {
                     )
                 })
                 .when_some(item.badge, |entry, count| {
-                    entry.child(
-                        div()
-                            .absolute()
-                            .top_1()
-                            .right_1()
-                            .px_1()
-                            .rounded_full()
-                            .bg(colors.accent)
-                            .text_color(colors.on_accent)
-                            .text_size(theme.text_size(TextSize::Xs))
-                            .line_height(theme.text_size(TextSize::Md))
-                            .child(SharedString::from(count.to_string())),
-                    )
+                    entry.child(div().absolute().top_1().right_1().child(CountBadge::new(
+                        SharedString::from(format!("activity-badge-{}", item.id)),
+                        count as usize,
+                    )))
                 })
         };
         let column = || div().flex().flex_col();
