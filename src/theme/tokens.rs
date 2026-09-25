@@ -261,6 +261,11 @@ impl Theme {
         (px_to_rems(48.0), px_to_rems(3.0))
     }
 
+    /// Height of a color picker's saturation and value plane.
+    pub fn color_plane(&self) -> Rems {
+        px_to_rems(152.0)
+    }
+
     /// Tallest a list grows before it scrolls.
     pub fn list_max_height(&self) -> Rems {
         px_to_rems(280.0)

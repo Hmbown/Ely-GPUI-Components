@@ -1,4 +1,5 @@
 mod choices;
+mod colors;
 mod dates;
 mod formats;
 mod numbers;
@@ -216,6 +217,26 @@ const SCRIPT: &[Step] = &[
     Step::Type("*/15 9-17 * * 1-5"),
     Step::Wait(200),
     Step::Shot("cron"),
+    Step::DownAt("color-picker", 60.0, 40.0),
+    Step::DragTo("color-picker", 200.0, 60.0),
+    Step::UpAt("color-picker", 200.0, 60.0),
+    Step::Wait(300),
+    Step::Shot("color"),
+    Step::DownAt("color-picker", 100.0, 228.0),
+    Step::UpAt("color-picker", 100.0, 228.0),
+    Step::Wait(200),
+    Step::Key("down"),
+    Step::Key("enter"),
+    Step::Wait(300),
+    Step::Shot("color-rgb"),
+    Step::DownAt("palette", 50.0, 14.0),
+    Step::UpAt("palette", 50.0, 14.0),
+    Step::Wait(300),
+    Step::Shot("swatches"),
+    Step::DownAt("gradient", 108.0, 16.0),
+    Step::UpAt("gradient", 108.0, 16.0),
+    Step::Wait(300),
+    Step::Shot("gradient"),
     Step::Rest,
 ];
 
@@ -259,5 +280,8 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(dates::periods(window, cx))
         .child(dates::more(window, cx))
         .child(dates::cron(window, cx))
+        .child(colors::picker(window, cx))
+        .child(colors::swatches(window, cx))
+        .child(colors::gradient(window, cx))
         .into_any_element()
 }

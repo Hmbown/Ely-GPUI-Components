@@ -3,6 +3,7 @@ mod cascade;
 mod check;
 mod checked;
 mod chips;
+mod color;
 mod combobox;
 mod date;
 mod expression;
@@ -40,6 +41,7 @@ pub use cascade::{Cascade, Cascader};
 pub use check::{CheckState, Checkbox, CheckboxGroup};
 pub use checked::{EmailInput, UrlInput};
 pub use chips::ChoiceChips;
+pub use color::{ColorPalette, ColorPicker, ColorSwatch, EyeDropper, GradientEditor, GradientStop};
 pub use combobox::Combobox;
 pub use date::{
     Calendar, CronEditor, CronRule, DatePicker, DateRangePicker, DateTimePicker, DurationPicker,

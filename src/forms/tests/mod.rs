@@ -1,4 +1,5 @@
 mod choices;
+mod colors;
 mod dates;
 
 use gpui::{

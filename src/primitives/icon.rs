@@ -187,6 +187,7 @@ icons! {
     PhoneOff => "phone-off",
     Phone => "phone",
     PictureInPicture2 => "picture-in-picture-2",
+    Pipette => "pipette",
     PinOff => "pin-off",
     Pin => "pin",
     Play => "play",

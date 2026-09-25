@@ -47,6 +47,7 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - An overlay takes focus with `primitives::take_focus` and returns it with `give_back` on every close path.
 - A state change made outside render calls `cx.notify()`, or nothing redraws.
 - The macOS share picker draws its content in another process; a capture shows only its frame.
+- NSColorSampler runs in another process too. The harness cannot pick or cancel with it; `read_srgb` is tested on a constructed `NSColor` instead.
 - Every text field is a `forms::TextInput` entity. Its keys live under the `ElyInput` context, bound in `init`. Wrappers take Up, Down, Enter and Backspace first with `capture_action`.
 - `TextInput::bounds_for` reads the last layout. Text changed this frame clamps to the laid-out end until the next paint.
 - The harness types with `dispatch_keystroke` through `AnyWindowHandle`, which leaves the root view free to redraw.
@@ -56,6 +57,9 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - Floating lists go below their anchor, or above when only above has room (`forms::options::float`). gpui's own switch keeps the anchor point, so a flipped list would cover its trigger.
 - A picker hands focus to its popup on open and back to its trigger on pick or Escape; it closes once focus leaves both (`forms::date::picker`).
 - Motion for a value change keys its animation on `motion::changes`, so it replays per change and stays still on first paint.
+- Thumbs stay inside their component's box: the track is padded by half a thumb (`Slider`, `ColorPicker`, `GradientEditor`).
+- gpui's `Hsla::opacity` scales alpha; `alpha` sets it.
+- A rounded box does not clip its children. Each layer inside takes the radius itself; `checker` takes one.
 - Masks reshape edits inside `TextInput::set_fit`, which sees the replaced range and the typed text. A diff after the fact cannot tell typed characters from kept ones.
 - Ids inside a reusable component carry its owner's id or `EntityId`. Twin ids share focus and click state.
 - Set an explicit line height on any box that clips text. gpui's default leading is taller than a tight box, and the clip eats descenders.

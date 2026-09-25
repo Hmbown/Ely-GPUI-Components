@@ -25,7 +25,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T06a Forms · Text
 - [x] T06b Forms · Selection
 - [x] T06c Forms · Date & Time
-- [ ] T06d Forms · Color
+- [x] T06d Forms · Color
 - [ ] T06e Forms · Files
 - [ ] T06f Forms · Other
 - [ ] T06g Forms · Structure
@@ -128,3 +128,5 @@ Per-component lines live in `tasks/`. Tags there:
 | T06c | 1 | FAIL | range preview reseeded the month; disabled pickers still committed; month buttons left the cursor; hour column scrolled before layout; `*/1` day fields were not wildcards; next(0) ran on; clock fell back to UTC; zone offsets went stale; "never runs" overclaimed |
 | T06c | 2 | FAIL | the description of an unstarred full day field ignored the OR rule |
 | T06c | 3 | PASS | |
+| T06d | 1 | FAIL | a zero-size checker hung the paint loop; a dragged stop lost its grip after passing another; `opacity(1.0)` kept alpha, so opaque pickers stayed see-through; inset thumbs drifted from the drawn gradients; swatch fills and checkers crossed rounded corners; the thumb ring was a literal white |
+| T06d | 2 | PASS | |
