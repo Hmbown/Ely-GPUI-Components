@@ -58,6 +58,8 @@ pub(crate) fn checker(radius: Rems, cx: &App) -> impl IntoElement + use<> {
         },
     )
     .absolute()
+    .top_0()
+    .left_0()
     .size_full()
 }
 

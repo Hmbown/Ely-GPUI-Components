@@ -1,11 +1,17 @@
 use gpui::{
-    Context, IntoElement, KeyUpEvent, Keystroke, Modifiers, ParentElement, Render, ScrollDelta,
-    ScrollWheelEvent, SharedString, Styled, TestAppContext, TouchPhase, VisualTestContext, Window,
-    div, point, px,
+    AppContext as _, Context, IntoElement, KeyUpEvent, Keystroke, Modifiers, ParentElement, Render,
+    ScrollDelta, ScrollWheelEvent, SharedString, Styled, TestAppContext, TouchPhase,
+    VisualTestContext, Window, div, point, px,
 };
 
-use super::{Breadcrumb, Crumb, EditorTab, EditorTabs, Tabs, Wizard};
-use crate::{forms::Choice, theme::Theme};
+use super::{
+    BackForwardNavigation, Breadcrumb, Crumb, EditorTab, EditorTabs, GoToLine, NavigationMenu,
+    Tabs, Wizard,
+};
+use crate::{
+    forms::{Choice, TextInput},
+    theme::Theme,
+};
 
 fn setup(cx: &mut TestAppContext) {
     cx.update(|cx| {
@@ -232,4 +238,156 @@ fn the_chosen_tab_scrolls_in_once_and_a_manual_scroll_stays(cx: &mut TestAppCont
         Some(SharedString::from("t0")),
         "a manual scroll stays put"
     );
+}
+
+struct Site {
+    entries: Vec<(&'static str, Vec<Choice>)>,
+    went: Option<SharedString>,
+}
+
+impl Site {
+    fn new() -> Self {
+        let entries = vec![
+            (
+                "Product",
+                vec![
+                    Choice::new("tour", "Tour").disabled(),
+                    Choice::new("price", "Pricing"),
+                ],
+            ),
+            (
+                "Docs",
+                vec![Choice::new("guide", "Guide"), Choice::new("api", "API")],
+            ),
+        ];
+        Self {
+            entries,
+            went: None,
+        }
+    }
+}
+
+impl Render for Site {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let view = cx.entity();
+        self.entries
+            .iter()
+            .fold(NavigationMenu::new("site"), |menu, (label, links)| {
+                menu.entry(*label, links.clone())
+            })
+            .on_select(move |value, _, cx| {
+                let value = value.clone();
+                view.update(cx, |view, _| view.went = Some(value));
+            })
+    }
+}
+
+#[gpui::test]
+fn the_menu_opens_switches_and_picks_from_the_keyboard(cx: &mut TestAppContext) {
+    setup(cx);
+    let (view, cx) = cx.add_window_view(|_, _| Site::new());
+    cx.update(|window, _| window.focus_next());
+    cx.simulate_keystrokes("down right down enter");
+    let went = view.read_with(cx, |view, _| view.went.clone());
+    assert_eq!(went, Some(SharedString::from("api")));
+}
+
+#[gpui::test]
+fn menu_keys_pass_over_disabled_links(cx: &mut TestAppContext) {
+    setup(cx);
+    let (view, cx) = cx.add_window_view(|_, _| Site::new());
+    cx.update(|window, _| window.focus_next());
+    cx.simulate_keystrokes("down enter");
+    let went = view.read_with(cx, |view, _| view.went.clone());
+    assert_eq!(went, Some(SharedString::from("price")));
+    cx.simulate_keystrokes("down down enter");
+    let went = view.read_with(cx, |view, _| view.went.clone());
+    assert_eq!(went, Some(SharedString::from("price")));
+}
+
+#[gpui::test]
+fn an_open_menu_follows_lists_that_shrink(cx: &mut TestAppContext) {
+    setup(cx);
+    let (view, cx) = cx.add_window_view(|_, _| Site::new());
+    cx.update(|window, _| window.focus_next());
+    cx.simulate_keystrokes("down right down");
+    view.update(cx, |view, cx| {
+        view.entries[1].1.pop();
+        cx.notify();
+    });
+    cx.simulate_keystrokes("enter");
+    let went = view.read_with(cx, |view, _| view.went.clone());
+    assert_eq!(went, Some(SharedString::from("guide")));
+    cx.simulate_keystrokes("down right");
+    view.update(cx, |view, cx| {
+        view.entries.pop();
+        cx.notify();
+    });
+    cx.run_until_parked();
+    cx.simulate_keystrokes("enter");
+    let went = view.read_with(cx, |view, _| view.went.clone());
+    assert_eq!(went, Some(SharedString::from("guide")));
+}
+
+struct Trail {
+    at: usize,
+}
+
+impl Render for Trail {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let view = cx.entity();
+        let places = ["home", "docs", "api"].map(|place| Choice::new(place, place));
+        BackForwardNavigation::new("trail", places, self.at).on_go(move |to, _, cx| {
+            view.update(cx, |view, cx| {
+                view.at = to;
+                cx.notify();
+            })
+        })
+    }
+}
+
+#[gpui::test]
+fn back_steps_once_and_the_list_jumps_anywhere(cx: &mut TestAppContext) {
+    setup(cx);
+    let (view, cx) = cx.add_window_view(|_, _| Trail { at: 2 });
+    cx.update(|window, _| window.focus_next());
+    press("enter", cx);
+    assert_eq!(view.read_with(cx, |view, _| view.at), 1);
+    cx.update(|window, _| {
+        window.blur();
+        for _ in 0..3 {
+            window.focus_next();
+        }
+    });
+    press("down", cx);
+    press("up", cx);
+    press("enter", cx);
+    assert_eq!(view.read_with(cx, |view, _| view.at), 2);
+}
+
+struct Jump {
+    field: gpui::Entity<TextInput>,
+    to: Option<(usize, Option<usize>)>,
+}
+
+impl Render for Jump {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let view = cx.entity();
+        GoToLine::new("jump", &self.field, 240).on_jump(move |line, column, _, cx| {
+            view.update(cx, |view, _| view.to = Some((line, column)));
+        })
+    }
+}
+
+#[gpui::test]
+fn enter_jumps_to_a_line_and_column(cx: &mut TestAppContext) {
+    setup(cx);
+    let (view, cx) = cx.add_window_view(|window, cx| Jump {
+        field: cx.new(|cx| TextInput::new(window, cx)),
+        to: None,
+    });
+    cx.update(|window, _| window.focus_next());
+    cx.simulate_input("12:4");
+    cx.simulate_keystrokes("enter");
+    assert_eq!(view.read_with(cx, |view, _| view.to), Some((12, Some(4))));
 }

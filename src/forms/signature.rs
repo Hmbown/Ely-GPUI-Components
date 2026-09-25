@@ -200,6 +200,8 @@ impl RenderOnce for SignaturePad {
                     move |bounds, _, window, _| paint(&shown, bounds, width, color, window),
                 )
                 .absolute()
+                .top_0()
+                .left_0()
                 .size_full(),
             )
             .on_mouse_down(MouseButton::Left, move |event, _, cx| {

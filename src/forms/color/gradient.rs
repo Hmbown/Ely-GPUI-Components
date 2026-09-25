@@ -198,6 +198,8 @@ impl RenderOnce for GradientEditor {
                     |_, _, _, _| {},
                 )
                 .absolute()
+                .top_0()
+                .left_0()
                 .size_full(),
             )
             .on_mouse_down(MouseButton::Left, move |event, window, cx| {

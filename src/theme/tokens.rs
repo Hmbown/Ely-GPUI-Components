@@ -223,6 +223,11 @@ impl Theme {
         px_to_rems(2.0)
     }
 
+    /// Width of a navigation menu's panel of links.
+    pub fn nav_panel_width(&self) -> Rems {
+        px_to_rems(480.0)
+    }
+
     /// Grab bar on a drawer.
     pub fn grip(&self) -> Size<Rems> {
         size(px_to_rems(36.0), px_to_rems(4.0))

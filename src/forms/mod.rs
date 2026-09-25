@@ -70,7 +70,7 @@ pub use mention::{MentionInput, mention_highlights};
 pub use multi::MultiSelect;
 pub use number::{NumberInput, ScrubInput};
 pub use options::Choice;
-pub(crate) use options::{Pick, Run, step};
+pub(crate) use options::{OnFlag, OnValue, Pick, Run, float, step, surface};
 pub use pairs::{FieldArray, KeyValueInput, ListInput};
 pub use path::PathInput;
 pub use pattern::{RegexInput, regex_highlights};
@@ -88,7 +88,7 @@ pub use structure::{
 };
 pub use switch::Switch;
 pub use tags::TagInput;
-pub(crate) use text::bind_keys;
+pub(crate) use text::{Enter, bind_keys};
 pub use text::{Highlight, InputEvent, TextInput};
 pub use transfer::TransferList;
 pub use unit::UnitInput;

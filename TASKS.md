@@ -30,7 +30,7 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T06f Forms · Other
 - [x] T06g Forms · Structure
 - [x] T07a Navigation · Tabs & paths
-- [ ] T07b Navigation · Places
+- [x] T07b Navigation · Places
 - [ ] T07c Navigation · Palettes & tour
 - [ ] T08 Menus
 - [ ] T09 Overlays
@@ -141,3 +141,5 @@ Per-component lines live in `tasks/`. Tags there:
 | T07a | 1 | FAIL | editor tabs keyed their scroll on the count of changes: a far tab chosen at mount stayed off screen, and after one change every redraw pulled a manual scroll back |
 | T07a | 2 | FAIL | in a hidden or zero-width strip the follow asked for a frame on every render, 126 redraws in 2 s |
 | T07a | 3 | FAIL | AGENTS.md said the test platform gives text no width; it gives each character a fixed advance (fixed after the cap) |
+| T07b | 1 | FAIL | an open navigation menu kept entry and link indexes past lists that shrank, and disabled links still fired by click or Enter |
+| T07b | 2 | PASS | |
