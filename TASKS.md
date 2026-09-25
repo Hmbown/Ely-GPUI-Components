@@ -182,3 +182,4 @@ Per-component lines live in `tasks/`. Tags there:
 | T11d | 2 | FAIL | Marquee's doc still said its content is drawn twice |
 | T11d | 3 | PASS | |
 | T12a | 1 | — | pending: codex answered 401 on every request; committed unreviewed, reviewed from its commit once codex logs in |
+| T12b | 1 | — | pending: codex still logged out |

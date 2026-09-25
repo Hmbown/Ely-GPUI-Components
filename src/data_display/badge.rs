@@ -37,7 +37,7 @@ impl From<Severity> for Tone {
 
 impl Tone {
     /// The fill, then the text on it.
-    fn colors(self, colors: &Palette) -> (Hsla, Hsla) {
+    pub(super) fn colors(self, colors: &Palette) -> (Hsla, Hsla) {
         let severity = |severity: Severity| (severity.subtle(colors), severity.color(colors));
         match self {
             Self::Neutral => (colors.hover, colors.fg_muted),
@@ -50,7 +50,7 @@ impl Tone {
     }
 
     /// The color a dot of this tone takes.
-    fn dot(self, colors: &Palette) -> Hsla {
+    pub(super) fn dot(self, colors: &Palette) -> Hsla {
         match self {
             Self::Neutral => colors.fg_subtle,
             Self::Accent => colors.accent,

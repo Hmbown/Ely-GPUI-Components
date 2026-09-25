@@ -1,4 +1,5 @@
 mod people;
+mod records;
 
 use gpui::{AnyElement, App, IntoElement, ParentElement, Window, div};
 
@@ -25,6 +26,9 @@ const SCRIPT: &[Step] = &[
     Step::Click("stats-next"),
     Step::Wait(300),
     Step::Shot("stats-next"),
+    Step::Click("feed-post"),
+    Step::Wait(300),
+    Step::Shot("feed-arrival"),
     Step::Rest,
 ];
 
@@ -35,5 +39,10 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(people::avatars(window, cx))
         .child(people::groups(cx))
         .child(people::numbers(window, cx))
+        .child(records::descriptions(cx))
+        .child(records::properties(window, cx))
+        .child(records::timelines(cx))
+        .child(records::feed(window, cx))
+        .child(records::changelog(cx))
         .into_any_element()
 }

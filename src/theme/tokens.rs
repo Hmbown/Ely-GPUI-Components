@@ -284,6 +284,11 @@ impl Theme {
         px_to_rems(128.0)
     }
 
+    /// The label column of a description list.
+    pub fn label_width(&self) -> Rems {
+        px_to_rems(160.0)
+    }
+
     /// Widest a centered block of prose runs, such as an empty state's help.
     pub fn prose_width(&self) -> Rems {
         px_to_rems(320.0)
