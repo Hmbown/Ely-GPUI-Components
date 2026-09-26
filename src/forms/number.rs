@@ -102,6 +102,7 @@ fn commit(state: &Entity<Numeric>, next: f64, window: &mut Window, cx: &mut App)
         )
     };
     let value = settle(next, min, max, precision);
+    state.update(cx, |numeric, _| numeric.value = value);
     show(&input, on_change.as_ref(), value, precision, window, cx);
 }
 
@@ -112,19 +113,36 @@ fn numeric(id: &ElementId, window: &mut Window, cx: &mut App) -> Entity<Numeric>
                 .filter(|ch| ch.is_ascii_digit() || matches!(ch, '.' | ',' | '-' | format::MINUS))
         });
         let events = cx.subscribe_in(&input, window, |numeric, input, event, window, cx| {
-            if !matches!(event, InputEvent::Blur | InputEvent::Submit) {
-                return;
-            }
             let (min, max, _, precision) = numeric.limits;
-            let value = settle(numeric.current(cx), min, max, precision);
-            show(
-                input,
-                numeric.on_change.as_ref(),
-                value,
-                precision,
-                window,
-                cx,
-            );
+            match event {
+                InputEvent::Blur | InputEvent::Submit => {
+                    let value = settle(numeric.current(cx), min, max, precision);
+                    numeric.value = value;
+                    show(
+                        input,
+                        numeric.on_change.as_ref(),
+                        value,
+                        precision,
+                        window,
+                        cx,
+                    );
+                }
+                InputEvent::Changed if input.read(cx).focus().is_focused(window) => {
+                    let Some(typed) = parse(input.read(cx).text()) else {
+                        return;
+                    };
+                    let settled = typed == settle(typed, min, max, precision);
+                    if typed == numeric.value || !settled {
+                        return;
+                    }
+                    log::info!("number input: typed {typed}");
+                    numeric.value = typed;
+                    if let Some(on_change) = numeric.on_change.clone() {
+                        on_change(typed, window, cx);
+                    }
+                }
+                _ => {}
+            }
         });
         Numeric {
             input,

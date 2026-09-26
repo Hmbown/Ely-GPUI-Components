@@ -173,6 +173,13 @@ pub fn relative(then: Timestamp, now: Timestamp) -> String {
     }
 }
 
+/// The system's time zone for `user`. An unknown zone stops here rather than reading as UTC.
+pub(crate) fn system_zone(user: &str) -> TimeZone {
+    TimeZone::try_system().unwrap_or_else(|error| {
+        panic!("{user}: the system time zone is unknown ({error}); pass a zone")
+    })
+}
+
 /// strftime in `zone`; a bad pattern is an error.
 pub fn datetime(at: Timestamp, zone: &TimeZone, pattern: &str) -> Result<String, jiff::Error> {
     strtime::format(pattern, &at.to_zoned(zone.clone()))

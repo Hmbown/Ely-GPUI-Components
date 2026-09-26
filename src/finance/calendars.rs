@@ -11,7 +11,11 @@ use crate::{
     forms::flag,
     tables::{Cell, Column, DataTable, Row},
     theme::{ActiveTheme, TextSize},
-    typography::{Ellipsis, format, tabular},
+    typography::{
+        Ellipsis,
+        format::{self, system_zone},
+        tabular,
+    },
 };
 
 /// An economic release: when, for which region, what, how much it moves markets from one to three, and its figure as it came, as forecast and as before.
@@ -31,7 +35,7 @@ pub struct Release {
 #[derive(IntoElement)]
 pub struct EconomicCalendar {
     releases: Vec<Release>,
-    zone: TimeZone,
+    zone: Option<TimeZone>,
 }
 
 impl EconomicCalendar {
@@ -45,18 +49,22 @@ impl EconomicCalendar {
         );
         Self {
             releases,
-            zone: TimeZone::system(),
+            zone: None,
         }
     }
 
     pub fn zone(mut self, zone: TimeZone) -> Self {
-        self.zone = zone;
+        self.zone = Some(zone);
         self
     }
 }
 
 impl RenderOnce for EconomicCalendar {
     fn render(mut self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let zone = self
+            .zone
+            .clone()
+            .unwrap_or_else(|| system_zone("EconomicCalendar"));
         let theme = cx.theme();
         let colors = theme.colors.clone();
         self.releases.sort_by_key(|release| release.time);
@@ -68,7 +76,7 @@ impl RenderOnce for EconomicCalendar {
         let mut out: Vec<gpui::AnyElement> = Vec::new();
         let mut day: Option<Date> = None;
         for release in &self.releases {
-            let zoned = release.time.to_zoned(self.zone.clone());
+            let zoned = release.time.to_zoned(zone.clone());
             if day != Some(zoned.date()) {
                 day = Some(zoned.date());
                 out.push(
@@ -179,6 +187,11 @@ pub struct Earnings {
     pub reported: Option<f64>,
 }
 
+/// How far a report beat its estimate, as a share of the estimate's size: positive when better, whatever the sign.
+pub(crate) fn surprise(estimate: f64, reported: f64) -> f64 {
+    (reported - estimate) / estimate.abs()
+}
+
 /// Earnings by date: each company, when in the day it reports, what is expected, and once reported, how far it beat or missed.
 #[derive(IntoElement)]
 pub struct EarningsCalendar {
@@ -222,7 +235,7 @@ impl RenderOnce for EarningsCalendar {
                 );
                 let surprise = match earnings.reported {
                     Some(reported) if earnings.estimate != 0.0 => {
-                        let share = reported / earnings.estimate - 1.0;
+                        let share = surprise(earnings.estimate, reported);
                         Cell::Tag(
                             format::percent(share, 1, true).into(),
                             if share >= 0.0 {
@@ -270,7 +283,7 @@ type OnStory = Rc<dyn Fn(usize, &mut Window, &mut App)>;
 pub struct NewsFeed {
     id: ElementId,
     stories: Vec<Story>,
-    zone: TimeZone,
+    zone: Option<TimeZone>,
     on_open: Option<OnStory>,
 }
 
@@ -279,13 +292,13 @@ impl NewsFeed {
         Self {
             id: id.into(),
             stories: stories.into_iter().collect(),
-            zone: TimeZone::system(),
+            zone: None,
             on_open: None,
         }
     }
 
     pub fn zone(mut self, zone: TimeZone) -> Self {
-        self.zone = zone;
+        self.zone = Some(zone);
         self
     }
 
@@ -298,6 +311,7 @@ impl NewsFeed {
 
 impl RenderOnce for NewsFeed {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let zone = self.zone.clone().unwrap_or_else(|| system_zone("NewsFeed"));
         let theme = cx.theme();
         let colors = theme.colors.clone();
         let mut order: Vec<usize> = (0..self.stories.len()).collect();
@@ -315,7 +329,7 @@ impl RenderOnce for NewsFeed {
                 let open = self.on_open.clone();
                 let when = story
                     .time
-                    .to_zoned(self.zone.clone())
+                    .to_zoned(zone.clone())
                     .strftime("%b %-d, %H:%M")
                     .to_string();
                 div()
@@ -374,5 +388,16 @@ impl RenderOnce for NewsFeed {
                             ),
                     )
             }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::surprise;
+
+    #[test]
+    fn a_smaller_loss_than_expected_is_a_beat() {
+        assert_eq!(surprise(-1.0, -0.5), 0.5);
+        assert_eq!(surprise(2.0, 1.5), -0.25);
     }
 }

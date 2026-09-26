@@ -26,6 +26,15 @@ impl Visible {
         .kept(total)
     }
 
+    /// Held to `total` candles after the data changed: no wider than they allow, and in reach of them.
+    pub(crate) fn fitted(self, total: usize) -> Self {
+        let count = self.count.clamp(
+            CLOSEST.min(total as f64).max(1.0),
+            (total as f64).max(1.0) * 1.1,
+        );
+        Self { count, ..self }.kept(total)
+    }
+
     /// Kept to what `total` candles allow: never before the first, at most a quarter window past the last.
     fn kept(self, total: usize) -> Self {
         let last = (total as f64 - self.count * 0.75).max(0.0);
@@ -106,6 +115,21 @@ pub(crate) fn decimals(step: f64) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_window_fits_data_that_shrank_under_it() {
+        let window = Visible {
+            start: 150.0,
+            count: 50.0,
+        };
+        let fitted = window.fitted(12);
+        assert!(fitted.count <= 12.0 * 1.1);
+        let range = fitted.range(12);
+        assert!(
+            !range.is_empty() && range.end == 12,
+            "{range:?} shows the newest candles"
+        );
+    }
 
     #[test]
     fn a_window_maps_candles_across_its_frame() {

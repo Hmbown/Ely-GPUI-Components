@@ -183,6 +183,26 @@ fn stepping_starts_from_the_typed_number(cx: &mut TestAppContext) {
     assert_eq!(view.read_with(cx, |view, _| view.value), 21.0);
 }
 
+#[gpui::test]
+fn a_typed_number_reaches_the_owner_before_any_blur(cx: &mut TestAppContext) {
+    setup(cx);
+    let (view, cx) = cx.add_window_view(|_, _| Stepped { value: 100.0 });
+    cx.update(|window, _| window.focus_next());
+    cx.simulate_keystrokes("cmd-a");
+    cx.simulate_input("250");
+    assert_eq!(
+        view.read_with(cx, |view, _| view.value),
+        250.0,
+        "a press elsewhere reads the typed number"
+    );
+    cx.simulate_input(".");
+    assert_eq!(
+        view.read_with(cx, |view, _| view.value),
+        250.0,
+        "a half-typed number waits"
+    );
+}
+
 struct Pin {
     code: String,
 }

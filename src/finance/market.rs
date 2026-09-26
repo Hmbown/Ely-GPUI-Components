@@ -19,6 +19,7 @@ use super::{
 use crate::{
     charts::{Linear, Rect, measure},
     theme::ActiveTheme,
+    typography::format::system_zone,
 };
 
 /// How a market chart draws its prices.
@@ -57,7 +58,7 @@ pub struct CandlestickChart {
     compare: Option<(SharedString, Rc<Vec<Candle>>)>,
     sync: Option<Entity<ChartSync>>,
     red_up: bool,
-    zone: TimeZone,
+    zone: Option<TimeZone>,
     drawings: Vec<Drawing>,
     tool: Option<Tool>,
     on_draw: Option<OnDraw>,
@@ -85,7 +86,7 @@ impl CandlestickChart {
             compare: None,
             sync: None,
             red_up: false,
-            zone: TimeZone::system(),
+            zone: None,
             drawings: Vec::new(),
             tool: None,
             on_draw: None,
@@ -181,7 +182,7 @@ impl CandlestickChart {
 
     /// The time zone its times read in; the system's unless set.
     pub fn zone(mut self, zone: TimeZone) -> Self {
-        self.zone = zone;
+        self.zone = Some(zone);
         self
     }
 }
@@ -194,6 +195,10 @@ impl Styled for CandlestickChart {
 
 impl RenderOnce for CandlestickChart {
     fn render(mut self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let zone = self
+            .zone
+            .clone()
+            .unwrap_or_else(|| system_zone("CandlestickChart"));
         let sync = self.sync.clone();
         let stage: Entity<Stage> =
             window.use_keyed_state((self.id.clone(), "stage"), cx, |_, cx| Stage {
@@ -236,11 +241,18 @@ impl RenderOnce for CandlestickChart {
             {
                 visible.pan((total - seen) as f64, total)
             }
-            Some(visible) => visible,
+            Some(visible) => visible.fitted(total),
             None => Visible::latest(total, f64::from(main.w / pixels(sizes.candle)).max(1.0)),
         };
         if seen != total {
+            log::debug!("market chart: {seen} candles to {total}");
             stage.update(cx, |stage, _| stage.seen = total);
+            if held.0.is_some() {
+                match &self.sync {
+                    Some(sync) => sync.update(cx, |sync, _| sync.visible = Some(visible)),
+                    None => stage.update(cx, |stage, _| stage.visible = Some(visible)),
+                }
+            }
         }
         let range = visible.range(total);
         let shown = Rc::new(if self.kind == ChartKind::HeikinAshi {
@@ -362,7 +374,7 @@ impl RenderOnce for CandlestickChart {
             range: range.clone(),
             hover,
             row,
-            zone: self.zone.clone(),
+            zone: zone.clone(),
             title: self.title.clone(),
             compare: self.compare.as_ref().map(|(name, _)| name.clone()),
             drawings: marks.clone(),

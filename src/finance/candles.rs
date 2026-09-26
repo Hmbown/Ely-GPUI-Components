@@ -162,14 +162,22 @@ pub(crate) fn profile(
     (low, high): (f64, f64),
     bands: usize,
 ) -> Vec<(f64, f64, f64)> {
+    assert!(bands > 0 && high > low, "a profile needs bands over a span");
     let step = (high - low) / bands as f64;
     let mut traded = vec![0.0; bands];
     for candle in candles {
-        let reach = (candle.high - candle.low).max(step);
+        let span = candle.high - candle.low;
+        if span <= 0.0 {
+            let band = ((candle.close - low) / step)
+                .floor()
+                .clamp(0.0, (bands - 1) as f64);
+            traded[band as usize] += candle.volume;
+            continue;
+        }
         for (band, volume) in traded.iter_mut().enumerate() {
             let (from, to) = (low + step * band as f64, low + step * (band + 1) as f64);
             let overlap = (to.min(candle.high) - from.max(candle.low)).max(0.0);
-            *volume += candle.volume * overlap / reach;
+            *volume += candle.volume * overlap / span;
         }
     }
     traded
@@ -249,5 +257,21 @@ mod tests {
             "half at each price it crossed"
         );
         assert_eq!((bands[3].0, bands[3].1), (13.0, 14.0));
+    }
+
+    #[test]
+    fn narrow_and_flat_candles_count_all_their_volume() {
+        let narrow = Candle::new(Timestamp::UNIX_EPOCH, (10.2, 10.3, 10.1, 10.2), 100.0);
+        let flat = Candle::new(Timestamp::UNIX_EPOCH, (12.5, 12.5, 12.5, 12.5), 40.0);
+        let traded: Vec<f64> = profile(&[narrow, flat], (10.0, 14.0), 4)
+            .iter()
+            .map(|band| band.2)
+            .collect();
+        assert!(
+            (traded[0] - 100.0).abs() < 1e-9,
+            "{traded:?}: a narrow candle's whole volume"
+        );
+        assert_eq!(traded[2], 40.0, "a flat candle lands in its band");
+        assert!((traded.iter().sum::<f64>() - 140.0).abs() < 1e-9);
     }
 }

@@ -11,8 +11,9 @@ mod zone;
 use jiff::{
     Timestamp, Zoned,
     civil::{Date, Time},
-    tz::TimeZone,
 };
+
+use crate::typography::format::system_zone;
 
 pub use calendar::Calendar;
 pub use cron::CronEditor;
@@ -26,10 +27,7 @@ pub use zone::TimezoneSelect;
 
 /// The system's clock in its own zone. An unknown zone stops here, not in UTC.
 pub(crate) fn zoned_now() -> Zoned {
-    let zone = TimeZone::try_system().unwrap_or_else(|error| {
-        panic!("the system time zone is unknown; pass a fixed date: {error}")
-    });
-    Timestamp::now().to_zoned(zone)
+    Timestamp::now().to_zoned(system_zone("date pickers"))
 }
 
 /// A day as "Sep 25, 2026".

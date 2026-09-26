@@ -9,12 +9,13 @@ use jiff::tz::TimeZone;
 use super::{
     book::{Side, Trade, cell, heading, level},
     quotes::{moves, price},
+    stage::decimals,
 };
 use crate::{
     charts::compact,
     motion::Flash,
     theme::{ActiveTheme, Density, TextSize},
-    typography::tabular,
+    typography::{format::system_zone, tabular},
 };
 
 /// Trades as they print, newest on top: the time, price and size tinted by the side that took them; trades of at least `large` stand bold, and the newest flashes in.
@@ -25,7 +26,7 @@ pub struct TimeAndSales {
     large: f64,
     rows: usize,
     places: usize,
-    zone: TimeZone,
+    zone: Option<TimeZone>,
     red_up: bool,
 }
 
@@ -38,7 +39,7 @@ impl TimeAndSales {
             large: f64::MAX,
             rows: 12,
             places: 2,
-            zone: TimeZone::system(),
+            zone: None,
             red_up: false,
         }
     }
@@ -55,7 +56,7 @@ impl TimeAndSales {
     }
 
     pub fn zone(mut self, zone: TimeZone) -> Self {
-        self.zone = zone;
+        self.zone = Some(zone);
         self
     }
 
@@ -67,10 +68,13 @@ impl TimeAndSales {
 
 impl RenderOnce for TimeAndSales {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let zone = self
+            .zone
+            .clone()
+            .unwrap_or_else(|| system_zone("TimeAndSales"));
         let (rise, fall) = moves(self.red_up, cx);
         let theme = cx.theme();
         let colors = theme.colors.clone();
-        let newest = self.trades.len();
         let rows = self
             .trades
             .iter()
@@ -81,7 +85,7 @@ impl RenderOnce for TimeAndSales {
                 let ink = if trade.side == Side::Buy { rise } else { fall };
                 let time = trade
                     .time
-                    .to_zoned(self.zone.clone())
+                    .to_zoned(zone.clone())
                     .strftime("%H:%M:%S")
                     .to_string();
                 let row = div()
@@ -104,7 +108,7 @@ impl RenderOnce for TimeAndSales {
                     .child(cell(price(trade.price, self.places), ink))
                     .child(cell(compact(trade.size), colors.fg));
                 if ix == 0 {
-                    Flash::new((self.id.clone(), "newest"), newest)
+                    Flash::new((self.id.clone(), "newest"), *trade)
                         .child(row)
                         .into_any_element()
                 } else {
@@ -192,6 +196,7 @@ fn rungs(last: f64, tick: f64, rows: usize) -> Vec<f64> {
 
 impl RenderOnce for DomLadder {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let places = self.places.max(decimals(self.tick));
         let (rise, fall) = moves(self.red_up, cx);
         let theme = cx.theme();
         let colors = theme.colors.clone();
@@ -255,7 +260,7 @@ impl RenderOnce for DomLadder {
                                     .font_weight(FontWeight::SEMIBOLD)
                             })
                             .when(!marked, |price| price.text_color(colors.fg_muted))
-                            .child(price(at, self.places)),
+                            .child(price(at, places)),
                     )
                     .child(side_cell(ask, Side::Sell, fall))
             });

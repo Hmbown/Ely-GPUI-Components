@@ -229,9 +229,7 @@ impl RenderOnce for DateTimeText {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
         let zone = match self.zone {
             Some(zone) => zone,
-            None => TimeZone::try_system().unwrap_or_else(|error| {
-                panic!("DateTimeText: system time zone unknown ({error}); pass .zone()")
-            }),
+            None => format::system_zone("DateTimeText"),
         };
         let text = format::datetime(self.at, &zone, self.pattern)
             .unwrap_or_else(|error| panic!("DateTimeText pattern {:?}: {error}", self.pattern));

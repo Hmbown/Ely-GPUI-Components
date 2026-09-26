@@ -17,7 +17,10 @@ use crate::{
         ChartTooltip, Linear, Rect, Tiles, anchored, at, finish, measure, place, ring, tracked,
     },
     theme::{ActiveTheme, TextSize},
-    typography::{format, tabular},
+    typography::{
+        format::{self, system_zone},
+        tabular,
+    },
 };
 
 /// A mark on a price-only chart: its slot, the prices it spans, whether it rose, and its words.
@@ -221,7 +224,7 @@ pub struct RenkoChart {
     id: ElementId,
     candles: Rc<Vec<Candle>>,
     size: f64,
-    zone: TimeZone,
+    zone: Option<TimeZone>,
     red_up: bool,
 }
 
@@ -236,7 +239,7 @@ impl RenkoChart {
             id: id.into(),
             candles: candles.into(),
             size,
-            zone: TimeZone::system(),
+            zone: None,
             red_up: false,
         }
     }
@@ -248,7 +251,7 @@ impl RenkoChart {
 
     /// The time zone its dates read in; the system's unless set.
     pub fn zone(mut self, zone: TimeZone) -> Self {
-        self.zone = zone;
+        self.zone = Some(zone);
         self
     }
 }
@@ -261,13 +264,17 @@ impl Styled for RenkoChart {
 
 impl RenderOnce for RenkoChart {
     fn render(mut self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let zone = self
+            .zone
+            .clone()
+            .unwrap_or_else(|| system_zone("RenkoChart"));
         let marks = renko(&self.candles, self.size)
             .into_iter()
             .enumerate()
             .map(|(slot, brick)| {
                 let day = self.candles[brick.at]
                     .time
-                    .to_zoned(self.zone.clone())
+                    .to_zoned(zone.clone())
                     .strftime("%b %-d, %Y")
                     .to_string();
                 let reading = format!(

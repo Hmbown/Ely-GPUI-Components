@@ -13,7 +13,11 @@ use crate::{
     forms::{Combobox, NumberInput, TextInput},
     primitives::{Icon, IconName},
     theme::{ActiveTheme, IconSize, Radius, TextSize},
-    typography::{Ellipsis, format, tabular},
+    typography::{
+        Ellipsis,
+        format::{self, system_zone},
+        tabular,
+    },
 };
 
 type OnConvert = Rc<dyn Fn(f64, SharedString, SharedString, &mut Window, &mut App)>;
@@ -309,7 +313,7 @@ pub struct Transfer {
 #[derive(IntoElement)]
 pub struct TransactionList {
     transfers: Vec<Transfer>,
-    zone: TimeZone,
+    zone: Option<TimeZone>,
 }
 
 impl TransactionList {
@@ -318,13 +322,13 @@ impl TransactionList {
         transfers.sort_by_key(|transfer| Reverse(transfer.time));
         Self {
             transfers,
-            zone: TimeZone::system(),
+            zone: None,
         }
     }
 
     /// The time zone its times read in; the system's unless set.
     pub fn zone(mut self, zone: TimeZone) -> Self {
-        self.zone = zone;
+        self.zone = Some(zone);
         self
     }
 }
@@ -342,6 +346,10 @@ fn amount(value: f64, unit: &str) -> String {
 
 impl RenderOnce for TransactionList {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let zone = self
+            .zone
+            .clone()
+            .unwrap_or_else(|| system_zone("TransactionList"));
         let theme = cx.theme();
         let colors = theme.colors.clone();
         div()
@@ -397,7 +405,7 @@ impl RenderOnce for TransactionList {
                                     .child(
                                         transfer
                                             .time
-                                            .to_zoned(self.zone.clone())
+                                            .to_zoned(zone.clone())
                                             .strftime("%b %-d, %H:%M")
                                             .to_string(),
                                     ),

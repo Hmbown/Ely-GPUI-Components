@@ -225,7 +225,15 @@ pub(crate) fn labels(
             continue;
         };
         let x = axes.visible.x(from.0.min(to.0), (main.x, main.w));
-        for (share, value) in Drawing::levels(from, to) {
+        if x > main.x + main.w {
+            continue;
+        }
+        let x = x.max(main.x);
+        let inside = |y: f32| y >= main.y && y <= main.y + main.h;
+        for (share, value) in Drawing::levels(from, to)
+            .into_iter()
+            .filter(|(_, value)| inside(price.at(*value)))
+        {
             let words = format!(
                 "{} {}",
                 format::percent(share, 1, false),

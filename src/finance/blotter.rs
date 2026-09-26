@@ -16,7 +16,10 @@ use crate::{
     motion::Flash,
     tables::{Aggregate, Cell, Column, DataTable, Row},
     theme::{ActiveTheme, TextSize},
-    typography::{format, tabular},
+    typography::{
+        format::{self, system_zone},
+        tabular,
+    },
 };
 
 /// A held position: its symbol, how many, what each cost on average, and the last price.
@@ -115,7 +118,7 @@ pub struct Working {
 pub struct OrderTable {
     id: ElementId,
     orders: Vec<Working>,
-    zone: TimeZone,
+    zone: Option<TimeZone>,
 }
 
 impl OrderTable {
@@ -132,13 +135,13 @@ impl OrderTable {
         Self {
             id: id.into(),
             orders,
-            zone: TimeZone::system(),
+            zone: None,
         }
     }
 
     /// The time zone its times read in; the system's unless set.
     pub fn zone(mut self, zone: TimeZone) -> Self {
-        self.zone = zone;
+        self.zone = Some(zone);
         self
     }
 }
@@ -153,6 +156,10 @@ fn side_tag(side: Side) -> Cell {
 
 impl RenderOnce for OrderTable {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+        let zone = self
+            .zone
+            .clone()
+            .unwrap_or_else(|| system_zone("OrderTable"));
         let columns = [
             Column::new("time", "Placed"),
             Column::new("symbol", "Symbol"),
@@ -175,7 +182,7 @@ impl RenderOnce for OrderTable {
                 };
                 let time: SharedString = working
                     .time
-                    .to_zoned(self.zone.clone())
+                    .to_zoned(zone.clone())
                     .strftime("%H:%M:%S")
                     .to_string()
                     .into();
@@ -214,7 +221,7 @@ pub struct Fill {
 pub struct TradeHistoryTable {
     id: ElementId,
     fills: Vec<Fill>,
-    zone: TimeZone,
+    zone: Option<TimeZone>,
 }
 
 impl TradeHistoryTable {
@@ -224,19 +231,23 @@ impl TradeHistoryTable {
         Self {
             id: id.into(),
             fills,
-            zone: TimeZone::system(),
+            zone: None,
         }
     }
 
     /// The time zone its times read in; the system's unless set.
     pub fn zone(mut self, zone: TimeZone) -> Self {
-        self.zone = zone;
+        self.zone = Some(zone);
         self
     }
 }
 
 impl RenderOnce for TradeHistoryTable {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+        let zone = self
+            .zone
+            .clone()
+            .unwrap_or_else(|| system_zone("TradeHistoryTable"));
         let columns = [
             Column::new("time", "Time"),
             Column::new("symbol", "Symbol"),
@@ -261,7 +272,7 @@ impl RenderOnce for TradeHistoryTable {
                 let total = signed * fill.quantity * fill.price - fill.fee;
                 let time: SharedString = fill
                     .time
-                    .to_zoned(self.zone.clone())
+                    .to_zoned(zone.clone())
                     .strftime("%b %-d %H:%M")
                     .to_string()
                     .into();
