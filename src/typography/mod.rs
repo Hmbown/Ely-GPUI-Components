@@ -15,8 +15,8 @@ mod text;
 pub use copy::CopyableText;
 pub use effects::{GradientText, ShimmerText, Typewriter};
 pub use emoji::Emoji;
-pub(crate) use fit::LEADING;
-pub use fit::{EllipsisTooltip, MiddleEllipsis};
+pub use fit::{Ellipsis, EllipsisTooltip, MiddleEllipsis};
+pub(crate) use fit::{LEADING, text_width};
 pub use format::DurationStyle;
 pub use formatted::{
     CurrencyText, DateTimeText, DurationText, FileSizeText, NumberText, PercentText, PluralText,

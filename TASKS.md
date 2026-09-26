@@ -216,3 +216,8 @@ Per-component lines live in `tasks/`. Tags there:
 | T15b | 2 | PASS | |
 | T15c | 1 | FAIL | eight charts kept a pointed part past their data, and the Gantt today line ran past the timeline |
 | T15c | 2 | PASS | |
+| T16a | 1 | — | pending review |
+| T16b | 1 | — | pending review |
+| T16c | 1 | — | pending review |
+| T16d | 1 | — | pending review |
+| T16e | 1 | — | pending review |

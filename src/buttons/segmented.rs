@@ -145,7 +145,7 @@ impl RenderOnce for SegmentedControl {
                     .when_some(icon, |segment, icon| {
                         segment.child(Icon::new(icon).size(icon_size).color(fg))
                     })
-                    .child(label)
+                    .when(!label.is_empty(), |segment| segment.child(label))
                     .child(measure_item(measure, ix, Axis::Horizontal))
             });
         div()

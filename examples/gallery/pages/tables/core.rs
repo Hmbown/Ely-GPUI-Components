@@ -16,7 +16,7 @@ use gpui::{
 
 use crate::{
     probe::probe,
-    ui::{keep, section, set},
+    ui::{keep, noise, section, set},
 };
 
 pub fn plain(cx: &mut App) -> impl IntoElement + use<> {
@@ -48,17 +48,6 @@ const PEOPLE: [&str; 10] = [
     "Margaret Hamilton",
 ];
 const REGIONS: [&str; 4] = ["Europe", "Americas", "Asia", "Oceania"];
-
-/// A steady pseudo-random series, so captures repeat.
-fn noise(seed: u64) -> impl FnMut() -> f64 {
-    let mut state = seed;
-    move || {
-        state = state
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        (state >> 33) as f64 / (1u64 << 31) as f64
-    }
-}
 
 pub(super) fn order_rows() -> Vec<Row> {
     let mut next = noise(7);

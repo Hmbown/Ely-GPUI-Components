@@ -1,8 +1,7 @@
 use ely_gpui_component::charts::{BoxPlot, Histogram, ViolinPlot, WaterfallChart};
 use gpui::{App, IntoElement, ParentElement, Styled, div, px};
 
-use super::cartesian::noise;
-use crate::ui::section;
+use crate::ui::{noise, section};
 
 pub fn distributions(cx: &mut App) -> impl IntoElement + use<> {
     let mut rng = noise(13);

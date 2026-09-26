@@ -6,7 +6,7 @@ use crate::{
     data_display::{Avatar, Badge, Sparkline, Tone},
     motion::ProgressBar,
     theme::{ActiveTheme, AvatarSize},
-    typography::{ExternalLink, format, tabular},
+    typography::{Ellipsis, ExternalLink, format, tabular},
 };
 
 /// What a cell holds; its column says how numbers read.
@@ -211,11 +211,7 @@ pub(crate) fn draw(cell: &Cell, column: &Column, id: ElementId, cx: &App) -> Any
     let colors = &cx.theme().colors;
     match cell {
         Cell::Empty => div().into_any_element(),
-        Cell::Text(text) => div()
-            .min_w_0()
-            .truncate()
-            .child(text.clone())
-            .into_any_element(),
+        Cell::Text(text) => Ellipsis::new(text.clone()).into_any_element(),
         Cell::Number(value) => tabular(div())
             .child(column.reads(*value))
             .into_any_element(),
@@ -243,7 +239,7 @@ pub(crate) fn draw(cell: &Cell, column: &Column, id: ElementId, cx: &App) -> Any
             .gap_2()
             .min_w_0()
             .child(Avatar::new(id, name.clone()).size(AvatarSize::Xs))
-            .child(div().min_w_0().truncate().child(name.clone()))
+            .child(Ellipsis::new(name.clone()))
             .into_any_element(),
         Cell::Link(label, url) => {
             ExternalLink::new(id, label.clone(), url.clone()).into_any_element()

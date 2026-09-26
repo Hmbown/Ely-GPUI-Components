@@ -10,7 +10,7 @@ use crate::{
     motion::ProgressBar,
     primitives::{Icon, IconName},
     theme::{ActiveTheme, ControlSize, IconSize, TextSize},
-    typography::{format::file_size, tabular},
+    typography::{Ellipsis, format::file_size, tabular},
 };
 
 /// Where one upload stands.
@@ -164,9 +164,8 @@ impl RenderOnce for UploadList {
                                     div()
                                         .flex_1()
                                         .min_w_0()
-                                        .truncate()
                                         .font_weight(FontWeight::MEDIUM)
-                                        .child(upload.name.clone()),
+                                        .child(Ellipsis::new(upload.name.clone())),
                                 )
                                 .child(
                                     tabular(div())

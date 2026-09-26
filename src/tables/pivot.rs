@@ -6,7 +6,7 @@ use gpui::{
 use super::{Aggregate, Cell, model::combine};
 use crate::{
     theme::{ActiveTheme, TextSize},
-    typography::{format, tabular},
+    typography::{Ellipsis, format, tabular},
 };
 
 /// A cross-tab: labels down the side and across the top, a figure where they meet, and totals.
@@ -151,8 +151,7 @@ impl RenderOnce for PivotTable {
                 .w(theme.label_width() * 0.8)
                 .flex_none()
                 .px_3()
-                .truncate()
-                .child(text)
+                .child(Ellipsis::new(text))
         };
         let number = |text: String, strong: bool| {
             tabular(div())

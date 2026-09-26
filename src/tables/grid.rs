@@ -11,6 +11,7 @@ use crate::{
     forms::{Editing, Input},
     primitives::{FocusNext, FocusPrev},
     theme::{ActiveTheme, ControlSize, TextSize},
+    typography::Ellipsis,
 };
 
 pub(crate) type OnCells = Rc<dyn Fn(&[(usize, usize, SharedString)], &mut Window, &mut App)>;
@@ -151,7 +152,7 @@ pub(crate) fn grid(face: Face, base: Div, window: &mut Window, cx: &mut App) -> 
                     .child(Input::new(field).size(ControlSize::Sm))
                     .into_any_element()
             }
-            _ => div().min_w_0().truncate().child(text).into_any_element(),
+            _ => Ellipsis::new(text).into_any_element(),
         };
         Some(
             div()

@@ -1,6 +1,6 @@
 use gpui::{
     App, Div, IntoElement, ParentElement, Pixels, Rems, SharedString, Styled, Window, div,
-    prelude::*,
+    prelude::*, relative,
 };
 
 use super::{
@@ -9,8 +9,8 @@ use super::{
     scale::Linear,
 };
 use crate::{
-    theme::{ActiveTheme, TextSize},
-    typography::tabular,
+    theme::{ActiveTheme, Radius, TextSize},
+    typography::{LEADING, tabular, text_width},
 };
 
 /// A label centered under `x`, below the frame.
@@ -99,14 +99,18 @@ pub(crate) fn marks(
         .collect();
     let along = if plot.horizontal { rect.h } else { rect.w };
     let room = f32::from(sizes.label.to_pixels(rem));
+    let named: Vec<&(f32, SharedString)> = geometry
+        .labels
+        .iter()
+        .filter(|(_, label)| !label.is_empty())
+        .collect();
     let every = if plot.horizontal {
         1
     } else {
-        ((geometry.labels.len() as f32 * room / along.max(1.0)).ceil() as usize).max(1)
+        ((named.len() as f32 * room / along.max(1.0)).ceil() as usize).max(1)
     };
     labels.extend(
-        geometry
-            .labels
+        named
             .iter()
             .enumerate()
             .filter(|(ix, _)| ix % every == 0)
@@ -148,7 +152,7 @@ pub(crate) fn marks(
                 .child(text(label.clone()).pb_0p5())
         }
     }));
-    let notes: Vec<(f32, SharedString)> = plot
+    let mut notes: Vec<(f32, SharedString)> = plot
         .notes
         .iter()
         .filter(|(ix, _)| !plot.horizontal && (span.0..=span.1).contains(ix))
@@ -159,14 +163,34 @@ pub(crate) fn marks(
                 .map(|(at, _)| (*at, label.clone()))
         })
         .collect();
-    labels.extend(notes.iter().map(|(at, label)| {
-        div()
-            .absolute()
-            .left(Pixels::from(*at))
-            .top(Pixels::from(rect.y))
-            .pl_1p5()
-            .child(text(label.clone()))
-    }));
+    notes.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let size = theme.text_size(TextSize::Xs).to_pixels(rem);
+    let mut ends: Vec<f32> = Vec::new();
+    for (at, label) in &notes {
+        let row = ends.iter().position(|end| end <= at).unwrap_or(ends.len());
+        let end = at + f32::from(text_width(label, size, window) + size);
+        if row == ends.len() {
+            ends.push(end);
+        } else {
+            ends[row] = end;
+        }
+        labels.push(
+            div()
+                .absolute()
+                .left(Pixels::from(*at))
+                .top(Pixels::from(
+                    rect.y + f32::from(size) * LEADING * row as f32,
+                ))
+                .pl_1p5()
+                .line_height(relative(LEADING))
+                .child(
+                    text(label.clone())
+                        .px_1()
+                        .rounded(theme.radius(Radius::Sm))
+                        .bg(colors.bg),
+                ),
+        );
+    }
     Marks {
         labels,
         rules: rules.iter().map(|(at, _)| *at).collect(),

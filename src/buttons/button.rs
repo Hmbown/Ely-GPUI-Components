@@ -20,6 +20,8 @@ pub enum ButtonVariant {
     Outline,
     Ghost,
     Subtle,
+    /// Confirms a gain, such as a purchase; green.
+    Success,
     Danger,
     Link,
 }
@@ -68,6 +70,13 @@ pub(crate) fn tone(variant: ButtonVariant, colors: &Palette) -> Tone {
             hover: colors.active,
             pressed: colors.active.mix(&colors.border_strong, 0.5),
             fg: colors.fg,
+            border: clear,
+        },
+        ButtonVariant::Success => Tone {
+            bg: colors.success,
+            hover: colors.success.mix(&colors.fg, 0.14),
+            pressed: colors.success.mix(&colors.fg, 0.24),
+            fg: colors.on_accent,
             border: clear,
         },
         ButtonVariant::Danger => Tone {

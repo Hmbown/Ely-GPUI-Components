@@ -11,7 +11,7 @@ use super::{Choice, Combobox, TextInput, options::OnValue};
 use crate::theme::{ActiveTheme, TextSize};
 
 /// The flag emoji of a two-letter region code.
-fn flag(region: &str) -> String {
+pub(crate) fn flag(region: &str) -> String {
     region
         .chars()
         .map(|letter| {

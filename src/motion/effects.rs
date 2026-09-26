@@ -105,6 +105,7 @@ impl RenderOnce for Blink {
 pub struct Flash<K: Clone + PartialEq + 'static> {
     id: ElementId,
     key: K,
+    tint: Option<Hsla>,
     base: Div,
     body: SmallVec<[AnyElement; 2]>,
 }
@@ -114,9 +115,16 @@ impl<K: Clone + PartialEq + 'static> Flash<K> {
         Self {
             id: id.into(),
             key,
+            tint: None,
             base: div(),
             body: SmallVec::new(),
         }
+    }
+
+    /// The color it flashes; the selection's unless set.
+    pub fn tint(mut self, tint: Hsla) -> Self {
+        self.tint = Some(tint);
+        self
     }
 }
 
@@ -135,7 +143,7 @@ impl<K: Clone + PartialEq + 'static> ParentElement for Flash<K> {
 impl<K: Clone + PartialEq + 'static> RenderOnce for Flash<K> {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let share = since_change(&self.id, self.key, duration(FLASH, cx), window, cx);
-        let tint = cx.theme().colors.selection;
+        let tint = self.tint.unwrap_or(cx.theme().colors.selection);
         self.base.children(self.body).when_some(share, |held, t| {
             held.bg(tint.opacity(1.0 - ease_out_cubic(t)))
         })

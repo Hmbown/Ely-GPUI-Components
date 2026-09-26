@@ -16,6 +16,7 @@ use crate::{
     motion::{self, Spinner},
     primitives::{Disclosure, DragGhost, Icon},
     theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
+    typography::Ellipsis,
 };
 
 /// What drawing rows needs, shared by every range the list asks for.
@@ -151,9 +152,8 @@ fn row(rows: &Rows, ix: usize, window: &mut Window, cx: &mut App) -> AnyElement 
         None => div()
             .flex_1()
             .min_w_0()
-            .truncate()
             .when_some(ink, |text, ink| text.text_color(ink))
-            .child(label.clone())
+            .child(Ellipsis::new(label.clone()))
             .into_any_element(),
     };
     let line = |at: DropAt| {

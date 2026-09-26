@@ -94,3 +94,14 @@ pub fn set<T: 'static>(state: &Entity<T>, value: T, cx: &mut App) {
         cx.notify();
     });
 }
+
+/// A steady pseudo-random series, so captures repeat.
+pub fn noise(seed: u64) -> impl FnMut() -> f64 {
+    let mut state = seed;
+    move || {
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        (state >> 33) as f64 / (1u64 << 31) as f64
+    }
+}

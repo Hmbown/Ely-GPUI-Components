@@ -14,6 +14,17 @@ impl Linear {
         Self { domain, range }
     }
 
+    /// The value at pixel `at`; a flat range reads the middle of the domain.
+    pub(crate) fn value(&self, at: f32) -> f64 {
+        let span = self.range.1 - self.range.0;
+        let share = if span == 0.0 {
+            0.5
+        } else {
+            (f64::from(at) - f64::from(self.range.0)) / f64::from(span)
+        };
+        self.domain.0 + (self.domain.1 - self.domain.0) * share
+    }
+
     /// Where `value` lands; a flat domain lands in the middle.
     pub(crate) fn at(&self, value: f64) -> f32 {
         let span = self.domain.1 - self.domain.0;
@@ -120,6 +131,7 @@ mod tests {
         let scale = Linear::new((0.0, 50.0), (100.0, 0.0));
         assert_eq!(scale.at(25.0), 50.0);
         assert_eq!(scale.at(50.0), 0.0);
+        assert_eq!(scale.value(20.0), 40.0, "and back");
         assert_eq!(
             Linear::new((3.0, 3.0), (0.0, 10.0)).at(3.0),
             5.0,

@@ -94,19 +94,18 @@ impl RenderOnce for TreeTable {
             theme.tree_indent(),
         );
         let columns = Rc::new(self.columns);
-        let head =
-            div()
-                .flex()
-                .items_center()
-                .h(height)
-                .border_b_1()
-                .border_color(colors.border)
-                .text_size(theme.text_size(TextSize::Xs))
-                .font_weight(FontWeight::MEDIUM)
-                .text_color(colors.fg_muted)
-                .children(columns.iter().map(|column| {
-                    sized(div().px_3(), column, narrowest).child(column.title.clone())
-                }));
+        let head = div()
+            .flex()
+            .items_center()
+            .h(height)
+            .border_b_1()
+            .border_color(colors.border)
+            .text_size(theme.text_size(TextSize::Xs))
+            .font_weight(FontWeight::MEDIUM)
+            .text_color(colors.fg_muted)
+            .children(columns.iter().map(|column| {
+                sized(div().px_3().flex(), column, narrowest).child(column.title.clone())
+            }));
         let rows = shown.into_iter().map(|(row, depth)| {
             assert_eq!(
                 row.cells.len(),

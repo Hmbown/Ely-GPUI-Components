@@ -2,6 +2,7 @@ mod buttons;
 mod charts;
 mod data;
 mod feedback;
+mod finance;
 mod forms;
 mod layout;
 mod lists;
@@ -45,6 +46,7 @@ pub const ALL: &[Page] = &[
     lists::PAGE,
     tables::PAGE,
     charts::PAGE,
+    finance::PAGE,
     theme::PAGE,
 ];
 

@@ -1,6 +1,6 @@
 use gpui::{
-    App, ElementId, FontWeight, IntoElement, ParentElement, RenderOnce, SharedString, Styled,
-    Window, div, prelude::*,
+    App, Div, ElementId, FontWeight, IntoElement, ParentElement, Refineable, RenderOnce,
+    SharedString, StyleRefinement, Styled, Window, div, prelude::*,
 };
 
 use crate::{
@@ -162,6 +162,7 @@ impl RenderOnce for Statistic {
 /// A statistic on a quiet card, with an icon and a line of context.
 #[derive(IntoElement)]
 pub struct KpiCard {
+    base: Div,
     statistic: Statistic,
     icon: Option<IconName>,
     caption: Option<SharedString>,
@@ -170,6 +171,7 @@ pub struct KpiCard {
 impl KpiCard {
     pub fn new(statistic: Statistic) -> Self {
         Self {
+            base: div(),
             statistic,
             icon: None,
             caption: None,
@@ -187,12 +189,19 @@ impl KpiCard {
     }
 }
 
+impl Styled for KpiCard {
+    fn style(&mut self) -> &mut StyleRefinement {
+        self.base.style()
+    }
+}
+
 impl RenderOnce for KpiCard {
-    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(mut self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
         let colors = &theme.colors;
-        div()
-            .relative()
+        let mut card = div();
+        card.style().refine(self.base.style());
+        card.relative()
             .flex()
             .flex_col()
             .gap_3()

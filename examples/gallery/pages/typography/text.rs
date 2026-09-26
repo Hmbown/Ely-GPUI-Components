@@ -1,8 +1,8 @@
 use ely_gpui_component::{
     theme::{ActiveTheme, Radius},
     typography::{
-        Blockquote, Caption, Code, EllipsisTooltip, ExternalLink, Heading, Highlight, Kbd,
-        KbdCombo, Label, Link, MiddleEllipsis, Overline, Paragraph, Subtitle, Title,
+        Blockquote, Caption, Code, Ellipsis, EllipsisTooltip, ExternalLink, Heading, Highlight,
+        Kbd, KbdCombo, Label, Link, MiddleEllipsis, Overline, Paragraph, Subtitle, Title,
     },
 };
 use gpui::{App, IntoElement, ParentElement, Styled, div, px};
@@ -149,11 +149,18 @@ fn narrow(cx: &App) -> gpui::Div {
 
 pub fn truncate(cx: &App) -> impl IntoElement + use<> {
     section(
-        "Truncate",
-        "gpui's .truncate(): one line, an ellipsis at the end.",
+        "Truncate / Ellipsis",
+        "One line, an ellipsis at the end, in the text style around it. It holds in flex boxes, where gpui's own .truncate() clips.",
         cx,
     )
-    .child(narrow(cx).child(div().truncate().child(PROSE)))
+    .child(
+        narrow(cx)
+            .flex()
+            .items_center()
+            .gap_2()
+            .child(div().flex_none().child("Note"))
+            .child(Ellipsis::new(PROSE)),
+    )
 }
 
 pub fn line_clamp(cx: &App) -> impl IntoElement + use<> {

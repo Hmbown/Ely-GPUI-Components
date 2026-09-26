@@ -9,7 +9,7 @@ use smallvec::SmallVec;
 
 use crate::{
     theme::{ActiveTheme, ControlSize, Radius, TextSize},
-    typography::LEADING,
+    typography::{Ellipsis, LEADING},
 };
 
 type OnClick = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
@@ -95,7 +95,12 @@ impl RenderOnce for ListItem {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
         let colors = &theme.colors;
-        let line = |text: SharedString| div().truncate().line_height(relative(LEADING)).child(text);
+        let line = |text: SharedString| {
+            div()
+                .min_w_0()
+                .line_height(relative(LEADING))
+                .child(Ellipsis::new(text))
+        };
         let pressable = self.on_click.is_some() && !self.disabled;
         div()
             .id(self.id)

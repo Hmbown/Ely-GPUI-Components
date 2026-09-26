@@ -14,6 +14,7 @@ use super::{
 use crate::{
     primitives::{Icon, IconName, tab_stop},
     theme::{ActiveTheme, ControlSize, IconSize, Radius},
+    typography::Ellipsis,
 };
 
 /// An open list's place and cursor, kept between frames.
@@ -117,11 +118,8 @@ pub(crate) fn field_text(
     div()
         .flex_1()
         .min_w_0()
-        .overflow_hidden()
-        .text_ellipsis()
-        .whitespace_nowrap()
         .text_color(color)
-        .child(text.unwrap_or(placeholder))
+        .child(Ellipsis::new(text.unwrap_or(placeholder)))
 }
 
 /// The list a trigger opens: its rows, the one chosen, and whether the trigger holds focus.

@@ -48,6 +48,7 @@ pub use avatar::AvatarUpload;
 pub use card::{CheckboxCard, RadioCard};
 pub use cascade::{Cascade, Cascader};
 pub use catalogs::FontPicker;
+pub(crate) use catalogs::flag;
 pub(crate) use check::check_mark;
 pub use check::{CheckState, Checkbox, CheckboxGroup};
 pub use checked::{EmailInput, UrlInput, is_email, is_url};

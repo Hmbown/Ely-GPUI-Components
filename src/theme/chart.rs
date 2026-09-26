@@ -18,6 +18,8 @@ pub struct ChartSizes {
     pub stroke: Rems,
     /// Widest a bubble's radius grows.
     pub bubble: Rems,
+    /// A market chart's room for each candle before any zoom.
+    pub candle: Rems,
     /// How far a slice under the pointer lifts out.
     pub lift: Rems,
     /// Gridlines and rules.
@@ -34,6 +36,7 @@ impl Theme {
             label: px_to_rems(64.0),
             stroke: px_to_rems(2.0),
             bubble: px_to_rems(24.0),
+            candle: px_to_rems(8.0),
             lift: px_to_rems(6.0),
             hairline: px(1.0),
         }

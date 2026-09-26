@@ -4,6 +4,7 @@ pub mod buttons;
 pub mod charts;
 pub mod data_display;
 pub mod feedback;
+pub mod finance;
 pub mod forms;
 pub mod layout;
 pub mod lists;

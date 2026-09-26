@@ -5,8 +5,10 @@ use ely_gpui_component::charts::{
 use gpui::{App, IntoElement, ParentElement, Styled, div, px};
 use jiff::civil::date;
 
-use super::cartesian::noise;
-use crate::{probe::probe, ui::section};
+use crate::{
+    probe::probe,
+    ui::{noise, section},
+};
 
 pub fn flows(cx: &mut App) -> impl IntoElement + use<> {
     let budget = SankeyChart::new(

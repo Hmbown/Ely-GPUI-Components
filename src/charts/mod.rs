@@ -45,3 +45,11 @@ pub use series::{Points, Series};
 pub use sunburst::{Slice, Sunburst};
 pub use targets::{Bullet, BulletChart, ProgressChart};
 pub use tiles::{HeatmapChart, Treemap};
+
+pub(crate) use axes::anchored;
+pub(crate) use geometry::{Geometry, Ink, Line, Rect};
+pub(crate) use layout::squarify;
+pub(crate) use paint::{at, finish, measure, place, ring, tint};
+pub(crate) use plot::{Layout, Pick, Plot, Scene, Tips, plot};
+pub(crate) use scale::{Linear, compact, nice, nice_step};
+pub(crate) use tiles::{Tiles, tracked};

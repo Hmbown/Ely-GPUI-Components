@@ -12,23 +12,12 @@ use gpui::{App, ClipboardItem, IntoElement, ParentElement, SharedString, Styled,
 
 use crate::{
     probe::probe,
-    ui::{keep, row, section, set},
+    ui::{keep, noise, row, section, set},
 };
 
 const MONTHS: [&str; 12] = [
     "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
-
-/// A steady pseudo-random series, so captures repeat.
-pub(super) fn noise(seed: u64) -> impl FnMut() -> f64 {
-    let mut state = seed;
-    move || {
-        state = state
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        (state >> 33) as f64 / (1u64 << 31) as f64
-    }
-}
 
 pub fn lines(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
     let turn = keep("lines-turn", || 0usize, window, cx);

@@ -59,8 +59,8 @@ impl Ink {
     pub(crate) fn color(self, colors: &Palette) -> Hsla {
         match self {
             Ink::Series(ix) => tint(colors, ix),
-            Ink::Rise => tint(colors, 1),
-            Ink::Fall => tint(colors, 3),
+            Ink::Rise => colors.success,
+            Ink::Fall => colors.danger,
             Ink::Rule => colors.fg_subtle,
             Ink::Strong => colors.fg,
         }

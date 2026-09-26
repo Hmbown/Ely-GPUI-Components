@@ -10,6 +10,7 @@ use crate::{
     motion,
     primitives::{Icon, IconName},
     theme::{ActiveTheme, ControlSize, Elevation, IconSize, Radius, TextSize},
+    typography::Ellipsis,
 };
 
 /// One option: a value, the label shown for it, and an optional icon and note.
@@ -130,10 +131,7 @@ pub(crate) fn option_row(
             div()
                 .flex_1()
                 .min_w_0()
-                .overflow_hidden()
-                .text_ellipsis()
-                .whitespace_nowrap()
-                .child(choice.label.clone()),
+                .child(Ellipsis::new(choice.label.clone())),
         )
         .when_some(choice.note.clone(), |row, note| {
             row.child(div().text_color(colors.fg_subtle).child(note))

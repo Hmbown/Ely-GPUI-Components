@@ -11,6 +11,7 @@ use crate::{
     motion,
     primitives::{DragGhost, Icon, IconName},
     theme::{ActiveTheme, ControlSize, IconSize, Radius, TextSize},
+    typography::Ellipsis,
 };
 
 /// One window-level tab.
@@ -199,10 +200,7 @@ impl RenderOnce for TabBar {
                     div()
                         .flex_1()
                         .min_w_0()
-                        .overflow_hidden()
-                        .whitespace_nowrap()
-                        .text_ellipsis()
-                        .child(tab.title.clone()),
+                        .child(Ellipsis::new(tab.title.clone())),
                 )
                 .when_some(close, |el, close| {
                     el.child(
