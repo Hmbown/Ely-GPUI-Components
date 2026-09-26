@@ -52,7 +52,9 @@ Per-component lines live in `tasks/`. Tags there:
 - [ ] T14a Tables · Core
 - [ ] T14b Tables · Columns & rows
 - [ ] T14c Tables · Grids
-- [ ] T15 Charts
+- [ ] T15a Charts · Cartesian
+- [ ] T15b Charts · Parts and spreads
+- [ ] T15c Charts · Flows and relations
 - [ ] T16a Finance · Market charts
 - [ ] T16b Finance · Technical analysis
 - [ ] T16c Finance · Quotes & book
@@ -204,3 +206,6 @@ Per-component lines live in `tasks/`. Tags there:
 | T14a | 1 | FAIL | numbers and words compared out of order in a mixed column, and the sort panicked |
 | T14b | 1 | FAIL | a removed filter rule left its typing to the next rule, and two sort rows could take one column |
 | T14c | 1 | FAIL | a shrunk grid kept its cursor outside, long column letters overflowed, presses landed in merged cells, Tab left the grid, and ranges counted text and blanks |
+| T15a | 1 | — | pending review |
+| T15b | 1 | — | pending review |
+| T15c | 1 | — | pending review |

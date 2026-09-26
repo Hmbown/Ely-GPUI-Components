@@ -14,6 +14,8 @@ use crate::{
 pub enum Step {
     Rest,
     Hover(&'static str),
+    /// Moves the pointer to an offset from the probe's top-left corner.
+    HoverAt(&'static str, f32, f32),
     Down(&'static str),
     Up(&'static str),
     Click(&'static str),
@@ -86,6 +88,10 @@ pub async fn play(
             Step::Hover(key) => {
                 let at = target(window, key, cx).await?;
                 send(window, Mouse::Move, at, cx)?;
+            }
+            Step::HoverAt(key, x, y) => {
+                last = target_bounds(window, key, cx).await?.origin + point(px(x), px(y));
+                send(window, Mouse::Move, last, cx)?;
             }
             Step::Down(key) => {
                 let at = target(window, key, cx).await?;

@@ -1,3 +1,4 @@
+mod chart;
 mod palette;
 mod tokens;
 
@@ -6,6 +7,7 @@ use std::time::{Duration, Instant};
 use gpui::{App, Global, SharedString, WindowAppearance};
 
 use crate::motion;
+pub use chart::ChartSizes;
 pub use palette::{Mix, Palette, Syntax};
 pub use tokens::{
     AvatarSize, ContainerSize, ControlSize, Density, Elevation, IconSize, Radius, TextSize,

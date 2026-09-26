@@ -102,6 +102,9 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - gpui's `img` takes its picture's pixel size for any `Auto` side, and its aspect ratio beats percent heights in flow. `Image` pins it absolute at full size, so an `Image` needs a sized box.
 - Badges, tags and avatars live in `data_display`; forms and shell draw theirs from there, and `data_display` imports neither. Avatars take square pictures.
 - `img()` keeps loading state only with an id. Content masks are rectangles, so rounded corners survive only when the image fills its box without cropping.
+- Charts lay out in `f32` pixels of their own box, tested without gpui, and paint through `charts::paint::at`: a canvas's paint gets window coordinates, and `with_element_offset` works only in prepaint. Their sizes come from `theme.chart()`.
+- A label pinned to a point sits in a zero-size absolute box that centers it with flex (`charts::axes`), so no offset guesses at text size.
+- Tokens live in `src/theme`; the raw `px()` scan skips that folder only.
 
 ## Decisions
 

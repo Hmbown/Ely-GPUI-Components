@@ -75,7 +75,7 @@ pub enum Elevation {
     Modal,
 }
 
-fn px_to_rems(value: f32) -> Rems {
+pub(super) fn px_to_rems(value: f32) -> Rems {
     rems(value / 16.0)
 }
 

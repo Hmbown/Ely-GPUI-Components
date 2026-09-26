@@ -1,4 +1,5 @@
 mod buttons;
+mod charts;
 mod data;
 mod feedback;
 mod forms;
@@ -43,6 +44,7 @@ pub const ALL: &[Page] = &[
     data::PAGE,
     lists::PAGE,
     tables::PAGE,
+    charts::PAGE,
     theme::PAGE,
 ];
 
