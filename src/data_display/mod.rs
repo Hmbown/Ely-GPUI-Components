@@ -9,6 +9,7 @@ mod feed;
 mod gallery;
 mod measures;
 mod records;
+mod spark;
 mod stars;
 mod stat;
 #[cfg(test)]
@@ -27,6 +28,7 @@ pub use feed::{Activity, ActivityFeed};
 pub use gallery::Gallery;
 pub use measures::{Gauge, Meter, UsageBar};
 pub use records::{DescriptionList, PropertyGrid, PropertyGroup};
+pub use spark::Sparkline;
 pub use stars::Stars;
 pub(crate) use stars::star;
 pub use stat::{KpiCard, Statistic, TrendIndicator};

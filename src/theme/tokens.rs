@@ -284,6 +284,20 @@ impl Theme {
         px_to_rems(128.0)
     }
 
+    /// A table row's height at each density.
+    pub fn table_row(&self, density: Density) -> Rems {
+        px_to_rems(match density {
+            Density::Compact => 28.0,
+            Density::Standard => 36.0,
+            Density::Comfortable => 44.0,
+        })
+    }
+
+    /// A sparkline beside text.
+    pub fn spark_size(&self) -> Size<Rems> {
+        size(px_to_rems(64.0), px_to_rems(18.0))
+    }
+
     /// How far each level of a tree steps in.
     pub fn tree_indent(&self) -> Rems {
         px_to_rems(16.0)

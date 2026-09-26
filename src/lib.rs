@@ -12,6 +12,7 @@ pub mod navigation;
 pub mod overlays;
 pub mod primitives;
 pub mod shell;
+pub mod tables;
 pub mod theme;
 pub mod typography;
 

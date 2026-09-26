@@ -10,6 +10,7 @@ mod navigation;
 mod overlays;
 mod primitives;
 mod shell;
+mod tables;
 mod theme;
 mod typography;
 
@@ -41,6 +42,7 @@ pub const ALL: &[Page] = &[
     motion::PAGE,
     data::PAGE,
     lists::PAGE,
+    tables::PAGE,
     theme::PAGE,
 ];
 

@@ -10,7 +10,7 @@ use crate::primitives::tab_stop;
 
 /// How a press or a key picks rows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Pick {
+pub(crate) enum Pick {
     One,
     Toggle,
     Range,
@@ -18,7 +18,7 @@ pub(super) enum Pick {
 }
 
 /// The selection after picking row `at`, a range reaching back to `anchor`; in row order.
-pub(super) fn picked(
+pub(crate) fn picked(
     keys: &[SharedString],
     selected: &[SharedString],
     anchor: usize,
