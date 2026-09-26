@@ -33,6 +33,7 @@ struct Guides {
     at: usize,
     log: Vec<String>,
     lower: bool,
+    pictures: usize,
 }
 
 fn target() -> Bounds<gpui::Pixels> {
@@ -60,7 +61,10 @@ impl Render for Guides {
                 cx.notify();
             })
         };
-        let slides = ["a", "b", "c"].map(|name| Slide::new(Path::new("/missing/ely.png"), name));
+        let slides = ["a", "b", "c"]
+            .into_iter()
+            .take(self.pictures)
+            .map(|name| Slide::new(Path::new("/missing/ely.png"), name));
         let steps = [
             TourStep::new(target(), "Here", "The first stop"),
             TourStep::new(
@@ -129,6 +133,7 @@ fn guides(cx: &mut TestAppContext) -> (Entity<Guides>, &mut VisualTestContext) {
         at: 0,
         log: Vec::new(),
         lower: false,
+        pictures: 3,
     });
     settle(cx);
     (view, cx)
@@ -165,6 +170,20 @@ fn the_lightbox_steps_with_arrows_and_escape_hands_focus_back(cx: &mut TestAppCo
     press("escape", cx);
     assert!(state(&view, cx).0.is_none());
     assert!(before_focused(&view, cx));
+}
+
+#[gpui::test]
+fn a_lightbox_whose_pictures_go_away_closes_and_hands_focus_back(cx: &mut TestAppContext) {
+    let (view, cx) = guides(cx);
+    open(&view, Open::Lightbox, cx);
+    assert!(!before_focused(&view, cx), "the lightbox took focus");
+    view.update(cx, |guides, cx| {
+        guides.pictures = 0;
+        cx.notify();
+    });
+    settle(cx);
+    assert!(state(&view, cx).0.is_none(), "it closed");
+    assert!(before_focused(&view, cx), "focus went back");
 }
 
 #[gpui::test]

@@ -38,11 +38,12 @@ pub(crate) fn picked(
         .collect()
 }
 
-/// The row the keyboard is on, where a Shift range starts, and the scroll that follows them.
+/// The row the keyboard is on and where a Shift range starts, by index and by key so they follow their rows when the owner reorders them, and the scroll that follows them.
 #[derive(Default)]
 struct Cursor {
     at: usize,
     anchor: usize,
+    keys: Option<(SharedString, SharedString)>,
     scroll: ScrollHandle,
 }
 
@@ -50,7 +51,7 @@ type OnSelect = Rc<dyn Fn(&[SharedString], &mut Window, &mut App)>;
 type OnActivate = Rc<dyn Fn(&SharedString, &mut Window, &mut App)>;
 type Picker = Rc<dyn Fn(usize, Pick, &mut Window, &mut App)>;
 
-/// Rows you select. A press picks one; with `multiple`, Cmd-press adds or drops one and Shift-press takes the range from the last pick. Up and Down move, Shift with them extends, Space toggles, Cmd-A takes all.
+/// Rows you select. A press picks one; with `multiple`, Cmd-press adds or drops one and Shift-press takes the range from the last pick. Up and Down move, Shift with them extends, Space toggles, Cmd-A takes all. Keys pass over disabled rows, and no pick adds one.
 #[derive(IntoElement)]
 pub struct SelectableList {
     id: ElementId,
@@ -123,14 +124,34 @@ impl RenderOnce for SelectableList {
         let focused = focus.is_focused(window);
         let cursor =
             window.use_keyed_state((self.id.clone(), "cursor"), cx, |_, _| Cursor::default());
-        let (at, scroll) = {
+        let keys: Rc<[SharedString]> = self.rows.iter().map(|(key, _)| key.clone()).collect();
+        let (at, anchor, scroll) = {
             let cursor = cursor.read(cx);
+            let place = |key: Option<&SharedString>, ix: usize| {
+                key.and_then(|key| keys.iter().position(|row| row == key))
+                    .unwrap_or(ix.min(count.saturating_sub(1)))
+            };
+            let held = cursor.keys.as_ref();
             (
-                cursor.at.min(count.saturating_sub(1)),
+                place(held.map(|keys| &keys.0), cursor.at),
+                place(held.map(|keys| &keys.1), cursor.anchor),
                 cursor.scroll.clone(),
             )
         };
-        let keys: Rc<[SharedString]> = self.rows.iter().map(|(key, _)| key.clone()).collect();
+        if (at, anchor) != (cursor.read(cx).at, cursor.read(cx).anchor) {
+            cursor.update(cx, |cursor, _| (cursor.at, cursor.anchor) = (at, anchor));
+        }
+        let off: Rc<[bool]> = self
+            .rows
+            .iter()
+            .map(|(_, item)| item.is_disabled())
+            .collect();
+        let barred: Vec<SharedString> = self
+            .rows
+            .iter()
+            .filter(|(_, item)| item.is_disabled())
+            .map(|(key, _)| key.clone())
+            .collect();
         let selected = self.selected;
         let multiple = self.multiple;
         let pick: Picker = {
@@ -147,12 +168,20 @@ impl RenderOnce for SelectableList {
                     (false, Pick::All) => return,
                     (false, _) => Pick::One,
                 };
-                let next = picked(&keys, &selected, cursor.read(cx).anchor, ix, pick);
+                let next: Vec<SharedString> =
+                    picked(&keys, &selected, cursor.read(cx).anchor, ix, pick)
+                        .into_iter()
+                        .filter(|key| !barred.contains(key) || selected.contains(key))
+                        .collect();
                 cursor.update(cx, |cursor, cx| {
                     cursor.at = ix;
                     if pick != Pick::Range {
                         cursor.anchor = ix;
                     }
+                    cursor.keys = Some((
+                        keys[ix].clone(),
+                        keys[cursor.anchor.min(keys.len() - 1)].clone(),
+                    ));
                     cursor.scroll.scroll_to_item(ix);
                     cx.notify();
                 });
@@ -209,22 +238,27 @@ impl RenderOnce for SelectableList {
                 let held = &event.keystroke.modifiers;
                 let at = cursor.read(cx).at.min(count - 1);
                 let extend = if held.shift { Pick::Range } else { Pick::One };
+                let open = |ix: &usize| !off[*ix];
                 let (to, how) = match event.keystroke.key.as_str() {
-                    "down" => ((at + 1).min(count - 1), extend),
-                    "up" => (at.saturating_sub(1), extend),
-                    "home" => (0, extend),
-                    "end" => (count - 1, extend),
-                    "space" => (at, Pick::Toggle),
+                    "down" => ((at + 1..count).find(open), extend),
+                    "up" => ((0..at).rev().find(open), extend),
+                    "home" => ((0..count).find(open), extend),
+                    "end" => ((0..count).rev().find(open), extend),
+                    "space" => (Some(at).filter(open), Pick::Toggle),
                     "enter" => {
                         cx.stop_propagation();
-                        activate(&keys[at], window, cx);
+                        if open(&at) {
+                            activate(&keys[at], window, cx);
+                        }
                         return;
                     }
-                    "a" if held.platform => (at, Pick::All),
+                    "a" if held.platform => (Some(at), Pick::All),
                     _ => return,
                 };
                 cx.stop_propagation();
-                pick(to, how, window, cx);
+                if let Some(to) = to {
+                    pick(to, how, window, cx);
+                }
             })
             .children(rows)
     }

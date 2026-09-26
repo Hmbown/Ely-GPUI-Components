@@ -81,7 +81,7 @@ pub struct Lightbox {
 }
 
 impl Lightbox {
-    /// Render it while open; the owner keeps `at` and moves it in `on_step`.
+    /// Render it while open; the owner keeps `at` and moves it in `on_step`. With no pictures left it closes, handing focus back.
     pub fn new(
         id: impl Into<ElementId>,
         slides: impl IntoIterator<Item = Slide>,
@@ -90,7 +90,7 @@ impl Lightbox {
     ) -> Self {
         let slides: Vec<Slide> = slides.into_iter().collect();
         assert!(
-            at < slides.len(),
+            slides.is_empty() || at < slides.len(),
             "slide {at} is past the last of {}",
             slides.len()
         );
@@ -127,6 +127,11 @@ impl RenderOnce for Lightbox {
                 on_close(window, cx)
             })
         };
+        if count == 0 {
+            log::info!("lightbox {:?}: no pictures left", self.id);
+            window.defer(cx, move |window, cx| close(window, cx));
+            return div().into_any_element();
+        }
         let step: OnStep = {
             let (id, on_step) = (self.id.clone(), self.on_step);
             Rc::new(move |to, window, cx| {
@@ -276,6 +281,8 @@ impl RenderOnce for Lightbox {
                             ),
                     ),
             );
-        deferred(anchored().position(Point::default()).child(stage)).with_priority(1)
+        deferred(anchored().position(Point::default()).child(stage))
+            .with_priority(1)
+            .into_any_element()
     }
 }

@@ -42,10 +42,10 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T11b Loading · Progress & states
 - [x] T11c Motion · Presence & order
 - [x] T11d Motion · Effects
-- [ ] T12a Data Display · People & numbers
-- [ ] T12b Data Display · Records
+- [x] T12a Data Display · People & numbers
+- [x] T12b Data Display · Records
 - [ ] T12c Data Display · Media
-- [ ] T12d Data Display · Codes & measures
+- [x] T12d Data Display · Codes & measures
 - [ ] T13a Lists & Trees · Lists
 - [ ] T13b Lists & Trees · Trees
 - [ ] T13c Lists & Trees · Files
@@ -187,12 +187,16 @@ Per-component lines live in `tasks/`. Tags there:
 | T11d | 2 | FAIL | Marquee's doc still said its content is drawn twice |
 | T11d | 3 | PASS | |
 | T12a | 1 | FAIL | the avatar upload took HEIC, which gpui cannot decode, an accent badge's dot matched its fill, and a square avatar's upload veil stayed round |
+| T12a | 2 | PASS | |
 | T12b | 1 | FAIL | the gpui test module compiled without test-support, and a long description value overflowed a narrow column |
+| T12b | 2 | PASS | |
 | T12c | 1 | FAIL | the gallery kept an open index past a shrunk list, and the lightbox asserted on it |
+| T12c | 2 | FAIL | emptying the list removed the open lightbox without handing focus back |
 | T12d | 1 | FAIL | Code 128 took a set-switch character, a usage bar's float sum tripped its assert, and a dense QR floored its modules to nothing |
-| T13a | 1 | — | pending: codex still logged out |
-| T13b | 1 | — | pending: codex still logged out |
-| T13c | 1 | — | pending: codex still logged out |
+| T12d | 2 | PASS | |
+| T13a | 1 | FAIL | Down and Cmd-A picked disabled rows, and Enter opened them |
+| T13b | 1 | FAIL | Down stuck on a loading row and never reached the nodes past it |
+| T13c | 1 | FAIL | the cursor kept its index through a re-sort, so Enter opened another file |
 | T14a | 1 | — | pending: codex still logged out |
 | T14b | 1 | — | pending: codex still logged out |
 | T14c | 1 | — | pending review |

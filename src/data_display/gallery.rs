@@ -9,9 +9,9 @@ use crate::{
     primitives::{FocusRing, Image, tab_stop},
 };
 
-/// The open picture if it is still there, the last when it went past the end, none when all are gone.
+/// The open picture, or the last when it went past the end; with none left the lightbox closes itself.
 fn clamp(open: Option<usize>, count: usize) -> Option<usize> {
-    open.and_then(|at| count.checked_sub(1).map(|last| at.min(last)))
+    open.map(|at| at.min(count.saturating_sub(1)))
 }
 
 /// Pictures in square tiles. A press, or Enter on a focused tile, opens the lightbox at that picture.
@@ -132,7 +132,7 @@ mod tests {
     fn an_open_picture_clamps_when_pictures_go_away() {
         assert_eq!(clamp(Some(1), 3), Some(1));
         assert_eq!(clamp(Some(2), 1), Some(0), "past the end opens the last");
-        assert_eq!(clamp(Some(0), 0), None, "no pictures closes it");
+        assert_eq!(clamp(Some(2), 0), Some(0), "the lightbox closes itself");
         assert_eq!(clamp(None, 3), None);
     }
 }

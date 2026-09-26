@@ -77,6 +77,10 @@ impl ListItem {
         self
     }
 
+    pub(crate) fn is_disabled(&self) -> bool {
+        self.disabled
+    }
+
     /// Makes the row pressable; the press keeps focus where it is.
     pub fn on_click(
         mut self,

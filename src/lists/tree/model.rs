@@ -181,10 +181,10 @@ pub(crate) enum Move {
     Close(SharedString),
 }
 
-/// Up, Down, Home and End walk the rows; Right opens a node or enters it, Left closes it or goes to its parent.
+/// Up, Down, Home and End walk the rows past any still loading; Right opens a node or enters it, Left closes it or goes to its parent.
 pub(crate) fn step(rows: &[Row], at: usize, key: &str) -> Option<Move> {
-    let last = rows.len().checked_sub(1)?;
     let row = rows.get(at)?;
+    let node = |ix: &usize| rows[*ix].shown != Shown::Loading;
     let (opens, open, node_key) = match &row.shown {
         Shown::Node {
             key, opens, open, ..
@@ -192,12 +192,15 @@ pub(crate) fn step(rows: &[Row], at: usize, key: &str) -> Option<Move> {
         Shown::Loading => (false, false, None),
     };
     match key {
-        "down" => (at < last).then(|| Move::To(at + 1)),
-        "up" => at.checked_sub(1).map(Move::To),
-        "home" => Some(Move::To(0)),
-        "end" => Some(Move::To(last)),
+        "down" => (at + 1..rows.len()).find(node).map(Move::To),
+        "up" => (0..at).rev().find(node).map(Move::To),
+        "home" => (0..rows.len()).find(node).map(Move::To),
+        "end" => (0..rows.len()).rev().find(node).map(Move::To),
         "right" if opens && !open => node_key.map(Move::Open),
-        "right" if open => (at < last).then(|| Move::To(at + 1)),
+        "right" if open => Some(at + 1)
+            .filter(|next| rows.get(*next).is_some_and(|child| child.depth > row.depth))
+            .filter(node)
+            .map(Move::To),
         "left" if open => node_key.map(Move::Close),
         "left" => row.parent.map(Move::To),
         _ => None,
@@ -340,6 +343,29 @@ mod tests {
         assert_eq!(step(&shown, 1, "right"), None, "a leaf has nowhere to go");
         assert_eq!(step(&shown, 4, "down"), None);
         assert_eq!(step(&shown, 3, "end"), Some(Move::To(4)));
+    }
+
+    #[test]
+    fn keys_pass_over_a_loading_row() {
+        let nodes = tree();
+        let shown = rows(&nodes, &open(&["docs"]));
+        assert_eq!(
+            step(&shown, 1, "down"),
+            Some(Move::To(3)),
+            "down skips the loading row"
+        );
+        assert_eq!(step(&shown, 3, "up"), Some(Move::To(1)));
+        assert_eq!(
+            step(&shown, 1, "right"),
+            None,
+            "nothing to enter while it loads"
+        );
+        let waiting = rows(&[TreeNode::new("docs", "docs").pending()], &open(&["docs"]));
+        assert_eq!(
+            step(&waiting, 0, "end"),
+            Some(Move::To(0)),
+            "end stops on the last node"
+        );
     }
 
     #[test]
