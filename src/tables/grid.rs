@@ -6,9 +6,10 @@ use gpui::{
     SharedString, StatefulInteractiveElement, Styled, Window, canvas, div, point, prelude::*,
 };
 
-use super::gridkeys::{begin, fill, keys};
+use super::gridkeys::{Metrics, across, begin, fill, fit, keys, land};
 use crate::{
     forms::{Editing, Input},
+    primitives::{FocusNext, FocusPrev},
     theme::{ActiveTheme, ControlSize, TextSize},
 };
 
@@ -49,34 +50,6 @@ pub(crate) struct Face {
     pub on_change: Option<OnCells>,
 }
 
-/// Sizes in pixels: a cell, a header, the row labels, and the frozen stretch.
-#[derive(Clone, Copy)]
-pub(crate) struct Metrics {
-    pub wide: Pixels,
-    pub tall: Pixels,
-    pub label: Pixels,
-    pub frozen: Point<Pixels>,
-}
-
-impl Metrics {
-    /// The cell under a point within the grid, if any.
-    pub(crate) fn cell_at(
-        &self,
-        at: Point<Pixels>,
-        offset: Point<Pixels>,
-        face: (usize, usize),
-    ) -> Option<(usize, usize)> {
-        let (x, y) = (at.x - self.label, at.y - self.tall);
-        if x < Pixels::ZERO || y < Pixels::ZERO {
-            return None;
-        }
-        let x = if x < self.frozen.x { x } else { x + offset.x };
-        let y = if y < self.frozen.y { y } else { y + offset.y };
-        let (col, row) = ((x / self.wide) as usize, (y / self.tall) as usize);
-        (row < face.0 && col < face.1).then_some((row, col))
-    }
-}
-
 /// A drag of a grid's fill handle, named by its owner.
 pub(crate) struct FillDrag {
     owner: EntityId,
@@ -96,7 +69,13 @@ pub(crate) fn grid(face: Face, base: Div, window: &mut Window, cx: &mut App) -> 
     let sheet: Entity<Sheet> =
         window.use_keyed_state((id.clone(), "sheet"), cx, |_, _| Sheet::default());
     let editor = window.use_keyed_state((id.clone(), "editor"), cx, |_, _| Editing::default());
-    sheet.update(cx, |sheet, _| sheet.rows = face.rows);
+    let shrunk = sheet.update(cx, |sheet, _| {
+        sheet.rows = face.rows;
+        fit(sheet, (face.rows, face.cols))
+    });
+    if shrunk {
+        editor.update(cx, |editing, cx| editing.finish(true, window, cx));
+    }
     if sheet.read(cx).editing && editor.read(cx).field().is_none() {
         sheet.update(cx, |sheet, _| sheet.editing = false);
         window.focus(&focus);
@@ -104,25 +83,7 @@ pub(crate) fn grid(face: Face, base: Div, window: &mut Window, cx: &mut App) -> 
     let theme = cx.theme();
     let colors = theme.colors.clone();
     let rem = window.rem_size();
-    let metrics = Metrics {
-        wide: theme.grid_column().to_pixels(rem),
-        tall: theme
-            .table_row(crate::theme::Density::Compact)
-            .to_pixels(rem),
-        label: if face.numbered {
-            theme.control_height(ControlSize::Lg).to_pixels(rem) * 1.25
-        } else {
-            Pixels::ZERO
-        },
-        frozen: Point::default(),
-    };
-    let metrics = Metrics {
-        frozen: point(
-            metrics.wide * face.frozen.1 as f32,
-            metrics.tall * face.frozen.0 as f32,
-        ),
-        ..metrics
-    };
+    let metrics = Metrics::new(&face, window, cx);
     let (rows, cols) = (face.rows, face.cols);
     let (offset, bounds, editing, fill_to) = {
         let sheet = sheet.read(cx);
@@ -348,6 +309,12 @@ pub(crate) fn grid(face: Face, base: Div, window: &mut Window, cx: &mut App) -> 
     let (raw, on_change, begin_with) = (face.raw.clone(), face.on_change.clone(), editor.clone());
     let (fill_raw, fill_hears) = (face.raw.clone(), face.on_change.clone());
     let numbered = face.numbered;
+    let (merges, frozen) = (Rc::new(face.merges.clone()), face.frozen);
+    let (hovered_merges, stepped, stepped_back) = (
+        merges.clone(),
+        (sheet.clone(), editor.clone()),
+        (sheet.clone(), editor.clone()),
+    );
     let keyed = keys(face, metrics, sheet.clone(), editor.clone());
     let focus_on_press = focus.clone();
     let text_size = theme.text_size(TextSize::Sm);
@@ -361,12 +328,33 @@ pub(crate) fn grid(face: Face, base: Div, window: &mut Window, cx: &mut App) -> 
         .border_1()
         .border_color(colors.border)
         .on_key_down(keyed)
+        .capture_action(move |_: &FocusNext, window, cx| {
+            across(
+                &stepped.0,
+                &stepped.1,
+                (face_cols, false),
+                (metrics, frozen),
+                window,
+                cx,
+            )
+        })
+        .capture_action(move |_: &FocusPrev, window, cx| {
+            across(
+                &stepped_back.0,
+                &stepped_back.1,
+                (face_cols, true),
+                (metrics, frozen),
+                window,
+                cx,
+            )
+        })
         .on_mouse_down(MouseButton::Left, move |event, window, cx| {
             let at = event.position - pressed.read(cx).bounds.origin;
             let Some(cell) = metrics.cell_at(at, pressed.read(cx).offset, (face_rows, face_cols))
             else {
                 return;
             };
+            let cell = land(&merges, cell);
             window.focus(&focus_on_press);
             pressed.update(cx, |sheet, cx| {
                 sheet.cursor = cell;
@@ -394,6 +382,7 @@ pub(crate) fn grid(face: Face, base: Div, window: &mut Window, cx: &mut App) -> 
             }
             let at = event.position - moved.read(cx).bounds.origin;
             if let Some(cell) = metrics.cell_at(at, moved.read(cx).offset, (face_rows, face_cols)) {
+                let cell = land(&hovered_merges, cell);
                 moved.update(cx, |sheet, cx| {
                     if sheet.cursor != cell && !sheet.editing {
                         sheet.cursor = cell;

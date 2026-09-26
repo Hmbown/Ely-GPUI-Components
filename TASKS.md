@@ -44,11 +44,11 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T11d Motion · Effects
 - [x] T12a Data Display · People & numbers
 - [x] T12b Data Display · Records
-- [ ] T12c Data Display · Media
+- [x] T12c Data Display · Media
 - [x] T12d Data Display · Codes & measures
-- [ ] T13a Lists & Trees · Lists
-- [ ] T13b Lists & Trees · Trees
-- [ ] T13c Lists & Trees · Files
+- [x] T13a Lists & Trees · Lists
+- [x] T13b Lists & Trees · Trees
+- [x] T13c Lists & Trees · Files
 - [ ] T14a Tables · Core
 - [ ] T14b Tables · Columns & rows
 - [ ] T14c Tables · Grids
@@ -192,11 +192,15 @@ Per-component lines live in `tasks/`. Tags there:
 | T12b | 2 | PASS | |
 | T12c | 1 | FAIL | the gallery kept an open index past a shrunk list, and the lightbox asserted on it |
 | T12c | 2 | FAIL | emptying the list removed the open lightbox without handing focus back |
+| T12c | 3 | PASS | |
 | T12d | 1 | FAIL | Code 128 took a set-switch character, a usage bar's float sum tripped its assert, and a dense QR floored its modules to nothing |
 | T12d | 2 | PASS | |
 | T13a | 1 | FAIL | Down and Cmd-A picked disabled rows, and Enter opened them |
+| T13a | 2 | PASS | |
 | T13b | 1 | FAIL | Down stuck on a loading row and never reached the nodes past it |
+| T13b | 2 | PASS | |
 | T13c | 1 | FAIL | the cursor kept its index through a re-sort, so Enter opened another file |
-| T14a | 1 | — | pending: codex still logged out |
-| T14b | 1 | — | pending: codex still logged out |
-| T14c | 1 | — | pending review |
+| T13c | 2 | PASS | |
+| T14a | 1 | FAIL | numbers and words compared out of order in a mixed column, and the sort panicked |
+| T14b | 1 | FAIL | a removed filter rule left its typing to the next rule, and two sort rows could take one column |
+| T14c | 1 | FAIL | a shrunk grid kept its cursor outside, long column letters overflowed, presses landed in merged cells, Tab left the grid, and ranges counted text and blanks |

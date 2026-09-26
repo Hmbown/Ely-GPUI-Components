@@ -1,12 +1,19 @@
-use std::{cell::RefCell, rc::Rc};
-
-use gpui::{
-    Context, IntoElement, Modifiers, ParentElement, Render, SharedString, Styled, TestAppContext,
-    VisualTestContext, Window, point, px,
+use std::{
+    cell::{Cell as Count, RefCell},
+    collections::HashMap,
+    rc::Rc,
 };
 
-use super::{Column, DataTable, Row};
-use crate::theme::Theme;
+use gpui::{
+    Context, FocusHandle, IntoElement, KeyBinding, Modifiers, ParentElement, Render, SharedString,
+    Styled, TestAppContext, VisualTestContext, Window, div, point, px,
+};
+
+use super::{Column, DataTable, FilterBuilder, FilterRule, Row};
+use crate::{
+    primitives::{FocusNext, FocusPrev, FocusScope},
+    theme::Theme,
+};
 
 /// Five selectable rows, 36 tall under a 36 tall header; it keeps what the table reports.
 struct Picks(Rc<RefCell<Vec<SharedString>>>);
@@ -188,6 +195,12 @@ struct Grid(Rc<RefCell<Vec<(usize, usize, String)>>>);
 
 impl Render for Grid {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        self.render_grid()
+    }
+}
+
+impl Grid {
+    fn render_grid(&self) -> impl IntoElement + use<> {
         let heard = self.0.clone();
         let rows: Vec<Vec<SharedString>> = (0..3)
             .map(|row| vec![format!("a{row}").into(), format!("b{row}").into()])
@@ -228,5 +241,188 @@ fn typing_edits_enter_keeps_and_backspace_clears_a_range(cx: &mut TestAppContext
         heard.borrow()[1..],
         [(1, 0, String::new()), (2, 0, String::new())],
         "enter moved down; the range clears"
+    );
+}
+
+/// Filter rules the owner keeps, 600 across, rebuilt from what the builder reports.
+struct Filters(Rc<RefCell<Vec<FilterRule>>>);
+
+impl Render for Filters {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let (rules, store, view) = (self.0.borrow().clone(), self.0.clone(), cx.entity());
+        div().w(px(600.0)).child(
+            FilterBuilder::new("filters", [("name", "Name"), ("region", "Region")])
+                .rules(rules, false)
+                .on_change(move |rules, _, _, cx| {
+                    *store.borrow_mut() = rules.to_vec();
+                    view.update(cx, |_, cx| cx.notify());
+                }),
+        )
+    }
+}
+
+#[gpui::test]
+fn removing_the_rule_being_typed_leaves_the_next_rule_its_own_value(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        Theme::init(cx);
+        crate::forms::bind_keys(cx);
+    });
+    let rule = |column: &'static str, value: &'static str| FilterRule {
+        column: column.into(),
+        value: value.into(),
+        ..FilterRule::default()
+    };
+    let rules = Rc::new(RefCell::new(vec![
+        rule("name", "one"),
+        rule("region", "keep"),
+    ]));
+    let seen = rules.clone();
+    let (_, cx) = cx.add_window_view(|_, _| Filters(seen));
+    settle(cx);
+    cx.simulate_click(point(px(330.0), px(12.0)), Modifiers::none());
+    settle(cx);
+    cx.simulate_input("typed");
+    settle(cx);
+    assert_eq!(
+        rules.borrow()[0].value.as_ref(),
+        "onetyped",
+        "the first field took the typing"
+    );
+    cx.simulate_click(point(px(588.0), px(12.0)), Modifiers::none());
+    settle(cx);
+    cx.simulate_input("X");
+    settle(cx);
+    assert_eq!(
+        *rules.borrow(),
+        [rule("region", "keep")],
+        "the removed rule's draft went with it"
+    );
+}
+
+/// A two-column grid whose row count the test sets.
+struct Shrinking(Rc<Count<usize>>);
+
+impl Render for Shrinking {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        let rows: Vec<Vec<SharedString>> = (0..self.0.get())
+            .map(|row| vec![format!("a{row}").into(), format!("b{row}").into()])
+            .collect();
+        super::DataGrid::new("shrink", ["A", "B"], rows)
+            .w(px(300.0))
+            .h(px(200.0))
+    }
+}
+
+fn grid_keys(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        Theme::init(cx);
+        crate::forms::bind_keys(cx);
+        cx.bind_keys([
+            KeyBinding::new("tab", FocusNext, None),
+            KeyBinding::new("shift-tab", FocusPrev, None),
+        ]);
+    });
+}
+
+#[gpui::test]
+fn a_grid_that_shrinks_keeps_its_cursor_inside(cx: &mut TestAppContext) {
+    grid_keys(cx);
+    let count = Rc::new(Count::new(3));
+    let (view, cx) = cx.add_window_view(|_, _| Shrinking(count.clone()));
+    settle(cx);
+    cx.simulate_click(point(px(146.0), px(98.0)), Modifiers::none());
+    settle(cx);
+    count.set(1);
+    view.update(cx, |_, cx| cx.notify());
+    settle(cx);
+    cx.simulate_keystrokes("cmd-c");
+    settle(cx);
+    let copied = cx.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text()));
+    assert_eq!(
+        copied.as_deref(),
+        Some("b0"),
+        "the cursor moved to the last row left"
+    );
+}
+
+/// A sheet with A1:C1 merged, 4 across, that keeps every edit it hears.
+struct Merged(Rc<RefCell<Vec<(usize, usize, String)>>>);
+
+impl Render for Merged {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        let heard = self.0.clone();
+        let cells: HashMap<(usize, usize), SharedString> =
+            [((0, 0), "Title".into())].into_iter().collect();
+        super::Spreadsheet::new("merged", 3, 4)
+            .cells(cells)
+            .merge((0, 0), (0, 2))
+            .on_change(move |edits, _, _| {
+                heard.borrow_mut().extend(
+                    edits
+                        .iter()
+                        .map(|(row, col, text)| (*row, *col, text.to_string())),
+                )
+            })
+            .w(px(500.0))
+            .h(px(200.0))
+    }
+}
+
+#[gpui::test]
+fn a_merge_answers_for_every_cell_it_covers(cx: &mut TestAppContext) {
+    grid_keys(cx);
+    let heard = Rc::new(RefCell::new(Vec::new()));
+    let seen = heard.clone();
+    let (_, cx) = cx.add_window_view(|_, _| Merged(seen));
+    settle(cx);
+    cx.simulate_click(point(px(146.0), px(42.0)), Modifiers::none());
+    settle(cx);
+    cx.simulate_keystrokes("7 enter");
+    settle(cx);
+    cx.simulate_keystrokes("up right 8 enter");
+    settle(cx);
+    assert_eq!(
+        *heard.borrow(),
+        [(0, 0, "7".to_string()), (0, 3, "8".to_string())],
+        "a press inside lands on the merge; right steps past it"
+    );
+}
+
+/// A grid inside a focus scope, as apps hold it, that keeps every edit it hears.
+struct Scoped(FocusHandle, Rc<RefCell<Vec<(usize, usize, String)>>>);
+
+impl Render for Scoped {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        FocusScope::new(&self.0)
+            .size_full()
+            .child(Grid(self.1.clone()).render_grid())
+    }
+}
+
+#[gpui::test]
+fn tab_steps_across_the_grid_and_keeps_an_edit(cx: &mut TestAppContext) {
+    grid_keys(cx);
+    let heard = Rc::new(RefCell::new(Vec::new()));
+    let seen = heard.clone();
+    let (_, cx) = cx.add_window_view(|_, cx| Scoped(cx.focus_handle(), seen));
+    settle(cx);
+    cx.simulate_click(point(px(48.0), px(42.0)), Modifiers::none());
+    settle(cx);
+    cx.simulate_keystrokes("tab 7 enter");
+    settle(cx);
+    cx.simulate_click(point(px(48.0), px(70.0)), Modifiers::none());
+    settle(cx);
+    cx.simulate_keystrokes("5 tab");
+    settle(cx);
+    cx.simulate_keystrokes("6 enter shift-tab");
+    settle(cx);
+    assert_eq!(
+        *heard.borrow(),
+        [
+            (0, 1, "7".to_string()),
+            (1, 0, "5".to_string()),
+            (1, 1, "6".to_string())
+        ],
+        "tab moves right, and keeps an open edit first"
     );
 }

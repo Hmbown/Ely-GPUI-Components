@@ -20,6 +20,9 @@ static REFERENCE: LazyLock<Regex> =
 /// How deep formulas may lean on each other before a loop is assumed.
 const DEPTH: usize = 64;
 
+/// The most cells a range may cover.
+const RANGE_CELLS: usize = 10_000;
+
 /// A column's letters: A to Z, then AA.
 pub(crate) fn letters(mut col: usize) -> String {
     let mut out = Vec::new();
@@ -39,50 +42,71 @@ pub(crate) fn name(row: usize, col: usize) -> String {
     format!("{}{}", letters(col), row + 1)
 }
 
-/// The row and column an A1 name points to, counted from zero.
+/// The row and column an A1 name points to, counted from zero; none when it is too long to count.
 pub(crate) fn place(text: &str) -> Option<(usize, usize)> {
     let caps = REFERENCE
         .captures(text)
         .filter(|caps| caps.get(0).is_some_and(|all| all.as_str() == text))?;
-    let col = caps[1].bytes().fold(0usize, |col, letter| {
-        col * 26 + usize::from(letter - b'A' + 1)
-    }) - 1;
+    let col = caps[1].bytes().try_fold(0usize, |col, letter| {
+        col.checked_mul(26)?
+            .checked_add(usize::from(letter - b'A' + 1))
+    })? - 1;
     let row = caps[2].parse::<usize>().ok()?.checked_sub(1)?;
     Some((row, col))
 }
 
-/// Every cell name in a rectangle, row by row.
-fn span(from: &str, to: &str) -> Result<Vec<String>, String> {
+/// Every cell in a rectangle, row by row.
+fn span(from: &str, to: &str) -> Result<Vec<(usize, usize)>, String> {
     let ((r0, c0), (r1, c1)) = (
         place(from).ok_or("a bad cell")?,
         place(to).ok_or("a bad cell")?,
     );
     let (rows, cols) = (r0.min(r1)..=r0.max(r1), c0.min(c1)..=c0.max(c1));
+    let covered = (r0.abs_diff(r1) + 1).saturating_mul(c0.abs_diff(c1) + 1);
+    if covered > RANGE_CELLS {
+        return Err(format!("{from}:{to} covers more than {RANGE_CELLS} cells"));
+    }
     Ok(rows
-        .flat_map(|row| cols.clone().map(move |col| name(row, col)))
+        .flat_map(|row| cols.clone().map(move |col| (row, col)))
         .collect())
 }
 
-/// A formula with its ranges written out and its functions in the evaluator's words.
-fn expand(source: &str) -> Result<String, String> {
+/// A range function over the numbers in its range; text and blanks are left out, as in a spreadsheet.
+fn aggregate(function: &str, numbers: &[f64]) -> Result<f64, String> {
+    let sum: f64 = numbers.iter().sum();
+    let least = || numbers.iter().copied().reduce(f64::min).unwrap_or(0.0);
+    let most = || numbers.iter().copied().reduce(f64::max).unwrap_or(0.0);
+    match function.to_uppercase().as_str() {
+        "SUM" => Ok(sum),
+        "AVERAGE" | "AVG" if numbers.is_empty() => Err("no numbers to average".into()),
+        "AVERAGE" | "AVG" => Ok(sum / numbers.len() as f64),
+        "MIN" => Ok(least()),
+        "MAX" => Ok(most()),
+        "COUNT" => Ok(numbers.len() as f64),
+        other => Err(format!("{other} takes no range")),
+    }
+}
+
+/// A formula with each range function worked out and its other functions in the evaluator's words.
+fn expand(
+    cells: &dyn Fn(usize, usize) -> SharedString,
+    source: &str,
+    depth: usize,
+) -> Result<String, String> {
     let mut failure = None;
     let written = RANGE.replace_all(source, |caps: &Captures| {
-        let cells = match span(&caps[2], &caps[3]) {
-            Ok(cells) => cells,
+        let worked = span(&caps[2], &caps[3]).and_then(|places| {
+            let values = places
+                .iter()
+                .map(|(row, col)| value(cells, *row, *col, depth + 1))
+                .collect::<Result<Vec<_>, _>>()?;
+            let numbers: Vec<f64> = values.into_iter().flatten().collect();
+            aggregate(&caps[1], &numbers)
+        });
+        match worked {
+            Ok(number) => format!("({number})"),
             Err(error) => {
-                failure = Some(error);
-                return String::new();
-            }
-        };
-        let (sum, count) = (cells.join("+"), cells.len());
-        match caps[1].to_uppercase().as_str() {
-            "SUM" => format!("({sum})"),
-            "AVERAGE" | "AVG" => format!("(({sum})/{count})"),
-            "MIN" => format!("min({})", cells.join(",")),
-            "MAX" => format!("max({})", cells.join(",")),
-            "COUNT" => count.to_string(),
-            other => {
-                failure = Some(format!("{other} takes no range"));
+                failure.get_or_insert(error);
                 String::new()
             }
         }
@@ -119,7 +143,7 @@ fn formula(
     if depth > DEPTH {
         return Err("a loop".into());
     }
-    let expanded = expand(source)?;
+    let expanded = expand(cells, source, depth)?;
     let mut variables: Vec<(SharedString, f64)> = Vec::new();
     for caps in REFERENCE.captures_iter(&expanded) {
         let reference = caps[0].to_string();
@@ -260,6 +284,31 @@ mod tests {
             "20",
             "a range sums before it multiplies"
         );
+    }
+
+    #[test]
+    fn range_functions_read_only_the_numbers_in_their_range() {
+        let cells = sheet(&[&[
+            "8",
+            "text",
+            "",
+            "=COUNT(A1:C1)",
+            "=AVERAGE(A1:C1)",
+            "=MIN(A1:C1)",
+        ]]);
+        assert_eq!(shown(&cells, 0, 3), "1");
+        assert_eq!(shown(&cells, 0, 4), "8");
+        assert_eq!(shown(&cells, 0, 5), "8");
+        let blank = sheet(&[&["", "=AVERAGE(A1:A1)"]]);
+        assert_eq!(shown(&blank, 0, 1), "#ERR", "nothing to average");
+    }
+
+    #[test]
+    fn a_reference_too_long_to_count_fails_as_a_formula() {
+        assert_eq!(place("ZZZZZZZZZZZZZZZZZZZZ1"), None);
+        let cells = sheet(&[&["=ZZZZZZZZZZZZZZZZZZZZ1", "=SUM(A1:ZZZZ99999)"]]);
+        assert_eq!(shown(&cells, 0, 0), "#ERR");
+        assert_eq!(shown(&cells, 0, 1), "#ERR", "a range too wide to walk");
     }
 
     #[test]

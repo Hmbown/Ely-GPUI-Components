@@ -20,7 +20,7 @@ type OnSorts = Rc<dyn Fn(&[SortKey], &mut Window, &mut App)>;
 /// The newest rules and hearer, for value fields whose edits come later.
 type Latest = Rc<RefCell<(Vec<FilterRule>, bool, Option<OnFilters>)>>;
 
-/// A builder's value fields, one per rule, and what their edits report to.
+/// A builder's value fields, one per rule in the rules' order, and what their edits report to.
 #[derive(Default)]
 struct Fields {
     fields: Vec<(Entity<TextInput>, Subscription)>,
@@ -31,6 +31,19 @@ fn choices(columns: &[(SharedString, SharedString)]) -> Vec<Choice> {
     columns
         .iter()
         .map(|(key, title)| Choice::new(key.clone(), title.clone()))
+        .collect()
+}
+
+/// The columns a sort row may take: its own, and those no other row holds.
+fn open(
+    columns: &[(SharedString, SharedString)],
+    keys: &[SortKey],
+    own: &SharedString,
+) -> Vec<(SharedString, SharedString)> {
+    columns
+        .iter()
+        .filter(|(key, _)| key == own || !keys.iter().any(|sort| sort.column == *key))
+        .cloned()
         .collect()
 }
 
@@ -86,13 +99,19 @@ impl RenderOnce for FilterBuilder {
         let latest = fields.read(cx).latest.clone();
         *latest.borrow_mut() = (self.rules.clone(), self.any, self.on_change.clone());
         while fields.read(cx).fields.len() < self.rules.len() {
-            let ix = fields.read(cx).fields.len();
             let field = cx.new(|cx| TextInput::new(window, cx));
-            let latest = latest.clone();
+            let (latest, owner) = (latest.clone(), fields.downgrade());
             let heard = window.subscribe(&field, cx, move |field, event, window, cx| {
                 if !matches!(event, InputEvent::Changed) {
                     return;
                 }
+                let Some(ix) = owner.upgrade().and_then(|owner| {
+                    let held = &owner.read(cx).fields;
+                    held.iter()
+                        .position(|(held, _)| held.entity_id() == field.entity_id())
+                }) else {
+                    return;
+                };
                 let (mut rules, any, on_change) = latest.borrow().clone();
                 let Some(rule) = rules.get_mut(ix) else {
                     return;
@@ -141,7 +160,8 @@ impl RenderOnce for FilterBuilder {
             .iter()
             .enumerate()
             .map(|(ix, rule)| {
-                let (column, test, remove) = (emit.clone(), emit.clone(), emit.clone());
+                let (column, test, remove, held) =
+                    (emit.clone(), emit.clone(), emit.clone(), fields.clone());
                 let (for_column, for_test, for_remove) =
                     (rules.clone(), rules.clone(), rules.clone());
                 div()
@@ -189,6 +209,7 @@ impl RenderOnce for FilterBuilder {
                             .on_click(move |_, window, cx| {
                                 let mut next = for_remove.clone();
                                 next.remove(ix);
+                                held.update(cx, |held, _| drop(held.fields.remove(ix)));
                                 remove(next, any, window, cx)
                             }),
                     )
@@ -259,8 +280,15 @@ impl SortBuilder {
         }
     }
 
+    /// The keys, each on its own column.
     pub fn keys(mut self, keys: impl IntoIterator<Item = SortKey>) -> Self {
         self.keys = keys.into_iter().collect();
+        assert!(
+            self.keys.iter().enumerate().all(|(ix, key)| self.keys[..ix]
+                .iter()
+                .all(|before| before.column != key.column)),
+            "sort keys take a column each"
+        );
         self
     }
 
@@ -318,7 +346,7 @@ impl RenderOnce for SortBuilder {
                             div().w(theme.label_width()).child(
                                 Select::new(
                                     (id.clone(), format!("sort-column-{ix}")),
-                                    choices(&self.columns),
+                                    choices(&open(&self.columns, &keys, &sort.column)),
                                 )
                                 .selected(sort.column.clone())
                                 .size(ControlSize::Sm)
@@ -379,5 +407,37 @@ impl RenderOnce for SortBuilder {
                         (add.0)(&next, window, cx)
                     })
             }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use gpui::SharedString;
+
+    use super::{SortKey, open};
+
+    #[test]
+    fn a_sort_row_offers_its_own_column_and_the_unused_ones() {
+        let columns: Vec<(SharedString, SharedString)> = ["a", "b", "c"]
+            .map(|key| (key.into(), key.to_uppercase().into()))
+            .to_vec();
+        let keys = [
+            SortKey {
+                column: "a".into(),
+                rising: true,
+            },
+            SortKey {
+                column: "b".into(),
+                rising: false,
+            },
+        ];
+        let offered = |own: &'static str| {
+            open(&columns, &keys, &own.into())
+                .into_iter()
+                .map(|(key, _)| key.to_string())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(offered("a"), ["a", "c"]);
+        assert_eq!(offered("b"), ["b", "c"]);
     }
 }

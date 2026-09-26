@@ -1,12 +1,115 @@
 use std::rc::Rc;
 
-use gpui::{App, ClipboardItem, Entity, KeyDownEvent, Pixels, SharedString, Window};
+use gpui::{App, ClipboardItem, Entity, KeyDownEvent, Pixels, Point, SharedString, Window, point};
 
 use super::{
     formula::filled,
-    grid::{Face, Metrics, OnCells, Sheet, Text, range},
+    grid::{Face, Merge, OnCells, Sheet, Text, range},
 };
-use crate::forms::Editing;
+use crate::{
+    forms::Editing,
+    theme::{ActiveTheme, ControlSize, Density},
+};
+
+/// Sizes in pixels: a cell, a header, the row labels, and the frozen stretch.
+#[derive(Clone, Copy)]
+pub(crate) struct Metrics {
+    pub wide: Pixels,
+    pub tall: Pixels,
+    pub label: Pixels,
+    pub frozen: Point<Pixels>,
+}
+
+impl Metrics {
+    /// A face's sizes at the window's rem.
+    pub(crate) fn new(face: &Face, window: &Window, cx: &App) -> Self {
+        let theme = cx.theme();
+        let rem = window.rem_size();
+        let (wide, tall) = (
+            theme.grid_column().to_pixels(rem),
+            theme.table_row(Density::Compact).to_pixels(rem),
+        );
+        Self {
+            wide,
+            tall,
+            label: if face.numbered {
+                theme.control_height(ControlSize::Lg).to_pixels(rem) * 1.25
+            } else {
+                Pixels::ZERO
+            },
+            frozen: point(wide * face.frozen.1 as f32, tall * face.frozen.0 as f32),
+        }
+    }
+
+    /// The cell under a point within the grid, if any.
+    pub(crate) fn cell_at(
+        &self,
+        at: Point<Pixels>,
+        offset: Point<Pixels>,
+        face: (usize, usize),
+    ) -> Option<(usize, usize)> {
+        let (x, y) = (at.x - self.label, at.y - self.tall);
+        if x < Pixels::ZERO || y < Pixels::ZERO {
+            return None;
+        }
+        let x = if x < self.frozen.x { x } else { x + offset.x };
+        let y = if y < self.frozen.y { y } else { y + offset.y };
+        let (col, row) = ((x / self.wide) as usize, (y / self.tall) as usize);
+        (row < face.0 && col < face.1).then_some((row, col))
+    }
+}
+
+/// The cell a place stands for: a merge's first cell for any cell it covers.
+pub(crate) fn land(merges: &[Merge], (row, col): (usize, usize)) -> (usize, usize) {
+    merges
+        .iter()
+        .find(|merge| {
+            (merge.from.0..=merge.to.0).contains(&row) && (merge.from.1..=merge.to.1).contains(&col)
+        })
+        .map_or((row, col), |merge| merge.from)
+}
+
+/// Pulls the cursor, its anchor and a fill back inside a grid of `size`; whether anything moved.
+pub(crate) fn fit(sheet: &mut Sheet, size: (usize, usize)) -> bool {
+    let last = (size.0.saturating_sub(1), size.1.saturating_sub(1));
+    let inside = |(row, col): (usize, usize)| (row.min(last.0), col.min(last.1));
+    let (cursor, anchor) = (inside(sheet.cursor), inside(sheet.anchor));
+    let moved = (cursor, anchor) != (sheet.cursor, sheet.anchor);
+    if moved {
+        log::info!("grid: now {size:?}; the cursor moved to {cursor:?}");
+        (sheet.cursor, sheet.anchor, sheet.fill) = (cursor, anchor, None);
+    }
+    moved
+}
+
+/// Tab and Shift-Tab: keep an open edit, then step across, staying inside the grid.
+pub(crate) fn across(
+    sheet: &Entity<Sheet>,
+    editor: &Entity<Editing>,
+    (cols, back): (usize, bool),
+    (metrics, frozen): (Metrics, (usize, usize)),
+    window: &mut Window,
+    cx: &mut App,
+) {
+    cx.stop_propagation();
+    let (row, col) = sheet.read(cx).cursor;
+    if sheet.read(cx).editing {
+        editor.update(cx, |editing, cx| editing.finish(false, window, cx));
+    }
+    let to = (
+        row,
+        if back {
+            col.saturating_sub(1)
+        } else {
+            (col + 1).min(cols.saturating_sub(1))
+        },
+    );
+    sheet.update(cx, |sheet, cx| {
+        (sheet.cursor, sheet.anchor) = (to, to);
+        reveal(sheet, metrics, frozen);
+        cx.notify();
+    });
+}
 
 /// Scrolls just enough that the cursor shows, past the frozen rows and columns.
 pub(crate) fn reveal(sheet: &mut Sheet, metrics: Metrics, frozen: (usize, usize)) {
@@ -100,7 +203,7 @@ pub(crate) fn pasted(
         .collect()
 }
 
-/// The key handler: arrows walk and Shift stretches the range, Tab and Enter step, typing or F2 edits, Delete clears, Cmd-C and Cmd-V copy and paste.
+/// The key handler: arrows walk, stepping over merges, and Shift stretches the range; Enter steps down, typing or F2 edits, Delete clears, Cmd-C and Cmd-V copy and paste.
 pub(crate) fn keys(
     face: Face,
     metrics: Metrics,
@@ -118,20 +221,23 @@ pub(crate) fn keys(
         let stroke = &event.keystroke;
         let held = &stroke.modifiers;
         let (row, col) = sheet.read(cx).cursor;
+        let far = face
+            .merges
+            .iter()
+            .find(|merge| merge.from == (row, col))
+            .map_or((row, col), |merge| merge.to);
         let to = match stroke.key.as_str() {
             "up" => Some((row.saturating_sub(1), col)),
-            "down" | "enter" => Some(((row + 1).min(rows - 1), col)),
+            "down" | "enter" => Some(((far.0 + 1).min(rows - 1), col)),
             "left" => Some((row, col.saturating_sub(1))),
-            "right" => Some((row, (col + 1).min(cols - 1))),
-            "tab" if held.shift => Some((row, col.saturating_sub(1))),
-            "tab" => Some((row, (col + 1).min(cols - 1))),
+            "right" => Some((row, (far.1 + 1).min(cols - 1))),
             "home" => Some((row, 0)),
             "end" => Some((row, cols - 1)),
             _ => None,
         };
-        if let Some(to) = to {
+        if let Some(to) = to.map(|to| land(&face.merges, to)) {
             cx.stop_propagation();
-            let stretch = held.shift && !matches!(stroke.key.as_str(), "tab" | "enter");
+            let stretch = held.shift && stroke.key != "enter";
             sheet.update(cx, |sheet, cx| {
                 sheet.cursor = to;
                 if !stretch {

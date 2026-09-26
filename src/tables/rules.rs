@@ -112,15 +112,17 @@ pub(crate) fn kept(
         .collect()
 }
 
-/// `order` sorted by each key in turn, the first deciding most; numbers by value, the rest by their words.
+/// `order` sorted by each key in turn, the first deciding most; numbers by value and before the rest, the rest by their words.
 pub(crate) fn sorted_by(rows: &[Row], mut order: Vec<usize>, keys: &[(usize, bool)]) -> Vec<usize> {
     order.sort_by(|a, b| {
         keys.iter().fold(Ordering::Equal, |so_far, (col, rising)| {
             so_far.then_with(|| {
                 let (a, b) = (&rows[*a].cells[*col], &rows[*b].cells[*col]);
                 let by = match (a.number(), b.number()) {
-                    (Some(a), Some(b)) => a.partial_cmp(&b).unwrap_or(Ordering::Equal),
-                    _ => a.words().to_lowercase().cmp(&b.words().to_lowercase()),
+                    (Some(a), Some(b)) => a.total_cmp(&b),
+                    (Some(_), None) => Ordering::Less,
+                    (None, Some(_)) => Ordering::Greater,
+                    (None, None) => a.words().to_lowercase().cmp(&b.words().to_lowercase()),
                 };
                 if *rising { by } else { by.reverse() }
             })
@@ -271,6 +273,44 @@ mod tests {
                 ("".into(), vec![3])
             ]
         );
+    }
+
+    #[test]
+    fn numbers_sort_before_words_in_a_mixed_column() {
+        let cells: [Cell; 6] = [
+            "11".into(),
+            10.0.into(),
+            "apple".into(),
+            2.0.into(),
+            Cell::Empty,
+            "Banana".into(),
+        ];
+        let rows: Vec<Row> = cells
+            .into_iter()
+            .enumerate()
+            .map(|(ix, cell)| Row::new(ix.to_string(), [cell]))
+            .collect();
+        let rising = sorted_by(&rows, (0..rows.len()).collect(), &[(0, true)]);
+        assert_eq!(
+            rising,
+            [3, 1, 4, 0, 2, 5],
+            "2, 10, then the words: empty, 11, apple, banana"
+        );
+        let many: Vec<Row> = (0..64)
+            .map(|ix| {
+                Row::new(
+                    ix.to_string(),
+                    [if ix % 3 == 0 {
+                        Cell::from(format!("{ix}"))
+                    } else {
+                        Cell::from(ix as f64)
+                    }],
+                )
+            })
+            .collect();
+        let order = sorted_by(&many, (0..64).rev().collect(), &[(0, true)]);
+        let numbers = order.iter().take_while(|ix| *ix % 3 != 0).count();
+        assert_eq!(numbers, 42, "every number comes before every word");
     }
 
     #[test]
