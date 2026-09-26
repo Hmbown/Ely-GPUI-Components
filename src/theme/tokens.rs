@@ -284,6 +284,11 @@ impl Theme {
         px_to_rems(128.0)
     }
 
+    /// A grid's column, before any resize.
+    pub fn grid_column(&self) -> Rems {
+        px_to_rems(96.0)
+    }
+
     /// A table row's height at each density.
     pub fn table_row(&self, density: Density) -> Rems {
         px_to_rems(match density {

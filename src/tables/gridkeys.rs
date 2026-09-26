@@ -1,0 +1,255 @@
+use std::rc::Rc;
+
+use gpui::{App, ClipboardItem, Entity, KeyDownEvent, Pixels, SharedString, Window};
+
+use super::{
+    formula::filled,
+    grid::{Face, Metrics, OnCells, Sheet, Text, range},
+};
+use crate::forms::Editing;
+
+/// Scrolls just enough that the cursor shows, past the frozen rows and columns.
+pub(crate) fn reveal(sheet: &mut Sheet, metrics: Metrics, frozen: (usize, usize)) {
+    let (row, col) = sheet.cursor;
+    let room_x = sheet.bounds.size.width - metrics.label - metrics.frozen.x;
+    let room_y = sheet.bounds.size.height - metrics.tall - metrics.frozen.y;
+    if col >= frozen.1 {
+        let x = metrics.wide * col as f32 - metrics.frozen.x;
+        sheet.offset.x = sheet
+            .offset
+            .x
+            .min(x)
+            .max(x + metrics.wide - room_x)
+            .max(Pixels::ZERO);
+    }
+    if row >= frozen.0 {
+        let y = metrics.tall * row as f32 - metrics.frozen.y;
+        sheet.offset.y = sheet
+            .offset
+            .y
+            .min(y)
+            .max(y + metrics.tall - room_y)
+            .max(Pixels::ZERO);
+    }
+}
+
+/// Opens the cursor's cell with `text`; a kept edit reports and moves down.
+pub(crate) fn begin(
+    sheet: &Entity<Sheet>,
+    editor: &Entity<Editing>,
+    on_change: Option<OnCells>,
+    text: String,
+    at_end: bool,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let (cell, rows) = (sheet.read(cx).cursor, sheet.read(cx).rows);
+    let moved = sheet.clone();
+    editor.update(cx, |editing, _| {
+        editing.on_commit = Some(Rc::new(move |text, window, cx| {
+            log::info!("grid: {cell:?} is now {text}");
+            if let Some(on_change) = &on_change {
+                on_change(&[(cell.0, cell.1, text.clone())], window, cx);
+            }
+            moved.update(cx, |sheet, _| {
+                sheet.cursor.0 = (cell.0 + 1).min(rows.saturating_sub(1));
+                sheet.anchor = sheet.cursor;
+            });
+        }))
+    });
+    sheet.update(cx, |sheet, _| sheet.editing = true);
+    let end = text.len();
+    Editing::begin(editor, text, window, cx);
+    if at_end && let Some(field) = editor.read(cx).field() {
+        field.update(cx, |field, cx| field.select(end..end, cx));
+    }
+}
+
+/// Text for the clipboard: the range's cells as they show, tabs between, lines below.
+fn copied(shown: &Text, sheet: &Sheet) -> String {
+    let ((top, left), (bottom, right)) = range(sheet);
+    (top..=bottom)
+        .map(|row| {
+            (left..=right)
+                .map(|col| shown(row, col).to_string())
+                .collect::<Vec<_>>()
+                .join("\t")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Pasted text as cell edits from the cursor on, clipped to the grid.
+pub(crate) fn pasted(
+    text: &str,
+    from: (usize, usize),
+    size: (usize, usize),
+) -> Vec<(usize, usize, SharedString)> {
+    text.lines()
+        .enumerate()
+        .flat_map(|(dr, line)| {
+            line.split('\t').enumerate().map(move |(dc, cell)| {
+                (
+                    from.0 + dr,
+                    from.1 + dc,
+                    SharedString::from(cell.to_string()),
+                )
+            })
+        })
+        .filter(|(row, col, _)| *row < size.0 && *col < size.1)
+        .collect()
+}
+
+/// The key handler: arrows walk and Shift stretches the range, Tab and Enter step, typing or F2 edits, Delete clears, Cmd-C and Cmd-V copy and paste.
+pub(crate) fn keys(
+    face: Face,
+    metrics: Metrics,
+    sheet: Entity<Sheet>,
+    editor: Entity<Editing>,
+) -> impl Fn(&KeyDownEvent, &mut Window, &mut App) + 'static {
+    move |event, window, cx| {
+        if sheet.read(cx).editing {
+            return;
+        }
+        let (rows, cols) = (face.rows, face.cols);
+        if rows == 0 || cols == 0 {
+            return;
+        }
+        let stroke = &event.keystroke;
+        let held = &stroke.modifiers;
+        let (row, col) = sheet.read(cx).cursor;
+        let to = match stroke.key.as_str() {
+            "up" => Some((row.saturating_sub(1), col)),
+            "down" | "enter" => Some(((row + 1).min(rows - 1), col)),
+            "left" => Some((row, col.saturating_sub(1))),
+            "right" => Some((row, (col + 1).min(cols - 1))),
+            "tab" if held.shift => Some((row, col.saturating_sub(1))),
+            "tab" => Some((row, (col + 1).min(cols - 1))),
+            "home" => Some((row, 0)),
+            "end" => Some((row, cols - 1)),
+            _ => None,
+        };
+        if let Some(to) = to {
+            cx.stop_propagation();
+            let stretch = held.shift && !matches!(stroke.key.as_str(), "tab" | "enter");
+            sheet.update(cx, |sheet, cx| {
+                sheet.cursor = to;
+                if !stretch {
+                    sheet.anchor = to;
+                }
+                reveal(sheet, metrics, face.frozen);
+                cx.notify();
+            });
+            return;
+        }
+        match (stroke.key.as_str(), held.platform) {
+            ("escape", _) => sheet.update(cx, |sheet, cx| {
+                sheet.anchor = sheet.cursor;
+                cx.notify();
+            }),
+            ("f2", _) => begin(
+                &sheet,
+                &editor,
+                face.on_change.clone(),
+                (face.raw)(row, col).to_string(),
+                true,
+                window,
+                cx,
+            ),
+            ("backspace" | "delete", false) => {
+                let ((top, left), (bottom, right)) = range(sheet.read(cx));
+                let cleared: Vec<_> = (top..=bottom)
+                    .flat_map(|row| {
+                        (left..=right).map(move |col| (row, col, SharedString::default()))
+                    })
+                    .collect();
+                if let Some(on_change) = &face.on_change {
+                    on_change(&cleared, window, cx);
+                }
+            }
+            ("c", true) => cx.write_to_clipboard(ClipboardItem::new_string(copied(
+                &face.shown,
+                sheet.read(cx),
+            ))),
+            ("v", true) => {
+                let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) else {
+                    return;
+                };
+                let edits = pasted(&text, (row, col), (rows, cols));
+                log::info!("grid: pasted {} cells", edits.len());
+                if let Some(on_change) = &face.on_change {
+                    on_change(&edits, window, cx);
+                }
+            }
+            _ => {
+                let typed = stroke.key_char.clone().filter(|typed| {
+                    !held.platform && !held.control && !typed.chars().any(char::is_control)
+                });
+                let Some(typed) = typed else {
+                    return;
+                };
+                begin(
+                    &sheet,
+                    &editor,
+                    face.on_change.clone(),
+                    typed,
+                    true,
+                    window,
+                    cx,
+                );
+            }
+        }
+        cx.stop_propagation();
+    }
+}
+
+/// Applies a fill: the range's runs carry on down, or across, to where the handle was dropped.
+pub(crate) fn fill(
+    sheet: &Entity<Sheet>,
+    raw: &Text,
+    on_change: &Option<OnCells>,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let Some((row, col)) = sheet.update(cx, |sheet, cx| {
+        cx.notify();
+        sheet.fill.take()
+    }) else {
+        return;
+    };
+    let ((top, left), (bottom, right)) = range(sheet.read(cx));
+    let mut edits = Vec::new();
+    if row > bottom {
+        for c in left..=right {
+            let run: Vec<SharedString> = (top..=bottom).map(|r| raw(r, c)).collect();
+            for (ix, text) in filled(&run, row - bottom, false).into_iter().enumerate() {
+                edits.push((bottom + 1 + ix, c, text));
+            }
+        }
+    } else if col > right {
+        for r in top..=bottom {
+            let run: Vec<SharedString> = (left..=right).map(|c| raw(r, c)).collect();
+            for (ix, text) in filled(&run, col - right, true).into_iter().enumerate() {
+                edits.push((r, right + 1 + ix, text));
+            }
+        }
+    }
+    log::info!("grid: filled {} cells", edits.len());
+    if let Some(on_change) = on_change.as_ref().filter(|_| !edits.is_empty()) {
+        on_change(&edits, window, cx);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pasted;
+
+    #[test]
+    fn pasted_text_lands_from_the_cursor_and_stops_at_the_edge() {
+        let edits: Vec<(usize, usize, String)> = pasted("a\tb\nc\td", (1, 1), (3, 2))
+            .into_iter()
+            .map(|(row, col, text)| (row, col, text.to_string()))
+            .collect();
+        assert_eq!(edits, [(1, 1, "a".into()), (2, 1, "c".into())]);
+    }
+}

@@ -1,5 +1,6 @@
 mod core;
 mod features;
+mod grids;
 
 use gpui::{AnyElement, App, IntoElement, ParentElement, Window, div};
 
@@ -43,6 +44,14 @@ const SCRIPT: &[Step] = &[
     Step::UpAt("grouped", 60.0, 54.0),
     Step::Wait(300),
     Step::Shot("folded"),
+    Step::Hover("sheet"),
+    Step::Wait(300),
+    Step::DownAt("sheet", 184.0, 294.0),
+    Step::UpAt("sheet", 184.0, 294.0),
+    Step::Type("=F8/4"),
+    Step::Key("enter"),
+    Step::Wait(300),
+    Step::Shot("sheet-formula"),
     Step::Rest,
 ];
 
@@ -53,6 +62,10 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(features::wide(cx))
         .child(features::rows(window, cx))
         .child(features::grouped(cx))
+        .child(grids::data_grid(window, cx))
+        .child(grids::spreadsheet(window, cx))
+        .child(grids::tree_table(cx))
+        .child(grids::pivot(cx))
         .child(core::long(window, cx))
         .child(core::heatmap(cx))
         .into_any_element()

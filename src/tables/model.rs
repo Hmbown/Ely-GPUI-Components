@@ -17,12 +17,8 @@ pub(crate) fn filtered(rows: &[Row], query: &str) -> Vec<usize> {
         .collect()
 }
 
-/// Column `col`'s figure over `order`; none when no cell counts.
-pub(crate) fn figure(rows: &[Row], order: &[usize], col: usize, how: Aggregate) -> Option<f64> {
-    let values: Vec<f64> = order
-        .iter()
-        .filter_map(|ix| rows[*ix].cells[col].number())
-        .collect();
+/// Values combined as a figure; none when there are none, save a count.
+pub(crate) fn combine(values: &[f64], how: Aggregate) -> Option<f64> {
     if how == Aggregate::Count {
         return Some(values.len() as f64);
     }
@@ -37,6 +33,15 @@ pub(crate) fn figure(rows: &[Row], order: &[usize], col: usize, how: Aggregate) 
         Aggregate::Max => values.iter().copied().fold(f64::MIN, f64::max),
         Aggregate::Count => unreachable!("counted above"),
     })
+}
+
+/// Column `col`'s figure over `order`; none when no cell counts.
+pub(crate) fn figure(rows: &[Row], order: &[usize], col: usize, how: Aggregate) -> Option<f64> {
+    let values: Vec<f64> = order
+        .iter()
+        .filter_map(|ix| rows[*ix].cells[col].number())
+        .collect();
+    combine(&values, how)
 }
 
 /// The lowest and highest numbers in column `col`, across every row.

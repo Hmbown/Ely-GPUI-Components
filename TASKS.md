@@ -195,3 +195,4 @@ Per-component lines live in `tasks/`. Tags there:
 | T13c | 1 | — | pending: codex still logged out |
 | T14a | 1 | — | pending: codex still logged out |
 | T14b | 1 | — | pending: codex still logged out |
+| T14c | 1 | — | pending review |

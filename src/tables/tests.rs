@@ -182,3 +182,51 @@ fn a_row_opens_its_detail_and_a_double_press_edits_a_cell(cx: &mut TestAppContex
         ["edit b name Alan Kay"]
     );
 }
+
+/// A two-column grid of three rows that keeps every edit it hears.
+struct Grid(Rc<RefCell<Vec<(usize, usize, String)>>>);
+
+impl Render for Grid {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        let heard = self.0.clone();
+        let rows: Vec<Vec<SharedString>> = (0..3)
+            .map(|row| vec![format!("a{row}").into(), format!("b{row}").into()])
+            .collect();
+        super::DataGrid::new("grid", ["A", "B"], rows)
+            .on_change(move |edits, _, _| {
+                heard.borrow_mut().extend(
+                    edits
+                        .iter()
+                        .map(|(row, col, text)| (*row, *col, text.to_string())),
+                )
+            })
+            .w(px(300.0))
+            .h(px(200.0))
+    }
+}
+
+#[gpui::test]
+fn typing_edits_enter_keeps_and_backspace_clears_a_range(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        Theme::init(cx);
+        crate::forms::bind_keys(cx);
+    });
+    let heard = Rc::new(RefCell::new(Vec::new()));
+    let seen = heard.clone();
+    let (_, cx) = cx.add_window_view(|_, _| Grid(seen));
+    settle(cx);
+    cx.simulate_click(point(px(48.0), px(42.0)), Modifiers::none());
+    settle(cx);
+    cx.simulate_keystrokes("7");
+    settle(cx);
+    cx.simulate_keystrokes("enter");
+    settle(cx);
+    assert_eq!(*heard.borrow(), [(0, 0, "7".to_string())]);
+    cx.simulate_keystrokes("shift-down backspace");
+    settle(cx);
+    assert_eq!(
+        heard.borrow()[1..],
+        [(1, 0, String::new()), (2, 0, String::new())],
+        "enter moved down; the range clears"
+    );
+}
