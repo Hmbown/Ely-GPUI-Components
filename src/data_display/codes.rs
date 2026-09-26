@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use barcoders::sym::{code128::Code128, ean13::EAN13};
 use gpui::{
     App, Bounds, Div, IntoElement, ParentElement, Pixels, Refineable, RenderOnce, SharedString,
@@ -9,8 +11,23 @@ pub use qrcode::types::QrError;
 
 use crate::theme::{ActiveTheme, Radius, TextSize};
 
+/// Whether a QR code has already said its tile is too small to draw it sharply.
+static SMALL: AtomicBool = AtomicBool::new(false);
+
 /// The quiet margin around a QR code, in modules, as the standard asks.
 const QUIET: usize = 4;
+
+/// A module's side: whole pixels for crisp edges, or the exact share when whole pixels would floor to nothing.
+fn module(side: Pixels, span: f32) -> Pixels {
+    let fit = side / span;
+    if f32::from(fit) >= 1.0 {
+        return fit.floor();
+    }
+    if !SMALL.swap(true, Ordering::Relaxed) {
+        log::warn!("qr code: {span} modules share {fit:?} each; give the tile more room");
+    }
+    fit
+}
 
 /// The dark runs in a row of modules, as start and length.
 fn runs(row: &[bool]) -> Vec<(usize, usize)> {
@@ -82,9 +99,16 @@ impl RenderOnce for QrCode {
         let theme = cx.theme();
         let (paper, ink) = (theme.colors.paper, theme.colors.ink);
         let rows = self.rows;
+        let span = (rows.len() + QUIET * 2) as f32;
+        let need = theme.barcode_module() * span;
+        let side = if need.0 > theme.qr_code().0 {
+            need
+        } else {
+            theme.qr_code()
+        };
         let mut tile = div()
             .flex_none()
-            .size(theme.qr_code())
+            .size(side)
             .rounded(theme.radius(Radius::Sm))
             .bg(paper);
         tile.style().refine(self.base.style());
@@ -92,8 +116,7 @@ impl RenderOnce for QrCode {
             canvas(
                 |_, _, _| {},
                 move |bounds, _, window, _| {
-                    let span = (rows.len() + QUIET * 2) as f32;
-                    let module = (bounds.size.width.min(bounds.size.height) / span).floor();
+                    let module = module(bounds.size.width.min(bounds.size.height), span);
                     let inset = (rows.len() as f32 * module) / 2.0;
                     let origin = bounds.center() - point(inset, inset);
                     paint_runs(&rows, origin, module, module, ink, window);
@@ -139,6 +162,9 @@ impl Barcode {
 
     /// Code 128 in its set B: letters, digits and printable ASCII marks.
     pub fn code128(text: &str) -> Result<Self, BarcodeError> {
+        if !text.chars().all(|letter| (' '..='~').contains(&letter)) {
+            return Err(BarcodeError::Character);
+        }
         let modules = Code128::new(format!("\u{0181}{text}"))?.encode();
         Ok(Self::new(modules, text.to_string()))
     }
@@ -207,7 +233,9 @@ impl RenderOnce for Barcode {
 
 #[cfg(test)]
 mod tests {
-    use super::{Barcode, BarcodeError, check_digit, runs};
+    use gpui::px;
+
+    use super::{Barcode, BarcodeError, check_digit, module, runs};
 
     #[test]
     fn dark_modules_merge_into_runs() {
@@ -232,6 +260,23 @@ mod tests {
             Barcode::code128("caf\u{e9}"),
             Err(BarcodeError::Character)
         ));
+        assert!(
+            matches!(Barcode::code128("\u{c0}123"), Err(BarcodeError::Character)),
+            "barcoders reads \u{c0} as a switch to set A"
+        );
+    }
+
+    #[test]
+    fn a_dense_qr_keeps_modules_it_can_draw() {
+        assert_eq!(
+            module(px(254.0), 25.0),
+            px(10.0),
+            "whole pixels when they fit"
+        );
+        assert!(
+            module(px(100.0), 185.0) > px(0.0),
+            "a share under a pixel stays drawn"
+        );
     }
 
     #[test]

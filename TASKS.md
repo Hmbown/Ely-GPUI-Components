@@ -186,10 +186,10 @@ Per-component lines live in `tasks/`. Tags there:
 | T11d | 1 | FAIL | the ripple drew inverted columns in a cut corner, motes crossed rounded corners, a narrow marquee jumped, confetti burst on a falling count, and the Lottie note misread velato |
 | T11d | 2 | FAIL | Marquee's doc still said its content is drawn twice |
 | T11d | 3 | PASS | |
-| T12a | 1 | — | pending: codex answered 401 on every request; committed unreviewed, reviewed from its commit once codex logs in |
-| T12b | 1 | — | pending: codex still logged out |
-| T12c | 1 | — | pending: codex still logged out |
-| T12d | 1 | — | pending: codex still logged out |
+| T12a | 1 | FAIL | the avatar upload took HEIC, which gpui cannot decode, an accent badge's dot matched its fill, and a square avatar's upload veil stayed round |
+| T12b | 1 | FAIL | the gpui test module compiled without test-support, and a long description value overflowed a narrow column |
+| T12c | 1 | FAIL | the gallery kept an open index past a shrunk list, and the lightbox asserted on it |
+| T12d | 1 | FAIL | Code 128 took a set-switch character, a usage bar's float sum tripped its assert, and a dense QR floored its modules to nothing |
 | T13a | 1 | — | pending: codex still logged out |
 | T13b | 1 | — | pending: codex still logged out |
 | T13c | 1 | — | pending: codex still logged out |

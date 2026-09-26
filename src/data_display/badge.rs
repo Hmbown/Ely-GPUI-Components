@@ -102,7 +102,10 @@ impl RenderOnce for Badge {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
         let (fill, text) = self.tone.colors(&theme.colors);
-        let dot = self.tone.dot(&theme.colors);
+        let dot = match self.tone {
+            Tone::Accent => theme.colors.on_accent,
+            tone => tone.dot(&theme.colors),
+        };
         div()
             .flex()
             .flex_none()

@@ -309,16 +309,24 @@ impl UsageBar {
     }
 }
 
+impl UsageBar {
+    /// What the parts use and whether they fill the total, within float error.
+    fn used(&self) -> (f64, bool) {
+        let used: f64 = self.parts.iter().map(|(_, amount)| amount).sum();
+        assert!(
+            used <= self.total * (1.0 + 1e-9),
+            "the parts ({used}) pass the total ({})",
+            self.total
+        );
+        (used, used >= self.total * (1.0 - 1e-9))
+    }
+}
+
 impl RenderOnce for UsageBar {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = cx.theme();
         let colors = &theme.colors;
-        let used: f64 = self.parts.iter().map(|(_, amount)| amount).sum();
-        assert!(
-            used <= self.total,
-            "the parts ({used}) pass the total ({})",
-            self.total
-        );
+        let (used, full) = self.used();
         assert!(
             self.parts.len() <= colors.chart.len(),
             "a usage bar has colors for {} parts",
@@ -339,9 +347,9 @@ impl RenderOnce for UsageBar {
                 grown(amount / total)
                     .bg(colors.chart[ix])
                     .when(ix == 0, |part| part.rounded_l_full())
-                    .when(ix == last && used == total, |part| part.rounded_r_full())
+                    .when(ix == last && full, |part| part.rounded_r_full())
             }))
-            .when(used < total, |bar| {
+            .when(!full, |bar| {
                 bar.child(
                     grown((total - used) / total)
                         .bg(colors.border)
@@ -382,7 +390,13 @@ impl RenderOnce for UsageBar {
 
 #[cfg(test)]
 mod tests {
-    use super::Level;
+    use super::{Level, UsageBar};
+
+    #[test]
+    fn parts_that_sum_to_the_total_fill_it_despite_float_error() {
+        assert!(UsageBar::new(0.3).part("a", 0.1).part("b", 0.2).used().1);
+        assert!(!UsageBar::new(1.0).part("a", 0.5).used().1);
+    }
 
     #[test]
     fn a_share_turns_amber_then_red() {

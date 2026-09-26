@@ -12,7 +12,7 @@ mod rules;
 mod sheets;
 mod simple;
 mod table;
-#[cfg(test)]
+#[cfg(all(test, feature = "test-support"))]
 mod tests;
 mod toolbar;
 mod tree_table;

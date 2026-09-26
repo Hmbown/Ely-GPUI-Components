@@ -12,7 +12,7 @@ mod records;
 mod spark;
 mod stars;
 mod stat;
-#[cfg(test)]
+#[cfg(all(test, feature = "test-support"))]
 mod tests;
 mod timeline;
 mod watermark;

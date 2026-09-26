@@ -9,6 +9,11 @@ use crate::{
     primitives::{FocusRing, Image, tab_stop},
 };
 
+/// The open picture if it is still there, the last when it went past the end, none when all are gone.
+fn clamp(open: Option<usize>, count: usize) -> Option<usize> {
+    open.and_then(|at| count.checked_sub(1).map(|last| at.min(last)))
+}
+
 /// Pictures in square tiles. A press, or Enter on a focused tile, opens the lightbox at that picture.
 #[derive(IntoElement)]
 pub struct Gallery {
@@ -87,7 +92,15 @@ impl RenderOnce for Gallery {
                     ),
             );
         }
-        let lightbox = (*open.read(cx)).map(|at| {
+        let at = clamp(*open.read(cx), self.slides.len());
+        if at != *open.read(cx) {
+            log::info!(
+                "gallery {:?}: pictures went away; open is now {at:?}",
+                self.id
+            );
+            open.update(cx, |open, _| *open = at);
+        }
+        let lightbox = at.map(|at| {
             let (close, step) = (show(None), open.clone());
             Lightbox::new(
                 (self.id.clone(), "lightbox"),
@@ -108,5 +121,18 @@ impl RenderOnce for Gallery {
             .gap_1()
             .children(tiles)
             .children(lightbox)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::clamp;
+
+    #[test]
+    fn an_open_picture_clamps_when_pictures_go_away() {
+        assert_eq!(clamp(Some(1), 3), Some(1));
+        assert_eq!(clamp(Some(2), 1), Some(0), "past the end opens the last");
+        assert_eq!(clamp(Some(0), 0), None, "no pictures closes it");
+        assert_eq!(clamp(None, 3), None);
     }
 }

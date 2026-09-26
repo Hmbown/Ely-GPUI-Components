@@ -92,6 +92,11 @@ impl Avatar {
         self
     }
 
+    /// Whether it is a rounded square rather than a circle.
+    pub(crate) fn is_square(&self) -> bool {
+        self.square
+    }
+
     /// A rounded square, as teams and apps take.
     pub fn square(mut self) -> Self {
         self.square = true;

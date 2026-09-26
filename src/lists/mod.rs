@@ -7,7 +7,7 @@ mod outline;
 mod select;
 mod sortable;
 mod swipe;
-#[cfg(test)]
+#[cfg(all(test, feature = "test-support"))]
 mod tests;
 mod tree;
 

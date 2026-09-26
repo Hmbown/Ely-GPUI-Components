@@ -75,7 +75,7 @@ impl RenderOnce for DescriptionList {
                                     .flex_1()
                                     .min_w_0()
                                     .text_color(colors.fg)
-                                    .child(value),
+                                    .child(div().min_w_0().child(value)),
                             )
                     }),
             )

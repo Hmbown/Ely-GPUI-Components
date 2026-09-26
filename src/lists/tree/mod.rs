@@ -1,7 +1,7 @@
 mod model;
 mod row;
 mod select;
-#[cfg(test)]
+#[cfg(all(test, feature = "test-support"))]
 mod tests;
 
 use std::{collections::HashSet, rc::Rc};

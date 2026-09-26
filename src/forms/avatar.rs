@@ -9,11 +9,11 @@ use super::{files::hovering, path::choose};
 use crate::{
     data_display::Avatar,
     primitives::{FocusRing, Icon, IconName, tab_stop},
-    theme::{ActiveTheme, IconSize},
+    theme::{ActiveTheme, IconSize, Radius},
 };
 
 /// File kinds an avatar takes.
-const PICTURES: [&str; 6] = ["png", "jpg", "jpeg", "gif", "webp", "heic"];
+const PICTURES: [&str; 5] = ["png", "jpg", "jpeg", "gif", "webp"];
 
 /// The one picture a drop or a pick brings, or why it is refused.
 pub(crate) fn picture(paths: &[PathBuf]) -> Result<PathBuf, &'static str> {
@@ -32,7 +32,7 @@ pub(crate) fn picture(paths: &[PathBuf]) -> Result<PathBuf, &'static str> {
         .and_then(|kind| kind.to_str())
         .map(str::to_lowercase);
     if !kind.is_some_and(|kind| PICTURES.contains(&kind.as_str())) {
-        return Err("pictures only: png, jpg, gif, webp or heic");
+        return Err("pictures only: png, jpg, gif or webp");
     }
     Ok(path.clone())
 }
@@ -76,14 +76,21 @@ impl RenderOnce for AvatarUpload {
             })
         };
         let theme = cx.theme();
+        let corner = |element: gpui::Div, square: bool| {
+            if square {
+                element.rounded(theme.radius(Radius::Md))
+            } else {
+                element.rounded_full()
+            }
+        };
+        let square = self.avatar.is_square();
         let group = SharedString::from(format!("{:?}", self.id));
         let (pick, drop_in, what_drop) = (take.clone(), take, what.clone());
-        div()
+        corner(div(), square)
             .id(self.id)
             .group(group.clone())
             .relative()
             .flex_none()
-            .rounded_full()
             .border_1()
             .border_color(gpui::transparent_black())
             .cursor_pointer()
@@ -91,13 +98,12 @@ impl RenderOnce for AvatarUpload {
             .focus_ring(cx)
             .child(self.avatar)
             .child(
-                div()
+                corner(div(), square)
                     .absolute()
                     .inset_0()
                     .flex()
                     .items_center()
                     .justify_center()
-                    .rounded_full()
                     .bg(theme.colors.media_backdrop.opacity(0.5))
                     .opacity(0.0)
                     .group_hover(group, |style| style.opacity(1.0))
@@ -154,7 +160,7 @@ mod tests {
         assert_eq!(picture(std::slice::from_ref(&face)), Ok(face.clone()));
         assert_eq!(
             picture(&[notes]),
-            Err("pictures only: png, jpg, gif, webp or heic")
+            Err("pictures only: png, jpg, gif or webp")
         );
         assert_eq!(picture(&[face.clone(), face]), Err("one picture at a time"));
         assert_eq!(picture(&[dir]), Err("files only, not folders"));
