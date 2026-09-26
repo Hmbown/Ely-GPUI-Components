@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use gpui::SharedString;
 
-use crate::{forms::CheckState, primitives::IconName};
+use crate::{data_display::Tone, forms::CheckState, primitives::IconName};
 
 /// What a node holds under it.
 #[derive(Clone, Debug, PartialEq)]
@@ -19,6 +19,8 @@ pub struct TreeNode {
     pub(crate) key: SharedString,
     pub(crate) label: SharedString,
     pub(crate) icon: Option<IconName>,
+    pub(crate) note: Option<SharedString>,
+    pub(crate) tone: Option<Tone>,
     pub(crate) children: Children,
 }
 
@@ -29,8 +31,22 @@ impl TreeNode {
             key: key.into(),
             label: label.into(),
             icon: None,
+            note: None,
+            tone: None,
             children: Children::Leaf,
         }
+    }
+
+    /// Quiet text at the row's end, such as a status letter.
+    pub fn note(mut self, note: impl Into<SharedString>) -> Self {
+        self.note = Some(note.into());
+        self
+    }
+
+    /// Tints the label and the note.
+    pub fn tone(mut self, tone: impl Into<Tone>) -> Self {
+        self.tone = Some(tone.into());
+        self
     }
 
     pub fn icon(mut self, icon: IconName) -> Self {
@@ -89,6 +105,8 @@ pub(crate) enum Shown {
         key: SharedString,
         label: SharedString,
         icon: Option<IconName>,
+        note: Option<SharedString>,
+        tone: Option<Tone>,
         opens: bool,
         open: bool,
     },
@@ -129,6 +147,8 @@ pub(crate) fn rows(nodes: &[TreeNode], open: &HashSet<SharedString>) -> Vec<Row>
                     key: node.key.clone(),
                     label: node.label.clone(),
                     icon: node.icon,
+                    note: node.note.clone(),
+                    tone: node.tone,
                     opens: node.opens(),
                     open: is_open,
                 },

@@ -79,6 +79,7 @@ fn row(rows: &Rows, ix: usize, window: &mut Window, cx: &mut App) -> AnyElement 
             icon,
             opens,
             open,
+            ..
         } => (key.clone(), label.clone(), *icon, *opens, *open),
         Shown::Loading => return waiting(rows, ix, item.depth, cx),
     };
@@ -100,6 +101,10 @@ fn row(rows: &Rows, ix: usize, window: &mut Window, cx: &mut App) -> AnyElement 
     let theme = cx.theme();
     let colors = &theme.colors;
     let indent = theme.tree_indent();
+    let (note, ink) = match &item.shown {
+        Shown::Node { note, tone, .. } => (note.clone(), tone.map(|tone| tone.colors(colors).1)),
+        Shown::Loading => (None, None),
+    };
     let selected = rows.selected.contains(&key);
     let (toggle, pick, activate, focus) = (
         rows.toggle.clone(),
@@ -147,6 +152,7 @@ fn row(rows: &Rows, ix: usize, window: &mut Window, cx: &mut App) -> AnyElement 
             .flex_1()
             .min_w_0()
             .truncate()
+            .when_some(ink, |text, ink| text.text_color(ink))
             .child(label.clone())
             .into_any_element(),
     };
@@ -202,6 +208,13 @@ fn row(rows: &Rows, ix: usize, window: &mut Window, cx: &mut App) -> AnyElement 
         )
         .children(icon.map(|icon| Icon::new(icon).size(IconSize::Sm).color(colors.fg_muted)))
         .child(body)
+        .children(note.map(|note| {
+            div()
+                .flex_none()
+                .text_size(theme.text_size(TextSize::Xs))
+                .text_color(ink.unwrap_or(colors.fg_subtle))
+                .child(note)
+        }))
         .children(landing.filter(|at| *at != DropAt::Inside).map(line))
         .on_click(move |event, window, cx| {
             window.focus(&focus);

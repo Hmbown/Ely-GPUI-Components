@@ -1,3 +1,5 @@
+mod directory;
+mod files;
 mod grouped;
 mod item;
 mod long;
@@ -9,6 +11,8 @@ mod swipe;
 mod tests;
 mod tree;
 
+pub use directory::{DirEntry, DirectoryListing};
+pub use files::{FileTree, GitStatus};
 pub use grouped::GroupedList;
 pub use item::{List, ListItem};
 pub use long::{InfiniteList, VirtualList};

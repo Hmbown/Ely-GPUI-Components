@@ -1,3 +1,4 @@
+mod files;
 mod long;
 mod rows;
 mod trees;
@@ -42,6 +43,12 @@ const SCRIPT: &[Step] = &[
     Step::UpAt("outline", 40.0, 150.0),
     Step::Wait(500),
     Step::Shot("outline-moved"),
+    Step::DownAt("file-tree", 120.0, 22.0),
+    Step::UpAt("file-tree", 120.0, 22.0),
+    Step::Key("cmd-a"),
+    Step::Type("side"),
+    Step::Wait(300),
+    Step::Shot("files-filtered"),
     Step::Rest,
 ];
 
@@ -58,5 +65,7 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
         .child(trees::checkbox(window, cx))
         .child(trees::select(window, cx))
         .child(trees::outline(window, cx))
+        .child(files::file_tree(window, cx))
+        .child(files::directory(window, cx))
         .into_any_element()
 }

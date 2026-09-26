@@ -47,6 +47,7 @@ struct Cursor {
 }
 
 type OnSelect = Rc<dyn Fn(&[SharedString], &mut Window, &mut App)>;
+type OnActivate = Rc<dyn Fn(&SharedString, &mut Window, &mut App)>;
 type Picker = Rc<dyn Fn(usize, Pick, &mut Window, &mut App)>;
 
 /// Rows you select. A press picks one; with `multiple`, Cmd-press adds or drops one and Shift-press takes the range from the last pick. Up and Down move, Shift with them extends, Space toggles, Cmd-A takes all.
@@ -58,6 +59,7 @@ pub struct SelectableList {
     selected: Vec<SharedString>,
     multiple: bool,
     on_change: Option<OnSelect>,
+    on_activate: Option<OnActivate>,
 }
 
 impl SelectableList {
@@ -69,6 +71,7 @@ impl SelectableList {
             selected: Vec::new(),
             multiple: false,
             on_change: None,
+            on_activate: None,
         }
     }
 
@@ -85,6 +88,15 @@ impl SelectableList {
 
     pub fn multiple(mut self) -> Self {
         self.multiple = true;
+        self
+    }
+
+    /// Enter, or a double press, on a row.
+    pub fn on_activate(
+        mut self,
+        handler: impl Fn(&SharedString, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_activate = Some(Rc::new(handler));
         self
     }
 
@@ -150,12 +162,21 @@ impl RenderOnce for SelectableList {
                 }
             })
         };
+        let activate: OnActivate = {
+            let (id, on_activate) = (self.id.clone(), self.on_activate);
+            Rc::new(move |key, window, cx| {
+                log::info!("selectable list {id:?}: activated {key}");
+                if let Some(on_activate) = &on_activate {
+                    on_activate(key, window, cx);
+                }
+            })
+        };
         let rows: Vec<_> = self
             .rows
             .into_iter()
             .enumerate()
             .map(|(ix, (key, item))| {
-                let (pick, focus) = (pick.clone(), focus.clone());
+                let (pick, focus, activate) = (pick.clone(), focus.clone(), activate.clone());
                 item.selected(selected.contains(&key))
                     .current(focused && ix == at)
                     .on_click(move |event, window, cx| {
@@ -167,6 +188,9 @@ impl RenderOnce for SelectableList {
                         };
                         window.focus(&focus);
                         pick(ix, how, window, cx);
+                        if event.click_count() == 2 {
+                            activate(&key, window, cx);
+                        }
                     })
             })
             .collect();
@@ -191,6 +215,11 @@ impl RenderOnce for SelectableList {
                     "home" => (0, extend),
                     "end" => (count - 1, extend),
                     "space" => (at, Pick::Toggle),
+                    "enter" => {
+                        cx.stop_propagation();
+                        activate(&keys[at], window, cx);
+                        return;
+                    }
                     "a" if held.platform => (at, Pick::All),
                     _ => return,
                 };

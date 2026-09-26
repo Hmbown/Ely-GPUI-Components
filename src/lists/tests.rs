@@ -36,12 +36,12 @@ fn settle(cx: &mut VisualTestContext) {
 
 const NAMES: [&str; 4] = ["a", "b", "c", "d"];
 
-/// A multiple-choice list of four rows that keeps what it reports.
-struct Picks(Vec<SharedString>);
+/// A multiple-choice list of four rows that keeps what it reports, and what was opened.
+struct Picks(Vec<SharedString>, Vec<SharedString>);
 
 impl Render for Picks {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let view = cx.entity();
+        let (view, opened) = (cx.entity(), cx.entity());
         NAMES
             .iter()
             .fold(SelectableList::new("picks").multiple(), |list, name| {
@@ -49,6 +49,7 @@ impl Render for Picks {
             })
             .selected(self.0.clone())
             .on_change(move |keys, _, cx| view.update(cx, |picks, _| picks.0 = keys.to_vec()))
+            .on_activate(move |key, _, cx| opened.update(cx, |picks, _| picks.1.push(key.clone())))
             .w(px(240.0))
             .h(px(200.0))
     }
@@ -68,7 +69,7 @@ fn row(ix: usize) -> Point<Pixels> {
 #[gpui::test]
 fn presses_pick_one_toggle_with_cmd_and_range_with_shift(cx: &mut TestAppContext) {
     setup(cx);
-    let (view, cx) = cx.add_window_view(|_, _| Picks(Vec::new()));
+    let (view, cx) = cx.add_window_view(|_, _| Picks(Vec::new(), Vec::new()));
     settle(cx);
     cx.simulate_click(row(0), Modifiers::none());
     settle(cx);
@@ -271,4 +272,35 @@ fn a_long_list_builds_only_what_is_near_the_view(cx: &mut TestAppContext) {
     settle(cx);
     let most = built.borrow().iter().copied().max().expect("some rows");
     assert!((9..60).contains(&most), "built up to row {most} of 1000");
+}
+
+#[gpui::test]
+fn enter_or_a_double_press_opens_a_row(cx: &mut TestAppContext) {
+    setup(cx);
+    let (view, cx) = cx.add_window_view(|_, _| Picks(Vec::new(), Vec::new()));
+    settle(cx);
+    cx.simulate_click(row(1), Modifiers::none());
+    settle(cx);
+    cx.simulate_keystrokes("enter");
+    settle(cx);
+    for count in [1, 2] {
+        cx.simulate_event(gpui::MouseDownEvent {
+            button: gpui::MouseButton::Left,
+            position: row(3),
+            modifiers: Modifiers::none(),
+            click_count: count,
+            first_mouse: false,
+        });
+        cx.simulate_event(gpui::MouseUpEvent {
+            button: gpui::MouseButton::Left,
+            position: row(3),
+            modifiers: Modifiers::none(),
+            click_count: count,
+        });
+    }
+    settle(cx);
+    let opened: Vec<String> = view.read_with(cx, |picks, _| {
+        picks.1.iter().map(|key| key.to_string()).collect()
+    });
+    assert_eq!(opened, ["b", "d"]);
 }
