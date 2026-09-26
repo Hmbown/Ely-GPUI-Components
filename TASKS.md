@@ -51,10 +51,10 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T13c Lists & Trees · Files
 - [x] T14a Tables · Core
 - [x] T14b Tables · Columns & rows
-- [ ] T14c Tables · Grids
-- [ ] T15a Charts · Cartesian
-- [ ] T15b Charts · Parts and spreads
-- [ ] T15c Charts · Flows and relations
+- [x] T14c Tables · Grids
+- [x] T15a Charts · Cartesian
+- [x] T15b Charts · Parts and spreads
+- [x] T15c Charts · Flows and relations
 - [ ] T16a Finance · Market charts
 - [ ] T16b Finance · Technical analysis
 - [ ] T16c Finance · Quotes & book
@@ -209,6 +209,10 @@ Per-component lines live in `tasks/`. Tags there:
 | T14b | 2 | PASS | |
 | T14c | 1 | FAIL | a shrunk grid kept its cursor outside, long column letters overflowed, presses landed in merged cells, Tab left the grid, and ranges counted text and blanks |
 | T14c | 2 | FAIL | Tab stepped into a merge's hidden cells |
+| T14c | 3 | PASS | |
 | T15a | 1 | FAIL | an empty chart's SVG export panicked, and a huge flat domain looped forever making ticks |
+| T15a | 2 | PASS | |
 | T15b | 1 | FAIL | a pointed part outlived shrinking data, an empty heatmap made up a cell, a negative total flipped its bar, and a sunburst child filled its parent's arc |
+| T15b | 2 | PASS | |
 | T15c | 1 | FAIL | eight charts kept a pointed part past their data, and the Gantt today line ran past the timeline |
+| T15c | 2 | PASS | |
