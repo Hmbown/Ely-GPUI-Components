@@ -22,6 +22,8 @@ mod stage;
 mod steer;
 mod symbols;
 mod tape;
+#[cfg(all(test, feature = "test-support"))]
+mod tests;
 mod tools;
 mod trade;
 mod wallet;

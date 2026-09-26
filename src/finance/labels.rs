@@ -1,6 +1,9 @@
 use std::ops::Range;
 
-use gpui::{App, Div, FontWeight, Hsla, ParentElement, Pixels, SharedString, Styled, Window, div};
+use gpui::{
+    App, Div, FontWeight, Hsla, ParentElement, Pixels, SharedString, Styled, Window, div,
+    prelude::*,
+};
 use jiff::tz::TimeZone;
 
 use super::{
@@ -12,7 +15,7 @@ use super::{
 use crate::{
     charts::{Linear, Rect, tint},
     theme::{ActiveTheme, Radius, TextSize},
-    typography::{format, tabular},
+    typography::{LEADING, format, tabular},
 };
 
 /// Where a market chart's words go: its panes and their scales, what is in view, the candle and row under the pointer, the zone its times read in, its title, and a compared symbol's name.
@@ -220,6 +223,8 @@ pub(crate) fn labels(
             })));
         }
     }
+    let tall = f32::from(small.to_pixels(rem)) * LEADING;
+    let mut levels = Vec::new();
     for drawing in &axes.drawings {
         let Drawing::Fib(from, to) = *drawing else {
             continue;
@@ -228,29 +233,47 @@ pub(crate) fn labels(
         if x > main.x + main.w {
             continue;
         }
-        let x = x.max(main.x);
-        let inside = |y: f32| y >= main.y && y <= main.y + main.h;
-        for (share, value) in Drawing::levels(from, to)
-            .into_iter()
-            .filter(|(_, value)| inside(price.at(*value)))
-        {
+        let left = (x - main.x).max(0.0);
+        for (share, value) in Drawing::levels(from, to) {
+            let y = price.at(value) - main.y;
+            if !(0.0..=main.h).contains(&y) {
+                continue;
+            }
             let words = format!(
                 "{} {}",
                 format::percent(share, 1, false),
                 format::number(value, digits, format::Separators::EN)
             );
-            out.push(
+            let above = y >= tall;
+            levels.push(
                 div()
                     .absolute()
-                    .left(Pixels::from(x))
-                    .top(Pixels::from(price.at(value)))
+                    .left(Pixels::from(left))
+                    .top(Pixels::from(y))
                     .h_0()
                     .flex()
-                    .items_end()
                     .pl_1()
-                    .child(tabular(text(words, colors.fg_muted)).pb_0p5()),
+                    .when(above, |label| label.items_end())
+                    .when(!above, |label| label.items_start())
+                    .child(
+                        tabular(text(words, colors.fg_muted))
+                            .when(above, |words| words.pb_0p5())
+                            .when(!above, |words| words.pt_0p5()),
+                    ),
             );
         }
+    }
+    if !levels.is_empty() {
+        out.push(
+            div()
+                .absolute()
+                .left(Pixels::from(main.x))
+                .top(Pixels::from(main.y))
+                .w(Pixels::from(main.w))
+                .h(Pixels::from(main.h))
+                .overflow_hidden()
+                .children(levels),
+        );
     }
     let pill = |y: f32, words: String, (fill, ink): (Hsla, Hsla)| {
         let body = tabular(div())

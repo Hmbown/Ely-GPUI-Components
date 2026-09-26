@@ -40,6 +40,8 @@ pub enum ChartKind {
 pub struct ChartSync {
     pub(crate) visible: Option<Visible>,
     pub(crate) hover: Option<i64>,
+    /// How many candles the shared window last moved for, so one append moves it once.
+    pub(crate) seen: usize,
 }
 
 /// A market's prices over time as candles, bars or a line, on a price scale at the right. Drag or scroll sideways to move through time, hold Cmd and scroll to zoom, and double-press to return to the newest; the crosshair reads each candle.
@@ -232,7 +234,10 @@ impl RenderOnce for CandlestickChart {
             Some(sync) => (sync.read(cx).visible, sync.read(cx).hover),
             None => (stage.read(cx).visible, stage.read(cx).hover),
         };
-        let seen = stage.read(cx).seen;
+        let seen = match &self.sync {
+            Some(sync) => sync.read(cx).seen,
+            None => stage.read(cx).seen,
+        };
         let visible = match held.0 {
             Some(visible)
                 if total > seen
@@ -246,12 +251,16 @@ impl RenderOnce for CandlestickChart {
         };
         if seen != total {
             log::debug!("market chart: {seen} candles to {total}");
-            stage.update(cx, |stage, _| stage.seen = total);
-            if held.0.is_some() {
-                match &self.sync {
-                    Some(sync) => sync.update(cx, |sync, _| sync.visible = Some(visible)),
-                    None => stage.update(cx, |stage, _| stage.visible = Some(visible)),
-                }
+            let kept = held.0.map(|_| visible);
+            match &self.sync {
+                Some(sync) => sync.update(cx, |sync, _| {
+                    sync.seen = total;
+                    sync.visible = kept.or(sync.visible);
+                }),
+                None => stage.update(cx, |stage, _| {
+                    stage.seen = total;
+                    stage.visible = kept.or(stage.visible);
+                }),
             }
         }
         let range = visible.range(total);

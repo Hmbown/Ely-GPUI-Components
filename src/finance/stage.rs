@@ -104,12 +104,15 @@ pub(crate) fn fit(low: f64, high: f64) -> ((f64, f64), Vec<f64>) {
     ((low, high), inside)
 }
 
-/// Places after the point that ticks `step` apart need: none for whole steps, two for cents.
+/// Places after the point that show every multiple of `step` exactly: none for whole steps, four for 0.0025.
 pub(crate) fn decimals(step: f64) -> usize {
-    if step >= 1.0 || step <= 0.0 {
-        return 0;
-    }
-    (-step.log10() - 1e-9).ceil().max(0.0) as usize
+    assert!(
+        step.is_finite() && step > 0.0,
+        "a step is positive, not {step}"
+    );
+    let text = format!("{step:.10}");
+    let fraction = text.split_once('.').map_or("", |(_, fraction)| fraction);
+    fraction.trim_end_matches('0').len()
 }
 
 #[cfg(test)]
@@ -197,6 +200,12 @@ mod tests {
                 decimals(0.001)
             ),
             (0, 1, 2, 3)
+        );
+        assert_eq!(decimals(0.0025), 4, "a quarter of a cent needs four places");
+        assert_eq!(
+            decimals(110.2 - 110.0),
+            1,
+            "float noise from a difference drops away"
         );
     }
 }
