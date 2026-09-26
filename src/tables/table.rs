@@ -1,22 +1,27 @@
-use std::rc::Rc;
+use std::{
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 
 use gpui::{
     AnyElement, App, Div, ElementId, Entity, FontWeight, InteractiveElement, IntoElement,
-    ParentElement, RenderOnce, SharedString, StatefulInteractiveElement, StyleRefinement, Styled,
-    UniformListScrollHandle, Window, div, prelude::*, uniform_list,
+    ParentElement, Pixels, RenderOnce, SharedString, StatefulInteractiveElement, StyleRefinement,
+    Styled, UniformListScrollHandle, Window, div, prelude::*, uniform_list,
 };
 
 use super::{
-    Aggregate, Cell, Column,
-    body::{Body, Select, sized},
-    model::{figure, filtered, page, range, sorted},
+    Aggregate, Cell, Column, FilterRule,
+    body::{Body, Detail, Line, OnEdit, Select, sized},
+    header::header,
+    model::{figure, filtered, page, range},
+    rules::{groups, kept, sorted_by},
 };
 use crate::{
-    forms::{CheckState, check_mark},
+    forms::{CheckState, Editing, check_mark},
+    layout::seeded::use_seeded,
     lists::{Pick, picked},
     navigation::Pagination,
-    primitives::{Icon, IconName},
-    theme::{ActiveTheme, Density, IconSize, TextSize},
+    theme::{ActiveTheme, ControlSize, Density, TextSize},
     typography::{Caption, format},
 };
 
@@ -36,104 +41,48 @@ impl Row {
     }
 }
 
-/// The sort, the page, where a Shift range starts, and the scroll of a long table.
+/// A table's own state: the page, a Shift range's start, the scroll, column widths, edges and order, opened rows, folded groups, and the cell being edited.
 #[derive(Default)]
-struct View {
-    sort: Option<(usize, bool)>,
-    page: usize,
-    anchor: usize,
-    scroll: UniformListScrollHandle,
+pub(crate) struct View {
+    pub page: usize,
+    pub anchor: usize,
+    pub scroll: UniformListScrollHandle,
+    pub widths: HashMap<SharedString, Pixels>,
+    pub edges: HashMap<SharedString, Pixels>,
+    pub narrowest: Pixels,
+    pub order: Vec<SharedString>,
+    pub open: HashSet<SharedString>,
+    pub folded: HashSet<SharedString>,
+    pub editing: Option<(SharedString, SharedString)>,
 }
 
-type OnSelect = Rc<dyn Fn(&[SharedString], &mut Window, &mut App)>;
-/// Rows under headers that sort, rising then falling then as given. A query keeps rows holding it; pages split long results, or a long table draws only the rows in view. With a selection, a box leads each row: a press picks one, Cmd adds, Shift takes a range, the header box takes all. Footers show figures; tinted columns show where each number sits.
+pub(super) type OnSelect = Rc<dyn Fn(&[SharedString], &mut Window, &mut App)>;
+
+/// Rows under headers. A press on a header sorts, rising then falling then off; Shift adds it to the sort. A header drags to move its column and its edge drags to resize it. A query and filter rules keep rows; pages split long results, or a long table draws only the rows in view. Rows can gather into folding groups, open a detail, or edit a cell in place. With a selection, a box leads each row. Footers show figures; tinted columns show where each number sits.
 #[derive(IntoElement)]
 pub struct DataTable {
-    id: ElementId,
-    base: Div,
-    columns: Vec<Column>,
-    rows: Rc<Vec<Row>>,
-    query: SharedString,
-    page_size: Option<usize>,
-    virtualized: bool,
-    selected: Option<Vec<SharedString>>,
-    on_select: Option<OnSelect>,
-    density: Density,
-}
-
-impl DataTable {
-    pub fn new(id: impl Into<ElementId>, columns: impl IntoIterator<Item = Column>) -> Self {
-        Self {
-            id: id.into(),
-            base: div(),
-            columns: columns.into_iter().collect(),
-            rows: Rc::default(),
-            query: SharedString::default(),
-            page_size: None,
-            virtualized: false,
-            selected: None,
-            on_select: None,
-            density: Density::Standard,
-        }
-    }
-
-    /// The rows, owned or shared; a shared list is not copied.
-    pub fn rows(mut self, rows: impl Into<Rc<Vec<Row>>>) -> Self {
-        self.rows = rows.into();
-        self
-    }
-
-    /// Keeps the rows holding this text in any cell.
-    pub fn query(mut self, query: impl Into<SharedString>) -> Self {
-        self.query = query.into();
-        self
-    }
-
-    /// Splits the rows into pages of `size`.
-    pub fn paged(mut self, size: usize) -> Self {
-        assert!(size > 0, "a page holds at least a row");
-        self.page_size = Some(size);
-        self
-    }
-
-    /// Draws only the rows in view, for long tables. Give it a height.
-    pub fn virtualized(mut self) -> Self {
-        self.virtualized = true;
-        self
-    }
-
-    /// Shows a box on each row; `keys` are the rows selected.
-    pub fn selected(mut self, keys: impl IntoIterator<Item = impl Into<SharedString>>) -> Self {
-        self.selected = Some(keys.into_iter().map(Into::into).collect());
-        self
-    }
-
-    pub fn on_select(
-        mut self,
-        handler: impl Fn(&[SharedString], &mut Window, &mut App) + 'static,
-    ) -> Self {
-        self.on_select = Some(Rc::new(handler));
-        self
-    }
-
-    pub fn density(mut self, density: Density) -> Self {
-        self.density = density;
-        self
-    }
+    pub(super) id: ElementId,
+    pub(super) base: Div,
+    pub(super) columns: Vec<Column>,
+    pub(super) rows: Rc<Vec<Row>>,
+    pub(super) query: SharedString,
+    pub(super) filters: Vec<FilterRule>,
+    pub(super) any: bool,
+    pub(super) sorts: Vec<(SharedString, bool)>,
+    pub(super) hidden: Vec<SharedString>,
+    pub(super) page_size: Option<usize>,
+    pub(super) virtualized: bool,
+    pub(super) selected: Option<Vec<SharedString>>,
+    pub(super) on_select: Option<OnSelect>,
+    pub(super) detail: Option<Detail>,
+    pub(super) group_by: Option<SharedString>,
+    pub(super) on_edit: Option<OnEdit>,
+    pub(super) density: Density,
 }
 
 impl Styled for DataTable {
     fn style(&mut self) -> &mut StyleRefinement {
         self.base.style()
-    }
-}
-
-/// The next sort after a press on column `col`: rising, then falling, then none.
-fn next_sort(sort: Option<(usize, bool)>, col: usize) -> Option<(usize, bool)> {
-    match sort {
-        Some((was, true)) if was == col => Some((col, false)),
-        Some((was, false)) if was == col => None,
-        _ => Some((col, true)),
     }
 }
 
@@ -149,35 +98,124 @@ impl RenderOnce for DataTable {
                 row.key
             );
         }
+        assert!(
+            !(self.detail.is_some() && self.virtualized),
+            "a virtualized table draws rows of one height, so rows cannot open"
+        );
+        assert!(
+            !(self.group_by.is_some() && self.page_size.is_some()),
+            "a grouped table is not paged"
+        );
+        let pinned_any = self.columns.iter().any(|column| column.pinned);
+        assert!(
+            !(pinned_any && (self.virtualized || self.detail.is_some())),
+            "pinned columns need rows of one height in one list"
+        );
+        assert!(
+            self.columns
+                .iter()
+                .all(|column| !column.pinned || column.width.is_some()),
+            "a pinned column needs a width"
+        );
         let view: Entity<View> =
             window.use_keyed_state((id.clone(), "view"), cx, |_, _| View::default());
-        let (sort, page_at, scroll) = {
-            let view = view.read(cx);
-            (view.sort, view.page, view.scroll.clone())
-        };
+        let sorting = use_seeded((id.clone(), "sort"), self.sorts.clone(), window, cx);
+        let editor = window.use_keyed_state((id.clone(), "editor"), cx, |_, _| Editing::default());
+        let narrowest = cx.theme().label_width() * 0.5;
+        let rem = window.rem_size();
+        let keys_now: Vec<SharedString> = self
+            .columns
+            .iter()
+            .map(|column| column.key.clone())
+            .collect();
+        view.update(cx, |view, _| {
+            view.narrowest = narrowest.to_pixels(rem);
+            view.order.retain(|key| keys_now.contains(key));
+            for key in &keys_now {
+                if !view.order.contains(key) {
+                    view.order.push(key.clone());
+                }
+            }
+        });
+        if view.read(cx).editing.is_some() && editor.read(cx).field().is_none() {
+            view.update(cx, |view, _| view.editing = None);
+        }
         let rows = self.rows;
-        let keys: Rc<Vec<SharedString>> = Rc::new(rows.iter().map(|row| row.key.clone()).collect());
-        let mut order = filtered(&rows, &self.query);
-        if let Some((col, rising)) = sort {
-            order = sorted(&rows, order, col, rising);
+        let columns = Rc::new(self.columns);
+        let index = |key: &SharedString| columns.iter().position(|column| column.key == *key);
+        let shown_columns: Vec<usize> = view
+            .read(cx)
+            .order
+            .iter()
+            .filter(|key| !self.hidden.contains(key))
+            .filter_map(index)
+            .collect();
+        let sort: Vec<(usize, bool)> = sorting
+            .read(cx)
+            .value
+            .iter()
+            .filter_map(|(key, rising)| index(key).map(|col| (col, *rising)))
+            .collect();
+        let mut order = kept(
+            &rows,
+            &columns,
+            filtered(&rows, &self.query),
+            &self.filters,
+            self.any,
+        );
+        if !sort.is_empty() {
+            order = sorted_by(&rows, order, &sort);
         }
         let total = order.len();
+        let (page_at, open, folded) = {
+            let view = view.read(cx);
+            (view.page, view.open.clone(), view.folded.clone())
+        };
         let pages = self.page_size.map(|size| total.div_ceil(size).max(1));
         let page_at = pages.map_or(0, |pages| page_at.min(pages - 1));
-        let (shown, offset) = match self.page_size {
-            Some(size) => (page(&order, page_at, size).to_vec(), page_at * size),
-            None => (order.clone(), 0),
+        let opens = self.detail.is_some();
+        let mut lines = Vec::new();
+        let mut ordered: Vec<SharedString> = Vec::new();
+        let push_row = |ix: usize, position: usize, lines: &mut Vec<Line>| {
+            lines.push(Line::Row { ix, position });
+            if opens && open.contains(&rows[ix].key) {
+                lines.push(Line::Detail { ix });
+            }
         };
-        let columns = Rc::new(self.columns);
-        let ranges: Rc<Vec<_>> = Rc::new(
-            columns
-                .iter()
-                .enumerate()
-                .map(|(col, column)| column.scale.then(|| range(&rows, col)).flatten())
-                .collect(),
-        );
-        let ordered: Rc<Vec<SharedString>> =
-            Rc::new(order.iter().map(|ix| keys[*ix].clone()).collect());
+        match self
+            .group_by
+            .as_ref()
+            .map(|key| index(key).unwrap_or_else(|| panic!("no column {key} to group by")))
+        {
+            Some(col) => {
+                for (name, members) in groups(&rows, &order, col) {
+                    let shut = folded.contains(&name);
+                    lines.push(Line::Group {
+                        name: name.clone(),
+                        count: members.len(),
+                        folded: shut,
+                    });
+                    if !shut {
+                        for ix in members {
+                            push_row(ix, ordered.len(), &mut lines);
+                            ordered.push(rows[ix].key.clone());
+                        }
+                    }
+                }
+            }
+            None => {
+                ordered.extend(order.iter().map(|ix| rows[*ix].key.clone()));
+                let offset = self.page_size.map_or(0, |size| page_at * size);
+                let visible = match self.page_size {
+                    Some(size) => page(&order, page_at, size).to_vec(),
+                    None => order.clone(),
+                };
+                for (at, ix) in visible.into_iter().enumerate() {
+                    push_row(ix, offset + at, &mut lines);
+                }
+            }
+        }
+        let ordered = Rc::new(ordered);
         let selected = self.selected.map(Rc::new);
         let select: Option<Select> = selected.clone().map(|selected| {
             let (view, ordered, on_select, id) = (
@@ -202,174 +240,223 @@ impl RenderOnce for DataTable {
             ) as Select
         });
         let theme = cx.theme();
-        let colors = &theme.colors;
         let height = theme.table_row(self.density);
-        let check = theme.control_height(crate::theme::ControlSize::Md);
+        let widths: Rc<Vec<Option<Pixels>>> = Rc::new(
+            columns
+                .iter()
+                .map(|column| view.read(cx).widths.get(&column.key).copied())
+                .collect(),
+        );
+        let body = Rc::new(Body {
+            id: id.clone(),
+            view: view.clone(),
+            columns: columns.clone(),
+            widths: widths.clone(),
+            rows: rows.clone(),
+            lines: Rc::new(lines),
+            selected: selected.clone(),
+            select,
+            detail: self.detail,
+            open: Rc::new(open),
+            editing: view.read(cx).editing.clone(),
+            editor,
+            on_edit: self.on_edit,
+            ranges: Rc::new(
+                columns
+                    .iter()
+                    .enumerate()
+                    .map(|(col, column)| column.scale.then(|| range(&rows, col)).flatten())
+                    .collect(),
+            ),
+            height,
+            lead: theme.control_height(ControlSize::Md),
+            narrowest,
+        });
         let all = selected.as_ref().map(|selected| {
-            let on = ordered.iter().filter(|key| selected.contains(key)).count();
-            match on {
+            match ordered.iter().filter(|key| selected.contains(key)).count() {
                 0 => CheckState::Off,
                 on if on == ordered.len() => CheckState::On,
                 _ => CheckState::Mixed,
             }
         });
-        let header = div()
-            .flex()
-            .items_center()
-            .h(height)
-            .border_b_1()
-            .border_color(colors.border)
-            .text_size(theme.text_size(TextSize::Xs))
-            .font_weight(FontWeight::MEDIUM)
-            .text_color(colors.fg_muted)
-            .when_some(all.zip(selected.clone()), |header, (state, selected)| {
-                let (ordered, on_select) = (ordered.clone(), self.on_select.clone());
-                header.child(
+        let on_select = self.on_select;
+        let heads = |cols: &[usize], lead: bool, cx: &App| {
+            let theme = cx.theme();
+            div()
+                .flex()
+                .items_center()
+                .h(height)
+                .border_b_1()
+                .border_color(theme.colors.border)
+                .when(lead, |row| {
+                    row.when_some(all.zip(selected.clone()), |row, (state, selected)| {
+                        let (ordered, on_select) = (ordered.clone(), on_select.clone());
+                        row.child(
+                            div()
+                                .id((id.clone(), "all"))
+                                .flex_none()
+                                .w(body.lead)
+                                .flex()
+                                .justify_center()
+                                .cursor_pointer()
+                                .on_click(move |_, window, cx| {
+                                    let next: Vec<SharedString> = if state == CheckState::On {
+                                        selected
+                                            .iter()
+                                            .filter(|key| !ordered.contains(key))
+                                            .cloned()
+                                            .collect()
+                                    } else {
+                                        let mut next = (*selected).clone();
+                                        next.extend(
+                                            ordered
+                                                .iter()
+                                                .filter(|key| !selected.contains(key))
+                                                .cloned(),
+                                        );
+                                        next
+                                    };
+                                    if let Some(on_select) = &on_select {
+                                        on_select(&next, window, cx);
+                                    }
+                                })
+                                .child(check_mark(state, false, false, 0, cx)),
+                        )
+                    })
+                    .when(body.detail.is_some(), |row| {
+                        row.child(div().flex_none().w(body.lead))
+                    })
+                })
+                .children(cols.iter().map(|col| {
+                    header(
+                        &id,
+                        &view,
+                        &sorting,
+                        &columns[*col],
+                        widths[*col],
+                        narrowest,
+                        cx,
+                    )
+                }))
+        };
+        let figures = |cols: &[usize], lead: bool, cx: &App| {
+            columns
+                .iter()
+                .any(|column| column.aggregate.is_some())
+                .then(|| {
+                    let theme = cx.theme();
                     div()
-                        .id((id.clone(), "all"))
-                        .flex_none()
-                        .w(check)
-                        .flex()
-                        .justify_center()
-                        .cursor_pointer()
-                        .on_click(move |_, window, cx| {
-                            let next: Vec<SharedString> = if state == CheckState::On {
-                                selected
-                                    .iter()
-                                    .filter(|key| !ordered.contains(key))
-                                    .cloned()
-                                    .collect()
-                            } else {
-                                let mut next = (*selected).clone();
-                                next.extend(
-                                    ordered
-                                        .iter()
-                                        .filter(|key| !selected.contains(key))
-                                        .cloned(),
-                                );
-                                next
-                            };
-                            if let Some(on_select) = &on_select {
-                                on_select(&next, window, cx);
-                            }
-                        })
-                        .child(check_mark(state, false, false, 0, cx)),
-                )
-            })
-            .children(columns.iter().enumerate().map(|(col, column)| {
-                let here = sort
-                    .filter(|(sorted, _)| *sorted == col)
-                    .map(|(_, rising)| rising);
-                let (view, id) = (view.clone(), id.clone());
-                sized(
-                    div()
-                        .id((self.id.clone(), format!("head-{}", column.key)))
-                        .h_full()
                         .flex()
                         .items_center()
-                        .gap_1()
-                        .px_3(),
-                    column,
-                )
-                .when(column.sortable, |head| {
-                    head.cursor_pointer()
-                        .hover(|style| style.text_color(colors.fg))
-                        .on_click(move |_, _, cx| {
-                            view.update(cx, |view, cx| {
-                                view.sort = next_sort(view.sort, col);
-                                view.page = 0;
-                                log::info!("data table {id:?}: sort {:?}", view.sort);
-                                cx.notify();
-                            })
+                        .h(height)
+                        .text_size(theme.text_size(TextSize::Sm))
+                        .font_weight(FontWeight::MEDIUM)
+                        .when(lead, |row| {
+                            row.child(div().flex_none().w(body.lead_width()))
                         })
-                })
-                .child(column.title.clone())
-                .children(here.map(|rising| {
-                    Icon::new(if rising {
-                        IconName::ArrowUp
-                    } else {
-                        IconName::ArrowDown
-                    })
-                    .size(IconSize::Xs)
-                    .color(colors.fg_muted)
-                }))
-            }));
-        let figures = columns
-            .iter()
-            .any(|column| column.aggregate.is_some())
-            .then(|| {
-                div()
-                    .flex()
-                    .items_center()
-                    .h(height)
-                    .text_size(theme.text_size(TextSize::Sm))
-                    .font_weight(FontWeight::MEDIUM)
-                    .when(selected.is_some(), |footer| {
-                        footer.child(div().flex_none().w(check))
-                    })
-                    .children(columns.iter().enumerate().map(|(col, column)| {
-                        let shown = column.aggregate.map(|how| {
-                            let shares = rows
-                                .first()
-                                .is_some_and(|row| matches!(row.cells[col], Cell::Progress(_)));
-                            let value =
-                                figure(&rows, &order, col, how).map_or("—".to_string(), |value| {
-                                    match how {
+                        .children(cols.iter().map(|col| {
+                            let column = &columns[*col];
+                            let shown = column.aggregate.map(|how| {
+                                let shares = rows.first().is_some_and(|row| {
+                                    matches!(row.cells[*col], Cell::Progress(_))
+                                });
+                                let value = figure(&rows, &order, *col, how).map_or(
+                                    "—".to_string(),
+                                    |value| match how {
                                         Aggregate::Count => format!("{}", value as usize),
                                         _ if shares => format::percent(value, 0, false),
                                         _ => column.reads(value),
-                                    }
-                                });
-                            div()
-                                .flex()
-                                .items_baseline()
-                                .gap_1()
-                                .child(
-                                    div()
-                                        .text_size(theme.text_size(TextSize::Xs))
-                                        .text_color(colors.fg_subtle)
-                                        .child(how.label()),
-                                )
-                                .child(value)
-                        });
-                        sized(div().px_3().flex().items_center(), column).children(shown)
-                    }))
-            });
-        let body = Body {
-            id: id.clone(),
-            columns: columns.clone(),
-            rows,
-            keys,
-            shown: Rc::new(shown),
-            offset,
-            selected,
-            select,
-            ranges,
-            height,
-            check,
+                                    },
+                                );
+                                div()
+                                    .flex()
+                                    .items_baseline()
+                                    .gap_1()
+                                    .child(
+                                        div()
+                                            .text_size(theme.text_size(TextSize::Xs))
+                                            .text_color(theme.colors.fg_subtle)
+                                            .child(how.label()),
+                                    )
+                                    .child(value)
+                            });
+                            let cell = div().px_3().flex().items_center();
+                            match widths[*col] {
+                                Some(width) => cell.w(width).flex_none(),
+                                None => sized(cell, column, narrowest),
+                            }
+                            .children(shown)
+                        }))
+                })
         };
-        let rows: AnyElement = if total == 0 {
+        let part = |cols: &[usize], lead: bool, window: &mut Window, cx: &mut App| -> Div {
+            let lines: Vec<AnyElement> = (0..body.lines.len())
+                .map(|at| body.line(at, cols, lead, window, cx))
+                .collect();
             div()
                 .flex()
-                .justify_center()
-                .py_6()
-                .text_size(theme.text_size(TextSize::Sm))
-                .text_color(colors.fg_subtle)
-                .child("Nothing matches.")
+                .flex_col()
+                .child(heads(cols, lead, cx))
+                .children(lines)
+                .children(figures(cols, lead, cx))
+        };
+        let table: AnyElement = if total == 0 {
+            let theme = cx.theme();
+            div()
+                .flex()
+                .flex_col()
+                .child(heads(&shown_columns, true, cx))
+                .child(
+                    div()
+                        .flex()
+                        .justify_center()
+                        .py_6()
+                        .text_size(theme.text_size(TextSize::Sm))
+                        .text_color(theme.colors.fg_subtle)
+                        .child("Nothing matches."),
+                )
                 .into_any_element()
         } else if self.virtualized {
-            let count = body.shown.len();
-            uniform_list((id.clone(), "rows"), count, move |range, _, cx| {
-                range.map(|at| body.row(at, cx)).collect()
-            })
-            .track_scroll(scroll)
-            .flex_1()
-            .min_h_0()
-            .into_any_element()
-        } else {
+            let (scroll, count, cols, drawn) = (
+                view.read(cx).scroll.clone(),
+                body.lines.len(),
+                shown_columns.clone(),
+                body.clone(),
+            );
             div()
-                .children((0..body.shown.len()).map(|at| body.row(at, cx)))
+                .flex()
+                .flex_col()
+                .size_full()
+                .child(heads(&shown_columns, true, cx))
+                .child(
+                    uniform_list((id.clone(), "rows"), count, move |range, window, cx| {
+                        range
+                            .map(|at| drawn.line(at, &cols, true, window, cx))
+                            .collect()
+                    })
+                    .track_scroll(scroll)
+                    .flex_1()
+                    .min_h_0(),
+                )
+                .children(figures(&shown_columns, true, cx))
                 .into_any_element()
+        } else if pinned_any {
+            let (held, moving): (Vec<usize>, Vec<usize>) =
+                shown_columns.iter().partition(|col| columns[**col].pinned);
+            div()
+                .flex()
+                .child(part(&held, true, window, cx).flex_none())
+                .child(
+                    div()
+                        .id((id.clone(), "sideways"))
+                        .flex_1()
+                        .min_w_0()
+                        .overflow_x_scroll()
+                        .child(part(&moving, false, window, cx)),
+                )
+                .into_any_element()
+        } else {
+            part(&shown_columns, true, window, cx).into_any_element()
         };
         let pager = pages.filter(|pages| *pages > 1).map(|pages| {
             let size = self.page_size.expect("pages come from a page size");
@@ -393,25 +480,6 @@ impl RenderOnce for DataTable {
                     ),
                 )
         });
-        self.base
-            .flex()
-            .flex_col()
-            .child(header)
-            .child(rows)
-            .children(figures)
-            .children(pager)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::next_sort;
-
-    #[test]
-    fn a_header_sorts_rising_then_falling_then_not() {
-        assert_eq!(next_sort(None, 2), Some((2, true)));
-        assert_eq!(next_sort(Some((2, true)), 2), Some((2, false)));
-        assert_eq!(next_sort(Some((2, false)), 2), None);
-        assert_eq!(next_sort(Some((1, false)), 2), Some((2, true)));
+        self.base.flex().flex_col().child(table).children(pager)
     }
 }

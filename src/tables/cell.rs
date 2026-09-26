@@ -108,6 +108,8 @@ pub struct Column {
     pub(crate) suffix: Option<SharedString>,
     pub(crate) aggregate: Option<Aggregate>,
     pub(crate) scale: bool,
+    pub(crate) editable: bool,
+    pub(crate) pinned: bool,
 }
 
 impl Column {
@@ -123,6 +125,8 @@ impl Column {
             suffix: None,
             aggregate: None,
             scale: false,
+            editable: false,
+            pinned: false,
         }
     }
 
@@ -169,6 +173,26 @@ impl Column {
     pub fn scale(mut self) -> Self {
         self.scale = true;
         self
+    }
+
+    /// A double press on a cell edits its text; the table's `on_edit` gets it.
+    pub fn editable(mut self) -> Self {
+        self.editable = true;
+        self
+    }
+
+    /// Holds still at the start while the other columns scroll sideways. Needs a width.
+    pub fn pinned(mut self) -> Self {
+        self.pinned = true;
+        self
+    }
+
+    pub fn key(&self) -> &SharedString {
+        &self.key
+    }
+
+    pub fn title(&self) -> &SharedString {
+        &self.title
     }
 
     /// A number as this column reads it.

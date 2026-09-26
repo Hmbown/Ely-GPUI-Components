@@ -1,4 +1,5 @@
 mod core;
+mod features;
 
 use gpui::{AnyElement, App, IntoElement, ParentElement, Window, div};
 
@@ -26,6 +27,22 @@ const SCRIPT: &[Step] = &[
     Step::UpAt("orders", 18.0, 126.0),
     Step::Wait(200),
     Step::Shot("selected"),
+    Step::DownAt("orders-tools", 300.0, 14.0),
+    Step::UpAt("orders-tools", 300.0, 14.0),
+    Step::Wait(300),
+    Step::Shot("builders"),
+    Step::Hover("tasks"),
+    Step::Wait(300),
+    Step::DownAt("tasks", 14.0, 54.0),
+    Step::UpAt("tasks", 14.0, 54.0),
+    Step::Wait(300),
+    Step::Shot("expanded"),
+    Step::Hover("grouped"),
+    Step::Wait(300),
+    Step::DownAt("grouped", 60.0, 54.0),
+    Step::UpAt("grouped", 60.0, 54.0),
+    Step::Wait(300),
+    Step::Shot("folded"),
     Step::Rest,
 ];
 
@@ -33,6 +50,9 @@ fn render(window: &mut Window, cx: &mut App) -> AnyElement {
     div()
         .child(core::plain(cx))
         .child(core::orders(window, cx))
+        .child(features::wide(cx))
+        .child(features::rows(window, cx))
+        .child(features::grouped(cx))
         .child(core::long(window, cx))
         .child(core::heatmap(cx))
         .into_any_element()

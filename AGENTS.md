@@ -88,6 +88,8 @@ Ely GPUI Component. A component library for GPUI, in light and dark.
 - A chevron that opens and closes is `primitives::Disclosure`.
 - `uniform_list` does not stretch its rows; each row sets `w_full`.
 - Chapters import only earlier chapters, so a select of tree nodes lives in `lists` (`TreeSelect`) and reaches `forms::listing`.
+- Script clicks aim at a probe's corner, so a scripted target must fit in the window; a tall probe puts its top off screen.
+- `scripts/check.sh` fails by its exit status; a pipe into `tail` hides it.
 - Reduced motion shortens animations to 1ms on the wall clock. Tests sleep past it between refreshes to see where one ends.
 - The test platform never runs next-frame callbacks, and its text metrics are simplified: each character takes a fixed advance. Tests refresh the window in place of the display link, and click where layout does not hang on text, such as padding and slots.
 - An absolute element with no insets sits where it would flow: after the content in a block, inside the padding in a flex box. A canvas that measures its parent pins itself with `.top_0().left_0()`.

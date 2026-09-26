@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use gpui::Hsla;
 
 use super::{Aggregate, Row};
@@ -17,19 +15,6 @@ pub(crate) fn filtered(rows: &[Row], query: &str) -> Vec<usize> {
                     .any(|cell| cell.words().to_lowercase().contains(&query))
         })
         .collect()
-}
-
-/// `order` sorted by column `col`, rising or falling: numbers by value, the rest by their words; ties keep their order.
-pub(crate) fn sorted(rows: &[Row], mut order: Vec<usize>, col: usize, rising: bool) -> Vec<usize> {
-    order.sort_by(|a, b| {
-        let (a, b) = (&rows[*a].cells[col], &rows[*b].cells[col]);
-        let by = match (a.number(), b.number()) {
-            (Some(a), Some(b)) => a.partial_cmp(&b).unwrap_or(Ordering::Equal),
-            _ => a.words().to_lowercase().cmp(&b.words().to_lowercase()),
-        };
-        if rising { by } else { by.reverse() }
-    });
-    order
 }
 
 /// Column `col`'s figure over `order`; none when no cell counts.
@@ -128,13 +113,12 @@ mod tests {
     #[test]
     fn numbers_sort_by_value_and_words_ignore_case() {
         let rows = rows();
-        assert_eq!(
-            sorted(&rows, vec![0, 1, 2, 3], 1, true),
-            [1, 2, 0, 3],
-            "ties keep their order"
-        );
-        assert_eq!(sorted(&rows, vec![0, 1, 2, 3], 1, false), [3, 0, 1, 2]);
-        assert_eq!(sorted(&rows, vec![0, 1, 2, 3], 0, true), [2, 1, 0, 3]);
+        let sorted = |col: usize, rising: bool| {
+            crate::tables::rules::sorted_by(&rows, vec![0, 1, 2, 3], &[(col, rising)])
+        };
+        assert_eq!(sorted(1, true), [1, 2, 0, 3], "ties keep their order");
+        assert_eq!(sorted(1, false), [3, 0, 1, 2]);
+        assert_eq!(sorted(0, true), [2, 1, 0, 3]);
     }
 
     #[test]

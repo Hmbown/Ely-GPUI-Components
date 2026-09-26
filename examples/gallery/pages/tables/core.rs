@@ -1,14 +1,18 @@
 use std::rc::Rc;
 
 use ely_gpui_component::{
-    buttons::SegmentedControl,
     data_display::Tone,
-    forms::{SearchInput, TextInput},
-    tables::{Aggregate, Cell, Column, DataTable, HeatmapTable, Row, Table},
-    theme::{ActiveTheme, ControlSize, Density, Radius},
+    forms::TextInput,
+    tables::{
+        Aggregate, Cell, Column, DataTable, FilterBuilder, FilterRule, HeatmapTable, Row,
+        SortBuilder, SortKey, Table, TableToolbar, Test, to_csv,
+    },
+    theme::{ActiveTheme, Density, Radius},
     typography::Caption,
 };
-use gpui::{App, IntoElement, ParentElement, SharedString, Styled, Window, div, px, rems};
+use gpui::{
+    App, ClipboardItem, IntoElement, ParentElement, SharedString, Styled, Window, div, px, rems,
+};
 
 use crate::{
     probe::probe,
@@ -56,7 +60,7 @@ fn noise(seed: u64) -> impl FnMut() -> f64 {
     }
 }
 
-fn order_rows() -> Vec<Row> {
+pub(super) fn order_rows() -> Vec<Row> {
     let mut next = noise(7);
     (0..24)
         .map(|ix| {
@@ -82,7 +86,7 @@ fn order_rows() -> Vec<Row> {
         .collect()
 }
 
-fn order_columns() -> [Column; 7] {
+pub(super) fn order_columns() -> [Column; 7] {
     [
         Column::new("owner", "Owner"),
         Column::new("status", "Status").width(rems(6.)),
@@ -110,58 +114,125 @@ pub fn orders(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
     let search = window.use_keyed_state("orders-search", cx, TextInput::new);
     let query = search.read(cx).text().to_string();
     let picked = keep("orders-picked", Vec::<SharedString>::new, window, cx);
-    let density = keep(
-        "orders-density",
-        || SharedString::from("standard"),
+    let spacing = keep("orders-density", || Density::Standard, window, cx);
+    let hidden = keep("orders-hidden", Vec::<SharedString>::new, window, cx);
+    let panel = keep("orders-panel", || false, window, cx);
+    let rules = keep(
+        "orders-rules",
+        || {
+            (
+                vec![FilterRule {
+                    column: "status".into(),
+                    test: Test::Contains,
+                    value: SharedString::default(),
+                }],
+                false,
+            )
+        },
         window,
         cx,
     );
-    let (chosen, store, dense, pick) = (
-        picked.read(cx).clone(),
-        picked.clone(),
-        density.read(cx).clone(),
-        density.clone(),
-    );
-    let spacing = match dense.as_ref() {
-        "compact" => Density::Compact,
-        "comfortable" => Density::Comfortable,
-        _ => Density::Standard,
-    };
-    section(
-        "DataTable / CellRenderer / RowSelection / TableDensity / AggregationFooter / ConditionalFormatting",
-        "Press a header to sort, rising then falling. Search keeps rows that hold the text; boxes select, Shift takes a range. Cells draw people, tags, sparklines and progress; growth is tinted by where it sits; the footer sums and averages what the search keeps.",
+    let sorts = keep(
+        "orders-sorts",
+        || {
+            vec![SortKey {
+                column: "region".into(),
+                rising: true,
+            }]
+        },
+        window,
         cx,
-    )
-    .child(
+    );
+    let copied = keep("orders-copied", || None::<usize>, window, cx);
+    let (chosen, dense, gone, open, (now_rules, any), now_sorts, told) = (
+        picked.read(cx).clone(),
+        *spacing.read(cx),
+        hidden.read(cx).clone(),
+        *panel.read(cx),
+        rules.read(cx).clone(),
+        sorts.read(cx).clone(),
+        *copied.read(cx),
+    );
+    let titles: Vec<(SharedString, SharedString)> = order_columns()
+        .iter()
+        .map(|column| (column.key().clone(), column.title().clone()))
+        .collect();
+    let theme = cx.theme();
+    let toolbar = TableToolbar::new("orders-tools")
+        .search(&search)
+        .filter(now_rules.len(), {
+            let panel = panel.clone();
+            move |_, cx| set(&panel, !open, cx)
+        })
+        .columns(titles.clone(), gone.clone(), {
+            let hidden = hidden.clone();
+            move |keys, _, cx| set(&hidden, keys.to_vec(), cx)
+        })
+        .density(dense, {
+            let spacing = spacing.clone();
+            move |density, _, cx| set(&spacing, density, cx)
+        })
+        .export({
+            let copied = copied.clone();
+            move |_, cx| {
+                let rows = order_rows();
+                cx.write_to_clipboard(ClipboardItem::new_string(to_csv(&order_columns(), &rows)));
+                set(&copied, Some(rows.len()), cx)
+            }
+        });
+    let builders = open.then(|| {
+        let (store_rules, store_sorts) = (rules.clone(), sorts.clone());
         div()
             .flex()
-            .items_center()
-            .justify_between()
-            .w(px(900.))
-            .pb_3()
-            .child(div().w(px(260.)).child(SearchInput::new("orders-find", &search).size(ControlSize::Sm)))
+            .gap_8()
+            .p_4()
+            .mb_3()
+            .rounded(theme.radius(Radius::Md))
+            .bg(theme.colors.sunken)
             .child(
-                SegmentedControl::new("orders-density", dense)
-                    .segment("compact", "Compact", None)
-                    .segment("standard", "Standard", None)
-                    .segment("comfortable", "Comfortable", None)
-                    .size(ControlSize::Sm)
-                    .on_change(move |value, _, cx| set(&pick, value.clone(), cx)),
-            ),
+                div().flex_1().child(
+                    FilterBuilder::new("orders-filter", titles.clone())
+                        .rules(now_rules.clone(), any)
+                        .on_change(move |rules, any, _, cx| {
+                            set(&store_rules, (rules.to_vec(), any), cx)
+                        }),
+                ),
+            )
+            .child(
+                div().w(px(380.)).child(
+                    SortBuilder::new("orders-sort", titles.clone())
+                        .keys(now_sorts.clone())
+                        .on_change(move |keys, _, cx| set(&store_sorts, keys.to_vec(), cx)),
+                ),
+            )
+    });
+    let store = picked.clone();
+    section(
+        "DataTable / TableToolbar / FilterBuilder / SortBuilder / ColumnVisibility / CellRenderer / RowSelection / TableDensity / AggregationFooter / ConditionalFormatting",
+        "Press a header to sort, Shift to add it to the sort. The toolbar searches, opens the filter and sort builders, hides columns, sets the density and copies the rows as CSV. Boxes select; Shift takes a range. Growth is tinted by where it sits; the footer sums and averages what the filters keep.",
+        cx,
     )
+    .child(div().pb_3().child(probe("orders-tools", div().w(px(900.)).child(toolbar))))
+    .children(builders.map(|panel| div().w(px(900.)).child(panel)))
     .child(probe(
         "orders",
         div().w(px(900.)).child(
             DataTable::new("orders", order_columns())
                 .rows(order_rows())
                 .query(query)
+                .filters(now_rules, any)
+                .sorts(now_sorts)
+                .hidden(gone)
                 .paged(8)
-                .density(spacing)
+                .density(dense)
                 .selected(chosen.clone())
                 .on_select(move |keys, _, cx| set(&store, keys.to_vec(), cx)),
         ),
     ))
-    .child(Caption::new(format!("{} selected", chosen.len())))
+    .child(Caption::new(match told {
+        Some(rows) => format!("{} selected. Copied {rows} rows as CSV.", chosen.len()),
+        None => format!("{} selected", chosen.len()),
+    }))
 }
 
 pub fn long(window: &mut Window, cx: &mut App) -> impl IntoElement + use<> {
