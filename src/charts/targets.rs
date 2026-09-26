@@ -111,7 +111,10 @@ impl RenderOnce for BulletChart {
     fn render(mut self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let tiles: Entity<Tiles> =
             window.use_keyed_state((self.id.clone(), "rows"), cx, |_, _| Tiles::default());
-        let (bounds, hover) = (tiles.read(cx).bounds, tiles.read(cx).hover);
+        let (bounds, hover) = (
+            tiles.read(cx).bounds,
+            tiles.read(cx).pointed(self.bullets.len()),
+        );
         let theme = cx.theme();
         let (colors, sizes, rem) = (theme.colors.clone(), theme.chart(), window.rem_size());
         let pixels = |length: gpui::Rems| f32::from(length.to_pixels(rem));
@@ -318,7 +321,10 @@ impl RenderOnce for ProgressChart {
             window.request_animation_frame();
         }
         let glided = glided.into_iter().next().expect("one row of shares");
-        let (bounds, hover) = (rings.read(cx).bounds, rings.read(cx).hover);
+        let (bounds, hover) = (
+            rings.read(cx).bounds,
+            rings.read(cx).pointed(self.goals.len()),
+        );
         let theme = cx.theme();
         let (colors, sizes, rem) = (theme.colors.clone(), theme.chart(), window.rem_size());
         let side = f32::from(bounds.size.width).min(f32::from(bounds.size.height));

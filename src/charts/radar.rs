@@ -110,7 +110,8 @@ impl RenderOnce for RadarChart {
         }
         let (bounds, hover, hidden) = {
             let radar = radar.read(cx);
-            (radar.bounds, radar.hover, radar.hidden.clone())
+            let hover = radar.hover.filter(|spoke| *spoke < self.axes.len());
+            (radar.bounds, hover, radar.hidden.clone())
         };
         let theme = cx.theme();
         let (colors, sizes, rem) = (theme.colors.clone(), theme.chart(), window.rem_size());

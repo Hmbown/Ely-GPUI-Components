@@ -104,6 +104,9 @@ pub(crate) struct Categories<'a> {
 
 /// Lays out categories and their series inside `frame`: bands along one axis, values along the other.
 pub(crate) fn categories(chart: &Categories, frame: Rect) -> Geometry {
+    if chart.labels.is_empty() {
+        return Geometry::default();
+    }
     let (first, last) = chart.span;
     let shown: Vec<(usize, &[f64])> = chart
         .names
@@ -385,6 +388,34 @@ mod tests {
         assert_eq!(
             geometry.labels.first().map(|label| label.1.clone()),
             Some("0".into())
+        );
+    }
+
+    #[test]
+    fn no_categories_lay_out_nothing() {
+        let hidden = HashSet::new();
+        let empty = Categories {
+            labels: &[],
+            names: &[],
+            values: &[],
+            mark: Mark::Line,
+            stacked: false,
+            horizontal: false,
+            gap: 0.28,
+            hidden: &hidden,
+            span: (0, 0),
+        };
+        assert_eq!(
+            categories(
+                &empty,
+                Rect {
+                    x: 0.0,
+                    y: 0.0,
+                    w: 100.0,
+                    h: 100.0
+                }
+            ),
+            Geometry::default()
         );
     }
 

@@ -310,11 +310,9 @@ pub(crate) fn grid(face: Face, base: Div, window: &mut Window, cx: &mut App) -> 
     let (fill_raw, fill_hears) = (face.raw.clone(), face.on_change.clone());
     let numbered = face.numbered;
     let (merges, frozen) = (Rc::new(face.merges.clone()), face.frozen);
-    let (hovered_merges, stepped, stepped_back) = (
-        merges.clone(),
-        (sheet.clone(), editor.clone()),
-        (sheet.clone(), editor.clone()),
-    );
+    let hovered_merges = merges.clone();
+    let ahead = (sheet.clone(), editor.clone(), merges.clone());
+    let behind = (sheet.clone(), editor.clone(), merges.clone());
     let keyed = keys(face, metrics, sheet.clone(), editor.clone());
     let focus_on_press = focus.clone();
     let text_size = theme.text_size(TextSize::Sm);
@@ -329,20 +327,22 @@ pub(crate) fn grid(face: Face, base: Div, window: &mut Window, cx: &mut App) -> 
         .border_color(colors.border)
         .on_key_down(keyed)
         .capture_action(move |_: &FocusNext, window, cx| {
+            let (sheet, editor, merges) = &ahead;
+            let size = (face_rows, face_cols);
             across(
-                &stepped.0,
-                &stepped.1,
-                (face_cols, false),
+                (sheet, editor),
+                (merges, size, false),
                 (metrics, frozen),
                 window,
                 cx,
             )
         })
         .capture_action(move |_: &FocusPrev, window, cx| {
+            let (sheet, editor, merges) = &behind;
+            let size = (face_rows, face_cols);
             across(
-                &stepped_back.0,
-                &stepped_back.1,
-                (face_cols, true),
+                (sheet, editor),
+                (merges, size, true),
                 (metrics, frozen),
                 window,
                 cx,

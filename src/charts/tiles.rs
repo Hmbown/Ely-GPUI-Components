@@ -27,6 +27,13 @@ pub(crate) struct Tiles {
     pub hover: Option<usize>,
 }
 
+impl Tiles {
+    /// The part under the pointer, if there are still that many parts.
+    pub(crate) fn pointed(&self, count: usize) -> Option<usize> {
+        self.hover.filter(|ix| *ix < count)
+    }
+}
+
 /// Keeps `tiles` answering the pointer: `find` names the tile at a place in the box.
 pub(crate) fn tracked(
     root: Div,
@@ -120,7 +127,10 @@ impl RenderOnce for Treemap {
     fn render(mut self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let tiles: Entity<Tiles> =
             window.use_keyed_state((self.id.clone(), "tiles"), cx, |_, _| Tiles::default());
-        let (bounds, hover) = (tiles.read(cx).bounds, tiles.read(cx).hover);
+        let (bounds, hover) = (
+            tiles.read(cx).bounds,
+            tiles.read(cx).pointed(self.tiles.len()),
+        );
         let theme = cx.theme();
         let (colors, sizes, rem) = (theme.colors.clone(), theme.chart(), window.rem_size());
         let pixels = |length: gpui::Rems| f32::from(length.to_pixels(rem));
@@ -296,7 +306,8 @@ impl RenderOnce for HeatmapChart {
     fn render(mut self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let tiles: Entity<Tiles> =
             window.use_keyed_state((self.id.clone(), "tiles"), cx, |_, _| Tiles::default());
-        let (bounds, hover) = (tiles.read(cx).bounds, tiles.read(cx).hover);
+        let cells = self.rows.len() * self.columns.len();
+        let (bounds, hover) = (tiles.read(cx).bounds, tiles.read(cx).pointed(cells));
         let theme = cx.theme();
         let (colors, sizes, rem) = (theme.colors.clone(), theme.chart(), window.rem_size());
         let pixels = |length: gpui::Rems| f32::from(length.to_pixels(rem));
@@ -307,8 +318,8 @@ impl RenderOnce for HeatmapChart {
             pixels(sizes.foot),
             pixels(sizes.inset),
         );
-        let (columns, rows) = (self.columns.len().max(1), self.rows.len().max(1));
-        let (cell_w, cell_h) = (rect.w / columns as f32, rect.h / rows as f32);
+        let (columns, rows) = (self.columns.len(), self.rows.len());
+        let (cell_w, cell_h) = (rect.w / columns.max(1) as f32, rect.h / rows.max(1) as f32);
         let cell = |row: usize, column: usize| Rect {
             x: rect.x + cell_w * column as f32,
             y: rect.y + cell_h * row as f32,
@@ -402,7 +413,7 @@ impl RenderOnce for HeatmapChart {
             (self.id.clone(), "heatmap").into(),
             &tiles,
             move |at| {
-                rect.contains(at).then(|| {
+                (rect.contains(at) && rows > 0 && columns > 0).then(|| {
                     let (row, column) = (
                         ((at.1 - rect.y) / cell_h) as usize,
                         ((at.0 - rect.x) / cell_w) as usize,

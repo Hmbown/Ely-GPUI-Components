@@ -69,6 +69,29 @@ pub(crate) fn land(merges: &[Merge], (row, col): (usize, usize)) -> (usize, usiz
         .map_or((row, col), |merge| merge.from)
 }
 
+/// Where a key moves the cursor from a cell: past the far side of a merge it stands on, and onto the first cell of any merge it reaches.
+pub(crate) fn stepped(
+    merges: &[Merge],
+    (row, col): (usize, usize),
+    key: &str,
+    (rows, cols): (usize, usize),
+) -> Option<(usize, usize)> {
+    let far = merges
+        .iter()
+        .find(|merge| merge.from == (row, col))
+        .map_or((row, col), |merge| merge.to);
+    let to = match key {
+        "up" => (row.saturating_sub(1), col),
+        "down" | "enter" => ((far.0 + 1).min(rows - 1), col),
+        "left" => (row, col.saturating_sub(1)),
+        "right" => (row, (far.1 + 1).min(cols - 1)),
+        "home" => (row, 0),
+        "end" => (row, cols - 1),
+        _ => return None,
+    };
+    Some(land(merges, to))
+}
+
 /// Pulls the cursor, its anchor and a fill back inside a grid of `size`; whether anything moved.
 pub(crate) fn fit(sheet: &mut Sheet, size: (usize, usize)) -> bool {
     let last = (size.0.saturating_sub(1), size.1.saturating_sub(1));
@@ -84,26 +107,22 @@ pub(crate) fn fit(sheet: &mut Sheet, size: (usize, usize)) -> bool {
 
 /// Tab and Shift-Tab: keep an open edit, then step across, staying inside the grid.
 pub(crate) fn across(
-    sheet: &Entity<Sheet>,
-    editor: &Entity<Editing>,
-    (cols, back): (usize, bool),
+    (sheet, editor): (&Entity<Sheet>, &Entity<Editing>),
+    (merges, size, back): (&[Merge], (usize, usize), bool),
     (metrics, frozen): (Metrics, (usize, usize)),
     window: &mut Window,
     cx: &mut App,
 ) {
     cx.stop_propagation();
+    if size.0 == 0 || size.1 == 0 {
+        return;
+    }
     let (row, col) = sheet.read(cx).cursor;
     if sheet.read(cx).editing {
         editor.update(cx, |editing, cx| editing.finish(false, window, cx));
     }
-    let to = (
-        row,
-        if back {
-            col.saturating_sub(1)
-        } else {
-            (col + 1).min(cols.saturating_sub(1))
-        },
-    );
+    let key = if back { "left" } else { "right" };
+    let to = stepped(merges, (row, col), key, size).expect("left and right always step");
     sheet.update(cx, |sheet, cx| {
         (sheet.cursor, sheet.anchor) = (to, to);
         reveal(sheet, metrics, frozen);
@@ -221,21 +240,7 @@ pub(crate) fn keys(
         let stroke = &event.keystroke;
         let held = &stroke.modifiers;
         let (row, col) = sheet.read(cx).cursor;
-        let far = face
-            .merges
-            .iter()
-            .find(|merge| merge.from == (row, col))
-            .map_or((row, col), |merge| merge.to);
-        let to = match stroke.key.as_str() {
-            "up" => Some((row.saturating_sub(1), col)),
-            "down" | "enter" => Some(((far.0 + 1).min(rows - 1), col)),
-            "left" => Some((row, col.saturating_sub(1))),
-            "right" => Some((row, (far.1 + 1).min(cols - 1))),
-            "home" => Some((row, 0)),
-            "end" => Some((row, cols - 1)),
-            _ => None,
-        };
-        if let Some(to) = to.map(|to| land(&face.merges, to)) {
+        if let Some(to) = stepped(&face.merges, (row, col), stroke.key.as_str(), (rows, cols)) {
             cx.stop_propagation();
             let stretch = held.shift && stroke.key != "enter";
             sheet.update(cx, |sheet, cx| {

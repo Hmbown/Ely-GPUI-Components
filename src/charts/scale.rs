@@ -48,14 +48,16 @@ pub(crate) fn nice_step(span: f64, count: usize) -> f64 {
 
 /// A domain widened to round steps that hold `low..=high`, and the ticks along it.
 pub(crate) fn nice(low: f64, high: f64, count: usize) -> ((f64, f64), Vec<f64>) {
-    let (low, high) = if low == high {
-        (low - 1.0, high + 1.0)
+    let (low, high) = (low.min(high), low.max(high));
+    let (low, high) = if high - low <= high.abs().max(low.abs()) * 1e-12 {
+        let pad = (high.abs().max(low.abs()) * 0.1).max(1.0);
+        (low - pad, high + pad)
     } else {
-        (low.min(high), low.max(high))
+        (low, high)
     };
     let step = nice_step(high - low, count);
     let (start, end) = ((low / step).floor() * step, (high / step).ceil() * step);
-    let ticks = (0..)
+    let ticks = (0..count.max(1) * 4 + 4)
         .map(|ix| start + step * ix as f64)
         .take_while(|tick| *tick <= end + step * 1e-9)
         .map(|tick| if tick.abs() < step * 1e-9 { 0.0 } else { tick })
@@ -137,6 +139,13 @@ mod tests {
         assert_eq!(domain, (-15.0, 10.0));
         assert_eq!(ticks.first(), Some(&-15.0));
         assert_eq!(nice(5.0, 5.0, 4).0, (4.0, 6.0), "a single value widens");
+        for (low, high) in [(1e30, 1e30), (1e30, 1e30 + 1e14)] {
+            let ((from, to), ticks) = nice(low, high, 4);
+            assert!(
+                from < to && (2..=20).contains(&ticks.len()),
+                "a huge flat domain widens by its size: {ticks:?}"
+            );
+        }
     }
 
     #[test]

@@ -133,7 +133,10 @@ impl RenderOnce for GanttChart {
     fn render(mut self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let tiles: Entity<Tiles> =
             window.use_keyed_state((self.id.clone(), "rows"), cx, |_, _| Tiles::default());
-        let (bounds, hover) = (tiles.read(cx).bounds, tiles.read(cx).hover);
+        let (bounds, hover) = (
+            tiles.read(cx).bounds,
+            tiles.read(cx).pointed(self.tasks.len()),
+        );
         let theme = cx.theme();
         let (colors, sizes, rem) = (theme.colors.clone(), theme.chart(), window.rem_size());
         let pixels = |length: gpui::Rems| f32::from(length.to_pixels(rem));
@@ -218,7 +221,7 @@ impl RenderOnce for GanttChart {
             .today
             .zip(first)
             .map(|(today, first)| x_of(days(first, today)) + day / 2.0)
-            .filter(|x| *x >= names);
+            .filter(|x| (names..=names + day * span as f32).contains(x));
         let tooltip = hover.map(|ix| {
             let (task, bar) = (&self.tasks[ix], bars[ix]);
             let dates = format!(

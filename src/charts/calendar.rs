@@ -67,7 +67,10 @@ impl RenderOnce for CalendarHeatmap {
     fn render(mut self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let tiles: Entity<Tiles> =
             window.use_keyed_state((self.id.clone(), "tiles"), cx, |_, _| Tiles::default());
-        let (bounds, hover) = (tiles.read(cx).bounds, tiles.read(cx).hover);
+        let (bounds, hover) = (
+            tiles.read(cx).bounds,
+            tiles.read(cx).pointed(self.counts.len()),
+        );
         let theme = cx.theme();
         let (colors, sizes, rem) = (theme.colors.clone(), theme.chart(), window.rem_size());
         let pixels = |length: gpui::Rems| f32::from(length.to_pixels(rem));

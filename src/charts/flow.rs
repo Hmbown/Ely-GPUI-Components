@@ -229,6 +229,10 @@ impl RenderOnce for SankeyChart {
         let flows: Entity<Flows> =
             window.use_keyed_state((self.id.clone(), "flows"), cx, |_, _| Flows::default());
         let (bounds, hover) = (flows.read(cx).bounds, flows.read(cx).hover);
+        let hover = hover.filter(|hover| match hover {
+            Hover::Node(ix) => *ix < self.nodes.len(),
+            Hover::Link(ix) => *ix < self.links.len(),
+        });
         let theme = cx.theme();
         let (colors, sizes, rem) = (theme.colors.clone(), theme.chart(), window.rem_size());
         let pixels = |length: gpui::Rems| f32::from(length.to_pixels(rem));

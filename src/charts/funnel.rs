@@ -87,7 +87,10 @@ impl RenderOnce for FunnelChart {
     fn render(mut self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let flows: Entity<Tiles> =
             window.use_keyed_state((self.id.clone(), "flows"), cx, |_, _| Tiles::default());
-        let (bounds, hover) = (flows.read(cx).bounds, flows.read(cx).hover);
+        let (bounds, hover) = (
+            flows.read(cx).bounds,
+            flows.read(cx).pointed(self.stages.len()),
+        );
         let theme = cx.theme();
         let (colors, sizes, rem) = (theme.colors.clone(), theme.chart(), window.rem_size());
         let pixels = |length: gpui::Rems| f32::from(length.to_pixels(rem));

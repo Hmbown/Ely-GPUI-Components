@@ -65,16 +65,15 @@ struct Arc {
 fn rings(slices: &[Slice]) -> Vec<Arc> {
     fn walk(
         slices: &[Slice],
-        (depth, start, sweep): (usize, f32, f32),
+        (depth, start, sweep, whole): (usize, f32, f32, f64),
         branch: Option<usize>,
         trail: &[SharedString],
         out: &mut Vec<Arc>,
     ) {
-        let total: f64 = slices.iter().map(Slice::weight).sum();
         let mut at = start;
         for (ix, slice) in slices.iter().enumerate() {
-            let part = if total > 0.0 {
-                (slice.weight() / total) as f32 * sweep
+            let part = if whole > 0.0 {
+                (slice.weight() / whole) as f32 * sweep
             } else {
                 0.0
             };
@@ -82,7 +81,7 @@ fn rings(slices: &[Slice]) -> Vec<Arc> {
             path.push(slice.name.clone());
             walk(
                 &slice.children,
-                (depth + 1, at, part),
+                (depth + 1, at, part, slice.weight()),
                 Some(branch),
                 &path,
                 out,
@@ -99,7 +98,8 @@ fn rings(slices: &[Slice]) -> Vec<Arc> {
         }
     }
     let mut out = Vec::new();
-    walk(slices, (0, -FRAC_PI_2, TAU), None, &[], &mut out);
+    let whole = slices.iter().map(Slice::weight).sum();
+    walk(slices, (0, -FRAC_PI_2, TAU, whole), None, &[], &mut out);
     out.sort_by_key(|arc| arc.depth);
     out
 }
@@ -250,6 +250,17 @@ mod tests {
     use std::f32::consts::{FRAC_PI_2, TAU};
 
     use super::*;
+
+    #[test]
+    fn a_child_takes_only_its_share_of_its_parent() {
+        let arcs = rings(&[Slice::new("Whole", 100.0).children([Slice::new("Part", 25.0)])]);
+        let part = arcs.iter().find(|arc| arc.depth == 1).expect("the part");
+        assert!(
+            (part.sweep - TAU / 4.0).abs() < 1e-5,
+            "a quarter of the ring, got {}",
+            part.sweep
+        );
+    }
 
     #[test]
     fn rings_nest_children_inside_their_parent() {

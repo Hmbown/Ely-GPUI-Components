@@ -1,6 +1,16 @@
-use gpui::TestAppContext;
+use std::{cell::Cell, rc::Rc};
 
-use super::{BarChart, LineChart, Series};
+use gpui::{
+    Context, IntoElement, Modifiers, MouseMoveEvent, ParentElement, Render, Styled, TestAppContext,
+    VisualTestContext, Window, div, point, px,
+};
+use jiff::civil::date;
+
+use super::{
+    BarChart, Bullet, BulletChart, CalendarHeatmap, ChordDiagram, FunnelChart, GanttChart,
+    HeatmapChart, LineChart, NetworkGraph, ParallelCoordinates, ProgressChart, RadarChart,
+    SankeyChart, Series, Task, Treemap,
+};
 use crate::theme::Theme;
 
 #[gpui::test]
@@ -26,4 +36,136 @@ fn a_chart_exports_as_svg_and_csv(cx: &mut TestAppContext) {
             "the page, then a bar per value"
         );
     });
+}
+
+/// Every chart that picks a part under the pointer, stacked 200 tall at 400 across, with many parts or few.
+struct Picked(Rc<Cell<bool>>);
+
+const TALL: f32 = 200.0;
+
+impl Render for Picked {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        let many = self.0.get();
+        let count = if many { 6 } else { 3 };
+        let values = |count: usize| {
+            (0..count)
+                .map(|ix| 10.0 + ix as f64 * 3.0)
+                .collect::<Vec<_>>()
+        };
+        let names: Vec<String> = (0..count).map(|ix| format!("n{ix}")).collect();
+        let tile = |chart: gpui::AnyElement| {
+            div()
+                .w(px(400.0))
+                .h(px(TALL))
+                .overflow_hidden()
+                .child(chart)
+        };
+        let treemap = names
+            .iter()
+            .zip(values(count))
+            .fold(Treemap::new("treemap"), |map, (name, value)| {
+                map.tile(name.clone(), value)
+            });
+        let heatmap = names
+            .iter()
+            .fold(HeatmapChart::new("heatmap", names.clone()), |map, name| {
+                map.row(name.clone(), values(count))
+            });
+        let radar = RadarChart::new("radar", names.clone()).series(Series::new("a", values(count)));
+        let funnel = names
+            .iter()
+            .zip(values(count).into_iter().rev())
+            .fold(FunnelChart::new("funnel"), |funnel, (name, value)| {
+                funnel.stage(name.clone(), value)
+            });
+        let sankey = (1..count).fold(SankeyChart::new("sankey", names.clone()), |sankey, to| {
+            sankey.link(0, to, 5.0)
+        });
+        let gantt = (0..count).fold(GanttChart::new("gantt"), |gantt, ix| {
+            gantt.task(Task::new(
+                format!("t{ix}"),
+                date(2026, 3, 1 + ix as i8),
+                date(2026, 3, 9 + ix as i8),
+            ))
+        });
+        let network = (1..count).fold(
+            names
+                .iter()
+                .fold(NetworkGraph::new("network"), |graph, name| {
+                    graph.node(name.clone(), 0)
+                }),
+            |graph, to| graph.edge(0, to),
+        );
+        let matrix: Vec<Vec<f64>> = (0..count)
+            .map(|row| {
+                (0..count)
+                    .map(|col| if row == col { 0.0 } else { 1.0 + col as f64 })
+                    .collect()
+            })
+            .collect();
+        let chord = ChordDiagram::new("chord", names.clone(), matrix);
+        let parallel = (0..count).fold(
+            ParallelCoordinates::new("parallel", ["a", "b"]),
+            |chart, ix| chart.record(format!("r{ix}"), [ix as f64, (count - ix) as f64]),
+        );
+        let bullets = (0..count).fold(BulletChart::new("bullets"), |chart, ix| {
+            chart.bullet(Bullet::new(format!("b{ix}"), 5.0 + ix as f64, 8.0))
+        });
+        let rings = (0..count).fold(ProgressChart::new("rings"), |chart, ix| {
+            chart.goal(format!("g{ix}"), 3.0 + ix as f64, 10.0)
+        });
+        let days = CalendarHeatmap::new("days", date(2026, 1, 5), values(count * 10));
+        div()
+            .flex()
+            .flex_col()
+            .child(tile(treemap.h(px(TALL)).into_any_element()))
+            .child(tile(heatmap.h(px(TALL)).into_any_element()))
+            .child(tile(radar.h(px(TALL)).into_any_element()))
+            .child(tile(funnel.h(px(TALL)).into_any_element()))
+            .child(tile(sankey.h(px(TALL)).into_any_element()))
+            .child(tile(gantt.h(px(TALL)).into_any_element()))
+            .child(tile(network.h(px(TALL)).into_any_element()))
+            .child(tile(chord.h(px(TALL)).into_any_element()))
+            .child(tile(parallel.h(px(TALL)).into_any_element()))
+            .child(tile(bullets.h(px(TALL)).into_any_element()))
+            .child(tile(rings.h(px(TALL)).into_any_element()))
+            .child(tile(days.h(px(TALL)).into_any_element()))
+    }
+}
+
+fn settle(cx: &mut VisualTestContext) {
+    for _ in 0..3 {
+        cx.run_until_parked();
+        cx.update(|window, _| window.refresh());
+    }
+    cx.run_until_parked();
+}
+
+#[gpui::test]
+fn a_part_under_the_pointer_lets_go_when_its_data_shrinks(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        Theme::init(cx);
+        Theme::update(cx, |theme| theme.reduced_motion = true);
+    });
+    let many = Rc::new(Cell::new(true));
+    let seen = many.clone();
+    let (view, cx) = cx.add_window_view(|_, _| Picked(seen));
+    cx.simulate_resize(gpui::size(px(400.0), px(TALL * 12.0)));
+    settle(cx);
+    for chart in 0..12 {
+        for (x, y) in [(360.0, 20.0), (200.0, 100.0), (60.0, 170.0)] {
+            let at = point(px(x), px(TALL * chart as f32 + y));
+            cx.simulate_event(MouseMoveEvent {
+                position: at,
+                pressed_button: None,
+                modifiers: Modifiers::none(),
+            });
+            settle(cx);
+            for full in [false, true] {
+                many.set(full);
+                view.update(cx, |_, cx| cx.notify());
+                settle(cx);
+            }
+        }
+    }
 }

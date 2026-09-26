@@ -173,7 +173,10 @@ impl RenderOnce for NetworkGraph {
         if !settled {
             window.request_animation_frame();
         }
-        let (bounds, hover) = (graph.read(cx).bounds, graph.read(cx).hover);
+        let (bounds, hover) = (
+            graph.read(cx).bounds,
+            graph.read(cx).hover.filter(|ix| *ix < self.nodes.len()),
+        );
         let theme = cx.theme();
         let (colors, sizes, rem) = (theme.colors.clone(), theme.chart(), window.rem_size());
         let pixels = |length: gpui::Rems| f32::from(length.to_pixels(rem));
@@ -275,6 +278,7 @@ impl RenderOnce for NetworkGraph {
             let offset = position - bounds.origin;
             (f32::from(offset.x), f32::from(offset.y))
         };
+        let count = self.nodes.len();
         let (moved, pressed, released, left, measured) = (
             graph.clone(),
             graph.clone(),
@@ -299,7 +303,8 @@ impl RenderOnce for NetworkGraph {
             .on_mouse_move(move |event: &MouseMoveEvent, _, cx| {
                 let place = local(event.position, moved.read(cx).bounds);
                 moved.update(cx, |graph, cx| {
-                    if let (Some(ix), Some(MouseButton::Left)) = (graph.drag, event.pressed_button)
+                    if let (Some(ix), Some(MouseButton::Left)) =
+                        (graph.drag.filter(|ix| *ix < count), event.pressed_button)
                     {
                         graph
                             .force

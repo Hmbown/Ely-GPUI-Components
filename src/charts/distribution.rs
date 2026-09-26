@@ -159,7 +159,16 @@ impl WaterfallChart {
             Step::Down => Ink::Fall,
             Step::Total => Ink::Series(0),
         };
-        let (drawn, names) = (bars.clone(), labels.clone());
+        let running: Rc<Vec<f64>> = Rc::new(
+            self.steps
+                .iter()
+                .scan(0.0, |sum, (_, change, total)| {
+                    *sum += if *total { 0.0 } else { *change };
+                    Some(*sum)
+                })
+                .collect(),
+        );
+        let (drawn, names, levels) = (bars.clone(), labels.clone(), running.clone());
         let layout: Layout = Rc::new(move |scene: &Scene| {
             let (low, high) = drawn
                 .iter()
@@ -180,7 +189,7 @@ impl WaterfallChart {
                     },
                 ));
                 if ix + 1 < drawn.len() {
-                    let level = scale.at(if *step == Step::Down { *bottom } else { *top });
+                    let level = scale.at(levels[ix]);
                     geometry.strokes.push((
                         Ink::Rule,
                         (start + width, level),
@@ -192,9 +201,9 @@ impl WaterfallChart {
         });
         let changes = self.steps;
         let tips: Tips = Rc::new(move |ix, _| {
-            let ((label, change, total), (_, top, step)) = (&changes[ix], bars[ix]);
+            let ((label, change, total), (_, _, step)) = (&changes[ix], bars[ix]);
             let (name, value) = if *total {
-                ("Total", compact(top))
+                ("Total", compact(running[ix]))
             } else {
                 (
                     "Change",

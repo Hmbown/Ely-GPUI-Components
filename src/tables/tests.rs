@@ -426,3 +426,21 @@ fn tab_steps_across_the_grid_and_keeps_an_edit(cx: &mut TestAppContext) {
         "tab moves right, and keeps an open edit first"
     );
 }
+
+#[gpui::test]
+fn tab_steps_past_a_merge_like_the_arrows(cx: &mut TestAppContext) {
+    grid_keys(cx);
+    let heard = Rc::new(RefCell::new(Vec::new()));
+    let seen = heard.clone();
+    let (_, cx) = cx.add_window_view(|_, _| Merged(seen));
+    settle(cx);
+    cx.simulate_click(point(px(146.0), px(42.0)), Modifiers::none());
+    settle(cx);
+    cx.simulate_keystrokes("tab 9 enter");
+    settle(cx);
+    assert_eq!(
+        *heard.borrow(),
+        [(0, 3, "9".to_string())],
+        "tab leaves the merge by its far side"
+    );
+}

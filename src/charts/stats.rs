@@ -125,14 +125,14 @@ pub(crate) enum Step {
     Total,
 }
 
-/// Each change floating from the running total, bottom and top; a total stands on zero at the sum so far.
+/// Each change floating from the running total, bottom and top; a total stands on zero, reaching up or down to the sum so far.
 pub(crate) fn steps(changes: &[(f64, bool)]) -> Vec<(f64, f64, Step)> {
-    let mut running = 0.0;
+    let mut running = 0.0f64;
     changes
         .iter()
         .map(|(value, total)| {
             if *total {
-                return (0.0, running, Step::Total);
+                return (running.min(0.0), running.max(0.0), Step::Total);
             }
             let from = running;
             running += value;
@@ -181,6 +181,17 @@ mod tests {
             peak.0 < 1.0,
             "the peak sits near the cluster, at {}",
             peak.0
+        );
+    }
+
+    #[test]
+    fn a_total_below_zero_hangs_down_from_it() {
+        let bars = steps(&[(-10.0, false), (0.0, true)]);
+        let (bottom, top, step) = bars[1];
+        assert_eq!(
+            (bottom, top, step),
+            (-10.0, 0.0, Step::Total),
+            "the bar runs from the total up to zero"
         );
     }
 

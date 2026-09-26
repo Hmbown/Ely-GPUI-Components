@@ -49,8 +49,8 @@ Per-component lines live in `tasks/`. Tags there:
 - [x] T13a Lists & Trees · Lists
 - [x] T13b Lists & Trees · Trees
 - [x] T13c Lists & Trees · Files
-- [ ] T14a Tables · Core
-- [ ] T14b Tables · Columns & rows
+- [x] T14a Tables · Core
+- [x] T14b Tables · Columns & rows
 - [ ] T14c Tables · Grids
 - [ ] T15a Charts · Cartesian
 - [ ] T15b Charts · Parts and spreads
@@ -204,8 +204,11 @@ Per-component lines live in `tasks/`. Tags there:
 | T13c | 1 | FAIL | the cursor kept its index through a re-sort, so Enter opened another file |
 | T13c | 2 | PASS | |
 | T14a | 1 | FAIL | numbers and words compared out of order in a mixed column, and the sort panicked |
+| T14a | 2 | PASS | |
 | T14b | 1 | FAIL | a removed filter rule left its typing to the next rule, and two sort rows could take one column |
+| T14b | 2 | PASS | |
 | T14c | 1 | FAIL | a shrunk grid kept its cursor outside, long column letters overflowed, presses landed in merged cells, Tab left the grid, and ranges counted text and blanks |
-| T15a | 1 | — | pending review |
-| T15b | 1 | — | pending review |
-| T15c | 1 | — | pending review |
+| T14c | 2 | FAIL | Tab stepped into a merge's hidden cells |
+| T15a | 1 | FAIL | an empty chart's SVG export panicked, and a huge flat domain looped forever making ticks |
+| T15b | 1 | FAIL | a pointed part outlived shrinking data, an empty heatmap made up a cell, a negative total flipped its bar, and a sunburst child filled its parent's arc |
+| T15c | 1 | FAIL | eight charts kept a pointed part past their data, and the Gantt today line ran past the timeline |
