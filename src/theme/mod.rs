@@ -95,7 +95,8 @@ impl ActiveTheme for App {
 }
 
 impl Theme {
-    pub(crate) fn init(cx: &mut App) {
+    /// Installs the theme alone. `ely_gpui_component::init` calls it; a host that keeps its own fonts, assets and keys calls it instead, then sets `colors` and the font families.
+    pub fn init(cx: &mut App) {
         cx.set_global(Theme {
             mode: Mode::Light,
             high_contrast: false,
